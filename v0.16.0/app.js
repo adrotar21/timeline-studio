@@ -838,8 +838,8 @@ const App={
     this.$.tl_body.addEventListener('contextmenu',e=>this.onTlCtx(e));
     this.$.tl_body.addEventListener('dblclick',e=>{const iEl=e.target.closest('.tl-item');if(iEl){const it=this.gi(iEl.dataset.iid);if(it)this.openPanel(it)}});
     this.$.tl_sl_labels.addEventListener('dblclick',e=>{const lbl=e.target.closest('.sl-lbl');if(lbl){const sl=this.gs(lbl.dataset.slId);if(sl)this.showSwM(sl)}});
-    // Collapse buttons
-    this.$.tl_sl_labels.addEventListener('click',e=>{const btn=e.target.closest('.sl-collapse-btn');if(btn){e.stopPropagation();const slId=btn.dataset.slId;const sl=this.gs(slId);if(sl){this.snap();sl.collapsed=sl.collapsed==='expanded'?'minimized':sl.collapsed==='minimized'?'collapsed':'expanded';this.sched();this.autoSave()}}});
+    // Hidden indicator click — expand collapsed swimlane
+    this.$.tl_sl_labels.addEventListener('click',e=>{const ind=e.target.closest('.sl-hidden-indicator');if(ind){e.stopPropagation();const sl=this.gs(ind.dataset.slId);if(sl){this.snap();sl.collapsed='expanded';this.sched();this.autoSave()}return}const btn=e.target.closest('.sl-collapse-btn');if(btn){e.stopPropagation();const slId=btn.dataset.slId;const sl=this.gs(slId);if(sl){this.snap();sl.collapsed=sl.collapsed==='expanded'?'minimized':sl.collapsed==='minimized'?'collapsed':'expanded';this.sched();this.autoSave()}}});
     // Column resize handle
     const colRH=this.$.sl_col_rh;
     if(colRH){colRH.addEventListener('mousedown',e=>{
@@ -911,7 +911,7 @@ const App={
   /* Render wrapped SVG text as <text> with <tspan> elements, vertically centered in a box. */
   _svgText(text,x,y,maxW,boxH,fontSize,fontWeight,attrs){
     const lines=this._wrapText(text,maxW-8,fontSize,fontWeight);if(!lines.length)return'';
-    const lh=fontSize*1.2;const totalH=lines.length*lh;const startY=y+boxH/2-(totalH/2)+fontSize*0.38;
+    const lh=fontSize*1.2;const totalH=lines.length*lh;const startY=y+boxH/2-(totalH/2)+fontSize*0.42;
     let s=`<text x="${x}" fill="#fff" font-size="${fontSize}" font-weight="${fontWeight}" text-anchor="middle"${attrs?' '+attrs:''}>`;
     for(let i=0;i<lines.length;i++)s+=`<tspan x="${x}" y="${startY+i*lh}">${U.esc(lines[i])}</tspan>`;
     return s+'</text>';
@@ -1685,18 +1685,19 @@ const App={
         for(const it of slItems)if(it.subSwimId&&groups.has(it.subSwimId)&&!unassigned.includes(it))groups.get(it.subSwimId).push(it);
         for(const[ssId,items]of groups){const vis=items.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId,h:Math.max(50,(mr+1)*rH+10),items})}
       }else if(!isCollapsed){const vis=slItems.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId:'',h:Math.max(sl.height||120,(mr+1)*rH+10),items:slItems})}
-      const totalH=isHidden?0:isMinimized?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
+      const totalH=isHidden?4:isMinimized?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
       slYMap.set(sl.id,{y:slYAccum,h:totalH});
 
-      if(!isHidden){
+      if(isHidden){
+      labelsH+=`<div class="sl-lbl sl-hidden-indicator" data-sl-id="${sl.id}" style="background:${sl.color};height:4px" title="${U.esc(sl.name)} (click to expand)"></div>`;
+      bodyH+=`<div class="sw-row sl-hidden-indicator" data-sl-id="${sl.id}" style="height:4px;border-bottom:none"></div>`;
+      }else{
       labelsH+=`<div class="sl-lbl${isMinimized?' collapsed':''}" data-sl-id="${sl.id}" style="background:${sl.color};height:${totalH}px">`;
       labelsH+=`<button class="sl-collapse-btn" data-sl-id="${sl.id}" title="${isMinimized?'Expand':'Minimize'}">${isMinimized?'▶':'▼'}</button>`;
       if(!isCollapsed&&hasSubs){const mainW=Math.min(60,(p.labelWidth||160)/2);labelsH+=`<div class="sl-lbl-main" style="width:${mainW}px;min-width:${mainW}px;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg)">${U.esc(sl.name)}</div><div class="sl-lbl-subs">`;for(const{ssId,h}of subMeta){const ss=sl.subSwimlanes.find(s=>s.id===ssId);labelsH+=`<div class="sl-sub-lbl" style="height:${h}px">${ss?U.esc(ss.name):''}</div>`}labelsH+=`</div>`}
       else labelsH+=`<div class="sl-lbl-main" style="flex:1">${U.esc(sl.name)}</div>`;
       labelsH+=`</div>`;
-      }
 
-      if(!isHidden){
       bodyH+=`<div class="sw-row${isMinimized?' collapsed':''}" data-sl-id="${sl.id}" style="height:${totalH}px">`;
       for(let ci=0;ci<tl.cols.length;ci++)bodyH+=`<div class="grid-col" style="left:${ci*tl.cw}px;width:${tl.cw}px"></div>`;
       if(!isCollapsed){
@@ -1808,6 +1809,8 @@ const App={
     bodyH+=`<svg id="dep-svg" style="width:${tl.tw}px;height:100%"></svg>`;
     this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this.$.tl_body.style.width=tl.tw+'px';
 
+    // Bind hidden indicators — click to expand
+    this.$.tl_sl_labels.querySelectorAll('.sl-hidden-indicator').forEach(ind=>{ind.onclick=e=>{e.stopPropagation();const sl=this.gs(ind.dataset.slId);if(sl){this.snap();sl.collapsed='expanded';this.sched();this.autoSave()}}});
     // Bind collapse buttons
     this.$.tl_sl_labels.querySelectorAll('.sl-collapse-btn').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();const sl=this.gs(btn.dataset.slId);if(sl){this.snap();sl.collapsed=sl.collapsed==='expanded'?'minimized':sl.collapsed==='minimized'?'collapsed':'expanded';this.sched();this.autoSave()}}});
 
@@ -1956,7 +1959,7 @@ const App={
         for(const it of visItems){if(it.subSwimId&&groups.has(it.subSwimId))groups.get(it.subSwimId).push(it);else{const fid=sl.subSwimlanes[0]?.id;if(fid)(groups.get(fid)||[]).push(it)}}
         for(const[ssId,items]of groups){const mr=items.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId,h:Math.max(50,(mr+1)*rH+10),items:slItems.filter(i=>i.subSwimId===ssId||(!i.subSwimId&&ssId===sl.subSwimlanes[0]?.id))})}
       }else if(!isCollapsed){const mr=visItems.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId:'',h:Math.max(sl.height||120,(mr+1)*rH+10),items:slItems})}
-      const h=isHidden?0:isMinimized?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
+      const h=isHidden?4:isMinimized?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
       sm.push({sl,items:isCollapsed?[]:slItems,h,subMeta,collapsed:isCollapsed,hidden:isHidden})
     }
     const totalBodyH=sm.reduce((s,m)=>s+m.h,0);
@@ -2025,7 +2028,7 @@ const App={
     let yO=0;const svgItemYMap=new Map();const svgItemXMap=new Map();/* {id: {left,right,midY}} for dep arrows */
     const svgVLines=[];/* vertical line data for export */
     for(const{sl,items,h,subMeta,collapsed,hidden}of sm){
-      if(hidden){yO+=h;continue}
+      if(hidden){const rowTop=yO-vpY+totalHdrH;svg+=`<rect x="${lw}" y="${rowTop}" width="${vpW}" height="${h}" fill="${sl.color}" opacity="0.3"/>`;yO+=h;continue}
       const slYStart=yO;
       const rowTop=yO-vpY+totalHdrH,rowBot=rowTop+h;
       if(viewportOnly&&(rowBot<totalHdrH||rowTop>H)){yO+=h;continue}
@@ -2170,7 +2173,7 @@ const App={
       }
     }
     /* Swimlane labels ON TOP to mask overflow text */
-    yO=0;for(const{sl,h,subMeta:subs,collapsed,hidden}of sm){if(hidden){yO+=h;continue}const rowTop=yO-vpY+totalHdrH;if(!(viewportOnly&&(rowTop+h<totalHdrH||rowTop>H))){
+    yO=0;for(const{sl,h,subMeta:subs,collapsed,hidden}of sm){if(hidden){const rowTop=yO-vpY+totalHdrH;svg+=`<rect x="0" y="${rowTop}" width="${lw}" height="${h}" fill="${sl.color}" opacity="0.5"/>`;yO+=h;continue}const rowTop=yO-vpY+totalHdrH;if(!(viewportOnly&&(rowTop+h<totalHdrH||rowTop>H))){
       const clampT=Math.max(totalHdrH,rowTop),clampH=Math.min(h,rowTop+h-clampT);
       svg+=`<rect x="0" y="${clampT}" width="${lw}" height="${clampH}" fill="${sl.color}"/>`;
       const hasSubs=!collapsed&&sl.subSwimlanes?.length>0&&subs.length>1;
