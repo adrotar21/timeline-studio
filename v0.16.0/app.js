@@ -980,7 +980,8 @@ const App={
     const bs=this.$.tl_body_scroll;if(!bs)return;
     const vpW=bs.clientWidth;
     const p=this.proj;
-    const items=p.items.filter(i=>!(p.hideMode&&i.hidden));
+    const collapsedSlIds=new Set(p.swimlanes.filter(sl=>sl.collapsed!=='expanded').map(sl=>sl.id));
+    const items=p.items.filter(i=>!(p.hideMode&&i.hidden)&&!collapsedSlIds.has(i.swimlaneId));
     if(!items.length){p.zoom=100;this.sched();return}
     /* Pre-compute per-item: barLeft/barRight at z=1 (scales with zoom) and fixed-px text offsets.
        At any zoom z, item's absolute left = z * barL_z1 - textLeft, right = z * barR_z1 + textRight.
@@ -1970,7 +1971,8 @@ const App={
       const bs=this.$.tl_body_scroll;vpX=bs.scrollLeft;vpW=bs.clientWidth;vpY=bs.scrollTop;vpH=Math.min(bs.clientHeight,totalBodyH-bs.scrollTop);
     }else{
       /* Fit-to-content: use shared _itemExtents with canvas text measurement */
-      const fitItems=p.items.filter(i=>!(p.hideMode&&i.hidden));
+      const collapsedSlIds=new Set(p.swimlanes.filter(sl=>sl.collapsed!=='expanded').map(sl=>sl.id));
+      const fitItems=p.items.filter(i=>!(p.hideMode&&i.hidden)&&!collapsedSlIds.has(i.swimlaneId));
       const ext=this._itemExtents(fitItems,tl);
       if(ext){
         const fitPad=20;/* small breathing room on each side */
