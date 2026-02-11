@@ -39,7 +39,8 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
-| | | _No open bugs_ | | | |
+| B6 | **Export swimlane label vertical centering** | Swimlane header labels and sub-swimlane labels appear slightly off-center vertically in export/screenshot SVG. The `_svgText()` vertical centering math needs tuning to match on-screen CSS flexbox `align-items:center` rendering. Affects both main swimlane names and sub-swimlane labels. | XS | P1 | Open |
+| B7 | **Export missing grid column lines** | Vertical grid column divider lines (e.g., monthly column borders) that run from the header down through all swimlane rows are not rendered in export/screenshot SVG. On-screen these are `.grid-col` elements with `border-right`. Similar class of bug to the previously-fixed header cell borders and swimlane dividers (v0.15.1). | S | P1 | Open |
 
 ---
 
@@ -82,6 +83,8 @@
 _All P0 items resolved in v0.14.0._
 
 ### P1 — High Priority for V1
+- **B6** — Export swimlane label vertical centering (XS)
+- **B7** — Export missing grid column lines (S)
 - **F8** — Comprehensive documentation (M)
 - **F14** — Swimlane Manager modal (L)
 - **F15** — Dual-mode swimlane collapse (M)
