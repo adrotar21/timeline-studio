@@ -13,6 +13,12 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 5. Document the problem solved, lightweight setup, and three-file architecture
 6. Share through professional channels for broader adoption
 
+## Versioning
+- **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
+- **Current:** `v0.14.0` — first versioned release (renamed from legacy v13.5)
+- Version history tracked in `BACKLOG.md` under the Versioning table
+- Git repo initialized at project root; commit after each version cut
+
 ## Critical Architecture Rule
 > **The application MUST remain exactly three core files: `index.html`, `styles.css`, and `app.js`.**
 
@@ -28,12 +34,12 @@ This is a non-negotiable design constraint. The three-file architecture is what 
 ```
 TimelineProject/
 ├── CLAUDE.md                       # This file — project context for AI assistants
-├── BACKLOG.md                      # Prioritized bugs and feature backlog
+├── BACKLOG.md                      # Prioritized bugs/features with version history
 ├── dependency-prd.md               # Dependency engine PRD (Phase 1 + Phase 2)
 ├── timeline project edits.txt      # Raw bug tracking notes (legacy, see BACKLOG.md)
-└── v13.5/                          # Current version
+└── v0.14.0/                        # Current version
     ├── index.html                  # Complete DOM structure, modals, inline styles
-    ├── app.js                      # All application logic (~2200 lines)
+    ├── app.js                      # All application logic (~2400 lines)
     ├── styles.css                  # Theming via CSS custom properties, layout
     ├── test_comprehensive.js       # ~400 tests covering core engine
     ├── test_expanded.js            # ~500+ tests targeting real bug patterns
@@ -42,8 +48,8 @@ TimelineProject/
 
 ## Tech Stack
 - **Vanilla JavaScript (ES6+)** — no frameworks, no transpilation, no bundler
-- **SVG** for dependency arrow rendering
-- **Canvas API** for PNG export/screenshot
+- **SVG** for dependency arrow rendering and export
+- **Canvas API** for PNG export/screenshot (with DPI scaling)
 - **CSS custom properties** for theme system
 - **localStorage** for auto-save (key: `tls3`)
 - **File System Access API** for native save/open dialogs
@@ -89,11 +95,51 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 - **Calendar vs. working day** durations handled consistently across all operations
 - **Pinned items** are protected from auto-scheduling and propagation
 
+## Export & Rendering Quirks
+
+> **Important context for anyone modifying export or fit-to-content logic.**
+
+### `buildExportSVG(viewportOnly)` — The Export Pipeline
+- Single function generates all SVG for export (PNG, SVG, clipboard screenshot)
+- Pipeline: `buildExportSVG()` → SVG blob → `Image` → `Canvas` → PNG blob
+- `viewportOnly=true` for viewport screenshot, `false` for full export (fit-to-content)
+- **DPI scaling**: `copyScreenshot` uses `Math.max(2, devicePixelRatio)`, `exportPNG` uses `Math.max(3, devicePixelRatio)`, both via `ctx.scale(dpr, dpr)` on canvas
+
+### Coordinate System
+- `dX(date, tl)` returns pixel position from left edge of timeline grid (0 = start of first column)
+- Positions scale linearly with zoom: `dX_at_z(date) = z × dX_at_z1(date)`
+- `dXEnd(date)` = pixel position at END of a day (for task bar right edges)
+- `dXMid(date)` = pixel position at CENTER of a day (for milestone icons)
+- In export SVG, all positions are offset by `-vpX` (scroll position) and shifted right by `lw` (160px label column)
+
+### Fit-to-Content — Two Separate Implementations
+1. **Export fit** (`buildExportSVG` with `viewportOnly=false`): Uses `_itemExtents(items, tl)` to find min/max pixel extents including text labels, then crops SVG to that range. Straightforward — all at current zoom.
+2. **On-screen fit** (`fitToContent()`): More complex because zoom and text interact differently:
+   - Bar positions scale with zoom, but text label widths are fixed pixels
+   - Uses per-item geometry: `{bL, bR}` (bar at z=1) + `{tL, tR}` (fixed-px text offsets)
+   - Iterative solver (4 rounds): at each candidate zoom, computes absolute extents `z×barPos ± textOffset`, adjusts zoom to fit viewport
+   - **Must be idempotent** — clicking Fit repeatedly should not change the result
+
+### Text Measurement
+- `_mt(text, fontSize, fontWeight)` — uses a shared offscreen `<canvas>` context for pixel-accurate text width
+- `_itemLabelWidths(it)` — returns `{labelW, edgeLW, edgeRW}` for any item (primary label, secondary label, edge date labels)
+- `_itemExtents(items, tl)` — returns `{minPx, maxPx}` combining bar positions + text widths at the given zoom
+- **Never use character-count estimation** (`charCount × fontSize × 0.6`) — it's unreliable and causes fit instability
+
+### Weekend/Holiday Opacity Stacking
+- DOM renders weekends via CSS class `rgba(0,0,0,0.15)` with inline `opacity` style on top
+- Export must multiply: `0.15 × (userOpacity/100)` to match the visual stacking
+- Holiday shading uses its own color channel with opacity directly
+
+### Hidden Item Handling in Export
+- `hideMode ON + item.hidden` → skip entirely (not rendered, not in fit calculation)
+- `hideMode OFF + item.hidden` → render with `opacity: 0.3` (greyed out, included in fit)
+
 ## Running Tests
 Tests are Node.js CLI scripts with no dependencies:
 ```bash
-node v13.5/test_comprehensive.js
-node v13.5/test_expanded.js
+node v0.14.0/test_comprehensive.js
+node v0.14.0/test_expanded.js
 ```
 Output is color-coded (green pass / red fail) with summary stats. Tests mock the engine functions from app.js internally. **Always run both test suites after making changes to `app.js`.**
 
@@ -104,13 +150,14 @@ Output is color-coded (green pass / red fail) with summary stats. Tests mock the
 - Holiday management with per-holiday scheduling control
 - Data table view with filtering, searching, sorting
 - Paste import from Excel (tab-separated)
-- Export: SVG, PNG, CSV, JSON
+- Export: SVG, PNG, CSV, JSON (with fit-to-content and viewport modes)
+- Screenshots: clipboard copy (viewport or full)
 - Themes: Default, Claude, Light, Midnight
 - Lasso selection for bulk operations
 - Project templates (Product Launch, Software Development)
 
 ## Known Issues & Backlog
-See `BACKLOG.md` for the prioritized and sized bug/feature backlog.
+See `BACKLOG.md` for the prioritized and sized bug/feature backlog with version history.
 
 ## Common Patterns
 - Event handlers are wired in `bind()` method
