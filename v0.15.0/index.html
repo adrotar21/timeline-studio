@@ -183,22 +183,28 @@
   <div id="settings-modal" class="modal hidden"><div class="modal-overlay"></div>
     <div class="modal-content modal-lg settings-modal-content"><div class="modal-header"><h2>Project Settings</h2><button class="modal-close" data-close-modal>&times;</button></div>
       <div class="modal-body settings-modal-body">
-        <div class="settings-section"><div class="settings-section-title">Project Info</div>
+        <nav class="settings-nav" id="settings-nav">
+          <a href="#sect-project" class="active">Project</a>
+          <a href="#sect-range">Range</a>
+          <a href="#sect-scheduling">Scheduling</a>
+          <a href="#sect-theme">Theme</a>
+          <a href="#sect-display">Display</a>
+          <a href="#sect-format">Format</a>
+          <a href="#sect-watermark">Watermark</a>
+          <a href="#sect-ttt">Time-to-Target</a>
+          <a href="#sect-export">Export</a>
+          <a href="#sect-advanced">Advanced</a>
+        </nav>
+        <div class="settings-content" id="settings-content">
+        <div class="settings-section" id="sect-project"><div class="settings-section-title">Project Info</div>
           <div class="form-group"><label>Project Name</label><input type="text" id="s-name" class="form-input"></div>
           <div class="form-group"><label>Project Owner</label><input type="text" id="s-owner" class="form-input" placeholder="e.g. John Smith"></div>
         </div>
-        <div class="settings-section"><div class="settings-section-title">Timeline Range</div>
+        <div class="settings-section" id="sect-range"><div class="settings-section-title">Timeline Range</div>
           <div class="form-group"><label><input type="checkbox" id="s-auto-range" checked> Auto-fit timeline range to data</label></div>
           <div class="form-row"><div class="form-group"><label>Start</label><input type="date" id="s-start" class="form-input"></div><div class="form-group"><label>End</label><input type="date" id="s-end" class="form-input"></div></div>
         </div>
-        <div class="settings-section"><div class="settings-section-title">Date &amp; Format</div>
-          <div class="form-group"><label>Date Format</label>
-            <select id="s-date-fmt" class="form-input"><option value="MMM D, YYYY">Jan 1, 2026</option><option value="MM/DD/YYYY">01/01/2026</option><option value="DD/MM/YYYY">01/01/2026 (EU)</option><option value="YYYY-MM-DD">2026-01-01</option><option value="M/D">1/1</option><option value="MMM D">Jan 1</option><option value="custom">Custom Format…</option></select>
-          </div>
-          <div class="form-group" id="custom-fmt-group" style="display:none"><label>Custom Pattern <span style="font-weight:400;color:var(--tx3)">(DD=01, D=1, MMM=Jan, MMMM=January, MM=01, M=1, YYYY=2026, YY=26)</span></label><input type="text" id="s-custom-fmt" class="form-input" value="DDMMMYY" placeholder="e.g. DDMMMYY → 01Jan26"></div>
-          <div class="form-group"><label>Default Font Size (px)</label><input type="number" id="s-fontsize" class="form-input" value="11" min="8" max="20" style="width:80px"></div>
-        </div>
-        <div class="settings-section"><div class="settings-section-title">Scheduling</div>
+        <div class="settings-section" id="sect-scheduling"><div class="settings-section-title">Scheduling</div>
           <div class="form-group"><label>Scheduling Mode</label>
             <div id="sched-mode-cards" style="display:flex;gap:8px;margin-top:4px">
               <div class="sched-card active" data-mode="manual" style="flex:1;padding:10px;border:2px solid var(--acc);border-radius:6px;cursor:pointer;font-size:11px;background:var(--bg2)">
@@ -212,7 +218,10 @@
             </div>
           </div>
         </div>
-        <div class="settings-section"><div class="settings-section-title">Display</div>
+        <div class="settings-section" id="sect-theme"><div class="settings-section-title">Theme</div>
+          <div class="form-group"><div class="theme-grid"><div class="theme-card active" data-theme="default"><div class="theme-preview tp-default"></div><span>Default</span></div><div class="theme-card" data-theme="claude"><div class="theme-preview tp-claude"></div><span>Claude</span></div><div class="theme-card" data-theme="light"><div class="theme-preview tp-light"></div><span>Light</span></div><div class="theme-card" data-theme="midnight"><div class="theme-preview tp-midnight"></div><span>Midnight</span></div></div></div>
+        </div>
+        <div class="settings-section" id="sect-display"><div class="settings-section-title">Display</div>
           <div class="form-row"><div class="form-group"><label>Show Today Marker</label><label class="toggle-switch"><input type="checkbox" id="s-today" checked><span class="toggle-slider"></span></label></div><div class="form-group"><label>Show Dependencies</label><label class="toggle-switch"><input type="checkbox" id="s-deps" checked><span class="toggle-slider"></span></label></div></div>
           <div class="form-group"><label><input type="checkbox" id="s-show-weekends"> Show Weekend Shading</label></div>
           <div class="form-row hidden" id="weekend-opts">
@@ -255,23 +264,28 @@
             <div style="display:flex;gap:6px;margin-top:4px;align-items:center"><button class="btn btn-primary" id="btn-hol-do-import" type="button" style="font-size:10px;padding:3px 10px">Add Holidays</button><span id="hol-paste-prev" style="font-size:10px;color:var(--tx3)"></span></div>
           </div>
         </div>
-        <div class="settings-section"><div class="settings-section-title">Theme</div>
-          <div class="form-group"><div class="theme-grid"><div class="theme-card active" data-theme="default"><div class="theme-preview tp-default"></div><span>Default</span></div><div class="theme-card" data-theme="claude"><div class="theme-preview tp-claude"></div><span>Claude</span></div><div class="theme-card" data-theme="light"><div class="theme-preview tp-light"></div><span>Light</span></div><div class="theme-card" data-theme="midnight"><div class="theme-preview tp-midnight"></div><span>Midnight</span></div></div></div>
+        <div class="settings-section" id="sect-format"><div class="settings-section-title">Date &amp; Format</div>
+          <div class="form-group"><label>Date Format</label>
+            <select id="s-date-fmt" class="form-input"><option value="MMM D, YYYY">Jan 1, 2026</option><option value="MM/DD/YYYY">01/01/2026</option><option value="DD/MM/YYYY">01/01/2026 (EU)</option><option value="YYYY-MM-DD">2026-01-01</option><option value="M/D">1/1</option><option value="MMM D">Jan 1</option><option value="custom">Custom Format…</option></select>
+          </div>
+          <div class="form-group" id="custom-fmt-group" style="display:none"><label>Custom Pattern <span style="font-weight:400;color:var(--tx3)">(DD=01, D=1, MMM=Jan, MMMM=January, MM=01, M=1, YYYY=2026, YY=26)</span></label><input type="text" id="s-custom-fmt" class="form-input" value="DDMMMYY" placeholder="e.g. DDMMMYY → 01Jan26"></div>
+          <div class="form-group"><label>Default Font Size (px)</label><input type="number" id="s-fontsize" class="form-input" value="11" min="8" max="20" style="width:80px"></div>
         </div>
-        <div class="settings-section"><div class="settings-section-title">Watermark</div>
+        <div class="settings-section" id="sect-watermark"><div class="settings-section-title">Watermark</div>
           <div class="form-group"><label><input type="checkbox" id="s-watermark"> Show "Last Updated" stamp</label></div>
           <div class="form-row hidden" id="watermark-opts"><div class="form-group"><label>Date</label><input type="date" id="s-wm-date" class="form-input"></div><div class="form-group"><label>Position</label><select id="s-wm-pos" class="form-input"><option value="bottom-center">Bottom Center</option><option value="bottom-left">Bottom Left</option><option value="bottom-right">Bottom Right</option><option value="top-center">Top Center</option><option value="top-left">Top Left</option><option value="top-right">Top Right</option></select></div></div>
           <div class="form-group"><label><input type="checkbox" id="s-wm-owner"> Show Project Owner with stamp</label></div>
         </div>
-        <div class="settings-section"><div class="settings-section-title">Time-to-Target</div>
+        <div class="settings-section" id="sect-ttt"><div class="settings-section-title">Time-to-Target</div>
           <div class="form-group"><label><input type="checkbox" id="s-ttt-enabled"> Time-to-Target Labels</label></div>
           <div class="form-row" id="ttt-opts" style="display:none"><div class="form-group"><label>Reference Milestone</label><select id="s-ttt-milestone" class="form-input"><option value="">— Select —</option></select></div></div>
         </div>
-        <div class="settings-section"><div class="settings-section-title">Export</div>
+        <div class="settings-section" id="sect-export"><div class="settings-section-title">Export</div>
           <div class="export-options"><button class="export-opt" id="btn-exp-svg">🖼 SVG</button><button class="export-opt" id="btn-exp-png">📷 PNG</button><button class="export-opt" id="btn-exp-json">📄 JSON</button><button class="export-opt" id="btn-exp-csv">📊 CSV</button></div>
         </div>
-        <div class="settings-section"><div class="settings-section-title">Advanced</div>
+        <div class="settings-section" id="sect-advanced"><div class="settings-section-title">Advanced</div>
           <div class="form-group"><label>Default Project Folder</label><input type="text" id="s-default-folder" class="form-input" placeholder="e.g. C:\Users\You\Documents\Timeline Studio"></div>
+        </div>
         </div>
       </div>
       <div class="modal-footer settings-modal-footer"><button class="btn btn-secondary" data-close-modal>Cancel</button><button class="btn btn-primary" id="btn-s-apply">Apply</button></div>

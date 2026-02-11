@@ -234,7 +234,7 @@ const App={
     if(lb)lb.innerHTML=this.proj.locked?'<span>🔒</span> <span id="lock-label">Locked</span>':'<span>🔓</span> <span id="lock-label">Unlocked</span>';
     const hl=document.getElementById('hide-label');if(hl)hl.textContent=this.proj.hideMode?'Hidden':'Visible';
     const sb=document.getElementById('sched-mode-badge');
-    if(sb){sb.classList.toggle('hidden',this.proj.schedulingMode!=='scheduled');sb.onclick=()=>{this.showSettings();requestAnimationFrame(()=>{const sec=document.querySelector('#settings-modal .settings-section-title');const all=document.querySelectorAll('#settings-modal .settings-section-title');for(const t of all){if(t.textContent.trim()==='Scheduling'){t.scrollIntoView({behavior:'smooth',block:'center'});break}}})}}
+    if(sb){sb.classList.toggle('hidden',this.proj.schedulingMode!=='scheduled');sb.onclick=()=>{this.showSettings();requestAnimationFrame(()=>{const sec=document.getElementById('sect-scheduling');if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'})})}}
     const tsl=document.getElementById('toggle-sched-label');
     if(tsl)tsl.textContent=this.proj.schedulingMode==='scheduled'?'Switch to Manual':'Switch to Auto-Scheduled';
   },
@@ -1240,7 +1240,25 @@ const App={
     }
     }catch(err){console.error('[Timeline Studio] Card setup error:',err)}
     this.showModal('settings-modal');
-    const smEl=document.getElementById('settings-modal');const mb=smEl?.querySelector('.modal-body');if(mb)mb.scrollTop=0
+    /* Settings nav: scroll-to-top, click-to-jump, scroll-spy */
+    const sContent=document.getElementById('settings-content');
+    const sNav=document.getElementById('settings-nav');
+    if(sContent)sContent.scrollTop=0;
+    if(sNav){
+      /* Reset active to first link */
+      sNav.querySelectorAll('a').forEach((a,i)=>a.classList.toggle('active',i===0));
+      /* Click-to-jump */
+      sNav.querySelectorAll('a').forEach(a=>{a.onclick=e=>{e.preventDefault();const tgt=document.querySelector(a.getAttribute('href'));if(tgt&&sContent)tgt.scrollIntoView({behavior:'smooth',block:'start'})}});
+      /* Scroll-spy via IntersectionObserver */
+      if(this._settingsObs)this._settingsObs.disconnect();
+      const sections=sContent.querySelectorAll('.settings-section[id]');
+      this._settingsObs=new IntersectionObserver(entries=>{
+        let topId=null,topR=Infinity;
+        sections.forEach(s=>{const r=s.getBoundingClientRect();const cR=sContent.getBoundingClientRect();const rel=r.top-cR.top;if(rel<cR.height*0.35&&rel>-r.height&&rel<topR){topR=rel;topId=s.id}});
+        if(topId){sNav.querySelectorAll('a').forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+topId))}
+      },{root:sContent,threshold:0,rootMargin:'-10% 0px -60% 0px'});
+      sections.forEach(s=>this._settingsObs.observe(s));
+    }
   },
   applySettings(){
     this.snap();const p=this.proj;p.name=this.$.s_name.value;p.owner=this.$.s_owner.value;
@@ -1966,6 +1984,7 @@ const App={
       if(!collapsed){
         let subYOff=0;
         for(const sub of subMeta){
+          if(subYOff>0)svg+=`<line x1="${lw}" y1="${rowTop+subYOff}" x2="${W}" y2="${rowTop+subYOff}" stroke="#000" opacity="0.08"/>`;
           for(const it of sub.items){
             /* Hidden item handling: hideMode ON → skip entirely; hideMode OFF → render greyed */
             if(p.hideMode&&it.hidden)continue;
@@ -2102,7 +2121,23 @@ const App={
       }
     }
     /* Swimlane labels ON TOP to mask overflow text */
-    yO=0;for(const{sl,h}of sm){const rowTop=yO-vpY+totalHdrH;if(!(viewportOnly&&(rowTop+h<totalHdrH||rowTop>H))){svg+=`<rect x="0" y="${Math.max(totalHdrH,rowTop)}" width="${lw}" height="${Math.min(h,rowTop+h-Math.max(totalHdrH,rowTop))}" fill="${sl.color}"/><text x="${lw/2}" y="${rowTop+h/2+4}" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">${U.esc(sl.name)}</text>`}yO+=h}
+    yO=0;for(const{sl,h,subMeta:subs,collapsed}of sm){const rowTop=yO-vpY+totalHdrH;if(!(viewportOnly&&(rowTop+h<totalHdrH||rowTop>H))){
+      const clampT=Math.max(totalHdrH,rowTop),clampH=Math.min(h,rowTop+h-clampT);
+      svg+=`<rect x="0" y="${clampT}" width="${lw}" height="${clampH}" fill="${sl.color}"/>`;
+      const hasSubs=!collapsed&&sl.subSwimlanes?.length>0&&subs.length>1;
+      if(hasSubs){
+        /* Split label: left strip = main name (vertical), right strip = sub-swimlane labels */
+        const mainW=60,subW=lw-mainW;
+        svg+=`<text x="${mainW/2}" y="${rowTop+h/2}" fill="#fff" font-size="11" font-weight="600" text-anchor="middle" transform="rotate(-90,${mainW/2},${rowTop+h/2})">${U.esc(sl.name)}</text>`;
+        svg+=`<line x1="${mainW}" y1="${clampT}" x2="${mainW}" y2="${clampT+clampH}" stroke="rgba(255,255,255,0.15)"/>`;
+        let subY=0;for(let si=0;si<subs.length;si++){const sub=subs[si];
+          if(si>0)svg+=`<line x1="${mainW}" y1="${rowTop+subY}" x2="${lw}" y2="${rowTop+subY}" stroke="rgba(255,255,255,0.15)"/>`;
+          const ss=sl.subSwimlanes.find(s=>s.id===sub.ssId);
+          if(ss)svg+=`<text x="${mainW+subW/2}" y="${rowTop+subY+sub.h/2+3}" fill="#fff" font-size="9.5" font-weight="500" text-anchor="middle" opacity="0.85">${U.esc(ss.name)}</text>`;
+          subY+=sub.h}
+      }else{
+        svg+=`<text x="${lw/2}" y="${rowTop+h/2+4}" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">${U.esc(sl.name)}</text>`}
+    }yO+=h}
     /* Header rows */
     let hdrY=0;
     hR.forEach(row=>{let hx=lw;svg+=`<rect x="${lw}" y="${hdrY}" width="${vpW}" height="${rowHH}" fill="${th.hdr}"/>`;

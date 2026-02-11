@@ -117,7 +117,7 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 
 /* Settings modal: sticky footer */
 .settings-modal-content{display:flex;flex-direction:column;overflow:hidden!important}
-.settings-modal-body{flex:1;overflow-y:auto;max-height:calc(85vh - 110px)}
+.settings-modal-body{flex:1;display:flex;gap:0;padding:0!important;overflow:hidden;max-height:calc(85vh - 110px)}
 .settings-modal-footer{flex-shrink:0;border-top:1px solid var(--brd)}
 
 /* Timeline */
@@ -246,7 +246,7 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center}
 .modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5)}
 .modal-content{position:relative;background:var(--bg1);border:1px solid var(--brd);border-radius:10px;width:460px;max-height:85vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.4)}
-.modal-sm{width:340px}.modal-lg{width:560px}.modal-wide{width:620px}
+.modal-sm{width:340px}.modal-lg{width:660px}.modal-wide{width:620px}
 .modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--brd)}
 .modal-header h2{font-size:15px;font-weight:700}
 .modal-close{background:none;border:none;color:var(--tx3);font-size:20px;cursor:pointer;padding:0 3px}
@@ -309,5 +309,11 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .settings-section{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--brd)}
 .settings-section:last-child{border-bottom:none;margin-bottom:0}
 .settings-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--acc);margin-bottom:10px}
+/* Settings TOC sidebar */
+.settings-nav{width:130px;flex-shrink:0;border-right:1px solid var(--brd);padding:14px 0;position:sticky;top:0;align-self:flex-start}
+.settings-nav a{display:block;padding:5px 12px;font-size:10px;color:var(--tx2);text-decoration:none;border-left:2px solid transparent;cursor:pointer;transition:all .1s}
+.settings-nav a:hover{color:var(--tx1);background:var(--bg2)}
+.settings-nav a.active{color:var(--acc);border-left-color:var(--acc);font-weight:600}
+.settings-content{flex:1;overflow-y:auto;max-height:calc(85vh - 110px);padding:14px 18px;scroll-behavior:smooth}
 /* Dropdown shortcut labels */
 .dd-shortcut{margin-left:auto;font-size:9px;opacity:.45;font-family:var(--mono)}

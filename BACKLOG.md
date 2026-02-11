@@ -6,6 +6,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.15.0** | 2026-02-10 | Settings navigation sidebar (F11): TOC with scroll-spy, click-to-jump, section reordering for logical grouping. Export sub-swimlane visuals (B5): divider lines and split label column with vertical main name + sub-labels. Modal widened to 660px. |
 | **0.14.1** | 2026-02-10 | Watermark positioning fix (all 6 positions, on-screen + export). Ctrl+Scroll zoom (±5%/±1%). Auto fit-to-content on project open. Also fixed: importHolidays undo ordering, export milestone textColor, weekend opacity fallback, debug console.log cleanup. 76 new watermark tests. |
 | **0.14.0** | 2026-02-10 | Export/screenshot overhaul: fixed label alignment, added all missing visual elements (weekends, holidays, today marker, dependency arrows, vertical lines, float/TTT labels, progress bars, edge dates). Canvas-based text measurement for accurate fit-to-content. DPI scaling for crisp PNG/screenshot output. Folder renamed from v13.5. |
 
@@ -36,7 +37,7 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
-| B5 | **Export missing sub-swimlane visuals** | Sub-swimlane divider lines and labels are rendered on-screen but missing from PNG/SVG export. | S | P1 | Open |
+| | | _No open bugs_ | | | |
 
 ---
 
@@ -49,7 +50,6 @@
 | F6 | **Modal/kiosk window mode** | Open the app in a browser window without the URL bar (e.g., `window.open` with toolbar/location disabled, or PWA manifest). | S | P3 | Open |
 | F7 | **Multi-project tabs** | Support opening multiple projects in separate tabs or an in-app tab bar, each with its own state. | XL | P3 | Open |
 | F8 | **Comprehensive documentation (.md)** | Create full user documentation covering all features, workflows, keyboard shortcuts, and the dependency/scheduling system. | M | P1 | Open |
-| F11 | **Settings navigation outline** | Add a clean table-of-contents sidebar within the Project Settings modal — a compact, document-outline-style list of section headers (Project Info, Timeline Range, Display, Scheduling, etc.) that lets users click to jump to any section. Should be unobtrusive, always visible alongside the settings content, and highlight the currently visible section as the user scrolls. | S | P1 | Open |
 
 ---
 
@@ -59,9 +59,7 @@
 _All P0 items resolved in v0.14.0._
 
 ### P1 — High Priority for V1
-- **B5** — Export missing sub-swimlane visuals (S)
 - **F8** — Comprehensive documentation (M)
-- **F11** — Settings navigation outline (S)
 
 ### P2 — Nice to Have for V1
 - **F3** — Collapsible sub-swimlanes (M)
@@ -77,6 +75,8 @@ _All P0 items resolved in v0.14.0._
 
 | # | Title | Size | Version | Notes |
 |---|-------|------|---------|-------|
+| B5 | **Export missing sub-swimlane visuals** | S | 0.15.0 | Added divider lines between sub-swimlanes in export SVG. Split label column: 60px vertical main name + 100px sub-labels with white dividers. |
+| F11 | **Settings navigation outline** | S | 0.15.0 | TOC sidebar (130px) with scroll-spy (IntersectionObserver), click-to-jump. Sections reordered: Project→Range→Scheduling→Theme→Display→Format→Watermark→TTT→Export→Advanced. Modal widened to 660px. |
 | B1 | **Watermark drift on scroll** | S | 0.14.1 | Moved watermark to absolute-positioned element outside scroll container. Fixed all 6 positions on-screen + export. Export top positions now render correctly (were all at bottom). Font size aligned to 11px. |
 | B4 | **Right-click add doesn't center on cursor** | XS | legacy | Previously resolved. |
 | F1 | **Fit-to-timeline on open** | S | 0.14.1 | `_pendingFit` flag fires `fitToContent()` after first render via double rAF. Wired into all 5 load paths. View guard prevents firing in data-only mode. |
