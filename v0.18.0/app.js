@@ -1,4 +1,4 @@
-/* Timeline Studio v0.18.1 — Sub-Swimlane Resize Fix, Divider Polish, Auto-Collapse, Slimmer Minimized */
+/* Timeline Studio v0.18.2 — Expand All Subs, Vertical Text Overflow, Minimized Sub Height Tweak */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -722,7 +722,7 @@ const App={
     on('btn-show-float',()=>{this.$.view_dropdown.classList.add('hidden');this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')});
     on('btn-zoom100',()=>{this.proj.zoom=100;this.sched()});
     on('btn-fit',()=>this.fitToContent());
-    on('btn-expand-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='expanded');this.sched();this.autoSave();this.toast('All swimlanes expanded')});
+    on('btn-expand-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')});
     on('btn-collapse-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')});
     on('btn-zi',()=>this.doZoom(10));on('btn-zo',()=>this.doZoom(-10));
     this.$.zoom_lbl.addEventListener('wheel',e=>{e.preventDefault();this.doZoom(e.deltaY<0?5:-5)},{passive:false});
@@ -1688,7 +1688,7 @@ const App={
         const unassigned=slItems.filter(i=>!i.subSwimId||!groups.has(i.subSwimId));
         if(sl.subSwimlanes.length>0&&unassigned.length){const fid=sl.subSwimlanes[0].id;unassigned.forEach(i=>i.subSwimId=fid);(groups.get(fid)||[]).push(...unassigned)}
         for(const it of slItems)if(it.subSwimId&&groups.has(it.subSwimId)&&!unassigned.includes(it))groups.get(it.subSwimId).push(it);
-        for(const[ssId,items]of groups){const ss=sl.subSwimlanes.find(s=>s.id===ssId);const isSubMin=ss&&ss.collapsed==='minimized';if(isSubMin){subMeta.push({ssId,h:16,items:[],minimized:true})}else{const vis=items.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);const contentH=Math.max(50,(mr+1)*rH+10);const ssH=ss&&ss.height>0?Math.max(ss.height,contentH):contentH;subMeta.push({ssId,h:ssH,items,minimized:false})}}
+        for(const[ssId,items]of groups){const ss=sl.subSwimlanes.find(s=>s.id===ssId);const isSubMin=ss&&ss.collapsed==='minimized';if(isSubMin){subMeta.push({ssId,h:20,items:[],minimized:true})}else{const vis=items.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);const contentH=Math.max(50,(mr+1)*rH+10);const ssH=ss&&ss.height>0?Math.max(ss.height,contentH):contentH;subMeta.push({ssId,h:ssH,items,minimized:false})}}
       }else if(!isCollapsed){const vis=slItems.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId:'',h:Math.max(sl.height||120,(mr+1)*rH+10),items:slItems})}
       const totalH=isHidden?8:isMinimized?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
       slYMap.set(sl.id,{y:slYAccum,h:totalH});
@@ -1699,7 +1699,7 @@ const App={
       }else{
       labelsH+=`<div class="sl-lbl${isMinimized?' collapsed':''}" data-sl-id="${sl.id}" style="background:${sl.color};height:${totalH}px">`;
       if(isMinimized){labelsH+=`<button class="sl-collapse-btn sl-btn-expand" data-sl-id="${sl.id}" data-action="expand" title="Expand">▶</button>`;labelsH+=`<button class="sl-collapse-btn sl-btn-hide" data-sl-id="${sl.id}" data-action="hide" title="Hide">✕</button>`}else{labelsH+=`<button class="sl-collapse-btn" data-sl-id="${sl.id}" title="Minimize">▼</button>`}
-      if(!isCollapsed&&hasSubs){const mainW=Math.min(60,(p.labelWidth||160)/2);labelsH+=`<div class="sl-lbl-main" style="width:${mainW}px;min-width:${mainW}px;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg)">${U.esc(sl.name)}</div><div class="sl-lbl-subs">`;for(let smi=0;smi<subMeta.length;smi++){const{ssId,h,minimized}=subMeta[smi];const ss=sl.subSwimlanes.find(s=>s.id===ssId);const nm=ss?U.esc(ss.name):'';const icon=minimized?'&#9654;':'&#9660;';labelsH+=`<div class="sl-sub-lbl${minimized?' ss-minimized':''}" style="height:${h}px"><span class="ss-name">${nm}</span><button class="ss-collapse-btn" data-sl-id="${sl.id}" data-ss-id="${ssId}" title="${minimized?'Expand':'Minimize'}">${icon}</button></div>`}labelsH+=`</div>`}
+      if(!isCollapsed&&hasSubs){const mainW=Math.min(60,(p.labelWidth||160)/2);const availH=totalH-12;let mfs=12;const tw=this._mt(sl.name,12,'700');if(tw>availH&&availH>0){mfs=Math.max(8,Math.floor(12*availH/tw))}labelsH+=`<div class="sl-lbl-main" style="width:${mainW}px;min-width:${mainW}px;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-size:${mfs}px">${U.esc(sl.name)}</div><div class="sl-lbl-subs">`;for(let smi=0;smi<subMeta.length;smi++){const{ssId,h,minimized}=subMeta[smi];const ss=sl.subSwimlanes.find(s=>s.id===ssId);const nm=ss?U.esc(ss.name):'';const icon=minimized?'&#9654;':'&#9660;';labelsH+=`<div class="sl-sub-lbl${minimized?' ss-minimized':''}" style="height:${h}px"><span class="ss-name">${nm}</span><button class="ss-collapse-btn" data-sl-id="${sl.id}" data-ss-id="${ssId}" title="${minimized?'Expand':'Minimize'}">${icon}</button></div>`}labelsH+=`</div>`}
       else labelsH+=`<div class="sl-lbl-main" style="flex:1;padding-left:20px">${U.esc(sl.name)}</div>`;
       labelsH+=`</div>`;
 
@@ -1832,7 +1832,7 @@ const App={
       wm.style.cssText=css}else this.$.tl_watermark.classList.add('hidden');
     this.bindRH();if(p.showDeps)requestAnimationFrame(()=>this.rDeps(tl));
     /* Update expand/collapse all button states */
-    const allExpanded=p.swimlanes.every(sl=>sl.collapsed==='expanded');
+    const allExpanded=p.swimlanes.every(sl=>sl.collapsed==='expanded'&&(!sl.subSwimlanes||sl.subSwimlanes.every(ss=>ss.collapsed==='expanded')));
     const allCollapsed=p.swimlanes.every(sl=>sl.collapsed==='collapsed');
     const btnExp=document.getElementById('btn-expand-all');
     const btnCol=document.getElementById('btn-collapse-all');
@@ -1965,7 +1965,7 @@ const App={
       if(!isCollapsed&&hasSubs){
         const groups=new Map();for(const ss of sl.subSwimlanes)groups.set(ss.id,[]);
         for(const it of visItems){if(it.subSwimId&&groups.has(it.subSwimId))groups.get(it.subSwimId).push(it);else{const fid=sl.subSwimlanes[0]?.id;if(fid)(groups.get(fid)||[]).push(it)}}
-        for(const[ssId,items]of groups){const ss=sl.subSwimlanes.find(s=>s.id===ssId);const isSubMin=ss&&ss.collapsed==='minimized';if(isSubMin){subMeta.push({ssId,h:16,items:[],minimized:true})}else{const mr=items.reduce((m,i)=>Math.max(m,i.subRow||0),0);const contentH=Math.max(50,(mr+1)*rH+10);const ssH=ss&&ss.height>0?Math.max(ss.height,contentH):contentH;subMeta.push({ssId,h:ssH,items:slItems.filter(i=>i.subSwimId===ssId||(!i.subSwimId&&ssId===sl.subSwimlanes[0]?.id)),minimized:false})}}
+        for(const[ssId,items]of groups){const ss=sl.subSwimlanes.find(s=>s.id===ssId);const isSubMin=ss&&ss.collapsed==='minimized';if(isSubMin){subMeta.push({ssId,h:20,items:[],minimized:true})}else{const mr=items.reduce((m,i)=>Math.max(m,i.subRow||0),0);const contentH=Math.max(50,(mr+1)*rH+10);const ssH=ss&&ss.height>0?Math.max(ss.height,contentH):contentH;subMeta.push({ssId,h:ssH,items:slItems.filter(i=>i.subSwimId===ssId||(!i.subSwimId&&ssId===sl.subSwimlanes[0]?.id)),minimized:false})}}
       }else if(!isCollapsed){const mr=visItems.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId:'',h:Math.max(sl.height||120,(mr+1)*rH+10),items:slItems})}
       const h=isHidden?0:isMinimized?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
       sm.push({sl,items:isCollapsed?[]:slItems,h,subMeta,collapsed:isCollapsed,hidden:isHidden})
@@ -2191,12 +2191,13 @@ const App={
       if(hasSubs){
         /* Split label: left strip = main name (vertical), right strip = sub-swimlane labels */
         const mainW=60,subW=lw-mainW;
-        svg+=`<text x="${mainW/2}" y="${rowTop+h/2}" fill="#fff" font-size="11" font-weight="600" text-anchor="middle" dominant-baseline="central" transform="rotate(-90,${mainW/2},${rowTop+h/2})">${U.esc(sl.name)}</text>`;
+        const availH=h-12;let mfs=11;const tw=this._mt(sl.name,11,'600');if(tw>availH&&availH>0){mfs=Math.max(8,Math.round(11*availH/tw))}
+        svg+=`<text x="${mainW/2}" y="${rowTop+h/2}" fill="#fff" font-size="${mfs}" font-weight="600" text-anchor="middle" dominant-baseline="central" transform="rotate(-90,${mainW/2},${rowTop+h/2})">${U.esc(sl.name)}</text>`;
         svg+=`<line x1="${mainW}" y1="${clampT}" x2="${mainW}" y2="${clampT+clampH}" stroke="rgba(255,255,255,0.15)"/>`;
         let subY=0;for(let si=0;si<subs.length;si++){const sub=subs[si];
           if(si>0)svg+=`<line x1="${mainW}" y1="${rowTop+subY}" x2="${lw}" y2="${rowTop+subY}" stroke="rgba(255,255,255,0.15)"/>`;
           const ss=sl.subSwimlanes.find(s=>s.id===sub.ssId);
-          if(ss){if(sub.minimized){svg+=`<text x="${mainW+subW/2}" fill="#fff" font-size="8" font-weight="500" text-anchor="middle" opacity="0.5"><tspan x="${mainW+subW/2}" y="${rowTop+subY+8}" dominant-baseline="central">${U.esc(ss.name)}</tspan></text>`}else{svg+=this._svgText(ss.name,mainW+subW/2,rowTop+subY,subW,sub.h,9.5,'500','opacity="0.85"')}}
+          if(ss){if(sub.minimized){svg+=`<text x="${mainW+subW/2}" fill="#fff" font-size="8" font-weight="500" text-anchor="middle" opacity="0.5"><tspan x="${mainW+subW/2}" y="${rowTop+subY+10}" dominant-baseline="central">${U.esc(ss.name)}</tspan></text>`}else{svg+=this._svgText(ss.name,mainW+subW/2,rowTop+subY,subW,sub.h,9.5,'500','opacity="0.85"')}}
           subY+=sub.h}
       }else{
         svg+=this._svgText(sl.name,lw/2,rowTop,lw,h,12,'600','')}
