@@ -129,11 +129,11 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 #tl-hdr{display:flex;flex-direction:column}
 .th-row{display:flex;white-space:nowrap}
 .th-cell{display:flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:600;padding:3px 0;border-right:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
-#tl-body-wrap{display:flex;flex:1;overflow:hidden}
+#tl-body-wrap{display:flex;flex:1;overflow:hidden;position:relative}
 #tl-sl-labels{width:var(--sl-w);min-width:var(--sl-w);overflow-y:auto;overflow-x:hidden;z-index:10;scrollbar-width:none}
 #tl-sl-labels::-webkit-scrollbar{display:none}
-#tl-watermark{position:sticky;font-size:11px;color:#888;font-style:italic;padding:4px 8px;z-index:15;pointer-events:none;bottom:8px;display:block}
-/* Ensure body-scroll is a flex container for sticky to work */
+#tl-watermark{position:absolute;font-size:11px;color:#888;font-style:italic;padding:4px 8px;z-index:15;pointer-events:none;display:block}
+/* body-scroll: flex column layout for tl-body growth */
 #tl-body-scroll{flex:1;overflow:auto;position:relative;display:flex;flex-direction:column}
 #tl-body{position:relative;min-height:100%;flex:1}
 #tl-body.lasso-mode{cursor:crosshair}

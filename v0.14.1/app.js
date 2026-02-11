@@ -41,7 +41,7 @@ const App={
   _sortCol:null,_sortDir:'asc',
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
   _fileHandle:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
-  _lassoMode:false,_collapsedSl:new Set(),
+  _lassoMode:false,_collapsedSl:new Set(),_pendingFit:false,
 
   init(){
     this.$={};
@@ -68,7 +68,7 @@ const App={
      'as-term','as-results',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
     this.loadAuto();this.migrate();
-    this.applyTheme();this.bind();this.sched();
+    this.applyTheme();this.bind();this.sched();if(this.proj.items.length)this._pendingFit=true;
     this.$.tl_body_scroll.addEventListener('scroll',()=>{
       this.$.tl_sl_labels.scrollTop=this.$.tl_body_scroll.scrollTop;
       this.$.tl_hdr_scroll.scrollLeft=this.$.tl_body_scroll.scrollLeft;
@@ -151,6 +151,7 @@ const App={
       this.$.hl_sel.value=String(this.proj.headerLayers);
       this.$.project_name_text.textContent=this.proj.name||'Untitled';
       this.updateStatus();
+      if(this._pendingFit){this._pendingFit=false;if(this.view==='timeline'||this.view==='split')requestAnimationFrame(()=>this.fitToContent())}
     })}
   },
 
@@ -174,23 +175,23 @@ const App={
     if(window.showOpenFilePicker){
       try{const[handle]=await window.showOpenFilePicker({types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}],multiple:false});
         const file=await handle.getFile();const text=await file.text();
-        try{this.snap();this.proj=JSON.parse(text);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=handle;this.sched();this.markClean();this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}
+        try{this.snap();this.proj=JSON.parse(text);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=handle;this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}
         return}catch(e){if(e.name==='AbortError')return}
     }
     this.$.file_input.click()
   },
-  handleOpen(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{this.snap();this.proj=JSON.parse(ev.target.result);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=null;this.sched();this.markClean();this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}};r.readAsText(f);e.target.value=''},
+  handleOpen(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{this.snap();this.proj=JSON.parse(ev.target.result);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=null;this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}};r.readAsText(f);e.target.value=''},
   newProjAct(){this.showModal('new-proj-modal');this.$.np_name.value='New Timeline';document.getElementById('np-template').value='blank'},
   createFromTemplate(){
     const tpl=document.getElementById('np-template').value,name=this.$.np_name.value.trim()||'New Timeline';
-    if(tpl==='duplicate'){this.snap();const dup=U.deep(this.proj);dup.name=name+' (Copy)';this.proj=dup;this._fileHandle=null;this.sel=[];this.applyTheme();this.sched();this.markDirty();document.getElementById('new-proj-modal').classList.add('hidden');this.toast('Duplicated!');return}
+    if(tpl==='duplicate'){this.snap();const dup=U.deep(this.proj);dup.name=name+' (Copy)';this.proj=dup;this._fileHandle=null;this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markDirty();document.getElementById('new-proj-modal').classList.add('hidden');this.toast('Duplicated!');return}
     if(this._unsaved&&!confirm('Unsaved changes will be lost.'))return;
     this.snap();
     if(tpl==='blank')this.proj=newProj();
     else if(tpl==='product-launch')this.proj=this.tplProductLaunch();
     else if(tpl==='software-dev')this.proj=this.tplSoftwareDev();
     else this.proj=newProj();
-    this.proj.name=name;this._fileHandle=null;this.sel=[];this.applyTheme();this.sched();this.markClean();
+    this.proj.name=name;this._fileHandle=null;this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();
     document.getElementById('new-proj-modal').classList.add('hidden');this.toast('Created!')
   },
   tplProductLaunch(){const p=newProj();p.name='Product Launch';const y=new Date().getFullYear();
@@ -722,6 +723,8 @@ const App={
     on('btn-fit',()=>this.fitToContent());
     on('btn-zi',()=>this.doZoom(10));on('btn-zo',()=>this.doZoom(-10));
     this.$.zoom_lbl.addEventListener('wheel',e=>{e.preventDefault();this.doZoom(e.deltaY<0?5:-5)},{passive:false});
+    /* Ctrl+Scroll zoom on timeline body: Ctrl=±5%, Ctrl+Shift=±1% */
+    this.$.tl_body_scroll.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();const d=e.shiftKey?1:5;this.doZoom(e.deltaY<0?d:-d)},{passive:false});
     // Tools dropdown
     on('btn-tools-menu',()=>{this.closeAllDD();this.$.tools_dropdown.classList.toggle('hidden');this.posDD(this.$.tools_dropdown)});
     on('btn-settings',()=>this.showSettings());
@@ -1227,7 +1230,7 @@ const App={
         c.style.borderColor=isActive?'var(--acc)':'var(--brd)';
         const titleDiv=c.querySelector('div');
         if(titleDiv)titleDiv.textContent=isActive?(c.dataset.mode==='manual'?'✅ Manual':'✅ Auto-Scheduled'):(c.dataset.mode==='manual'?'◻ Manual':'◻ Auto-Scheduled');
-        c.onclick=()=>{this._pendingSchedMode=c.dataset.mode;console.log('[TS] Card clicked, _pendingSchedMode set to:',this._pendingSchedMode);smCards.querySelectorAll('.sched-card').forEach(cc=>{
+        c.onclick=()=>{this._pendingSchedMode=c.dataset.mode;smCards.querySelectorAll('.sched-card').forEach(cc=>{
           const a=cc.dataset.mode===c.dataset.mode;
           cc.classList.toggle('active',a);
           cc.style.borderColor=a?'var(--acc)':'var(--brd)';
@@ -1240,7 +1243,6 @@ const App={
     const smEl=document.getElementById('settings-modal');const mb=smEl?.querySelector('.modal-body');if(mb)mb.scrollTop=0
   },
   applySettings(){
-    console.log('[TS] applySettings called, _pendingSchedMode=',this._pendingSchedMode);
     this.snap();const p=this.proj;p.name=this.$.s_name.value;p.owner=this.$.s_owner.value;
     p.timelineStart=this.$.s_start.value;p.timelineEnd=this.$.s_end.value;
     p.autoRange=this.$.s_auto_range.checked;p.showToday=this.$.s_today.checked;p.showDeps=this.$.s_deps.checked;
@@ -1269,7 +1271,6 @@ const App={
     const activeCard=document.querySelector('#sched-mode-cards .sched-card.active');
     const newMode=activeCard?.dataset?.mode||this._pendingSchedMode||p.schedulingMode||'manual';
     const oldMode=p.schedulingMode||'manual';
-    console.log('[TS] Scheduling:',oldMode,'→',newMode,'cardMode=',activeCard?.dataset?.mode,'pending=',this._pendingSchedMode);
     if(newMode==='scheduled'&&oldMode==='manual'){
       if(p.autoRange)this.autoRange();this.applyTheme();
       document.getElementById('settings-modal').classList.add('hidden');
@@ -1302,11 +1303,12 @@ const App={
   importHolidays(){
     const rows=this.parseHolidays(document.getElementById('hol-paste-ta').value);
     if(!rows.length){this.toast('No valid holidays found','error');return}
+    this.snap();
     rows.forEach(h=>{if(!this.proj.holidays.some(x=>x.name===h.name&&x.start===h.start)){h.schedAround=true;this.proj.holidays.push(h)}});
     this.proj.holidays.sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:0);
     document.getElementById('hol-paste-ta').value='';document.getElementById('hol-paste-prev').textContent='';
     document.getElementById('hol-import-box').classList.add('hidden');
-    this.snap();this.renderHolList();this._recalcNonWorkingDays();this.sched();this.autoSave();
+    this.renderHolList();this._recalcNonWorkingDays();this.sched();this.autoSave();
     this.toast(`Imported ${rows.length} holiday${rows.length>1?'s':''}`)
   },
   addSingleHoliday(){
@@ -1699,7 +1701,7 @@ const App={
     }
     // Weekend shading
     if(p.showWeekends&&!(p.weekendAutoHide&&p.timescale==='years')){
-      const opacity=(p.weekendOpacity||15)/100;
+      const opacity=(p.weekendOpacity||8)/100;
       for(let ci=0;ci<tl.cols.length;ci++){
         const c=tl.cols[ci],cs=new Date(c.start+'T12:00:00'),ce=new Date(c.end+'T12:00:00');
         const numDays=Math.max(1,U.days(c.start,c.end)+1);
@@ -1753,7 +1755,14 @@ const App={
     // Bind collapse buttons
     this.$.tl_sl_labels.querySelectorAll('.sl-collapse-btn').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();const sl=this.gs(btn.dataset.slId);if(sl){sl.collapsed=!sl.collapsed;this.sched();this.autoSave()}}});
 
-    if(p.watermark){const wm=this.$.tl_watermark;wm.classList.remove('hidden');let wmText='Last Updated: '+U.fmt(p.wmDate||U.iso(new Date()),p.dateFormat);if(p.wmShowOwner&&p.owner)wmText+=' | '+p.owner;wm.textContent=wmText;const pos=p.wmPos||'bottom-center';wm.style.cssText='position:sticky;font-size:11px;color:#888;font-style:italic;padding:4px 8px;z-index:15;pointer-events:none;width:fit-content;';if(pos.includes('bottom')){wm.style.bottom='8px';wm.style.top='auto';wm.style.alignSelf='flex-end'}else{wm.style.top='8px';wm.style.bottom='auto'}if(pos.includes('left')){wm.style.marginRight='auto';wm.style.marginLeft='8px'}else if(pos.includes('right')){wm.style.marginLeft='auto';wm.style.marginRight='8px'}else{wm.style.marginLeft='auto';wm.style.marginRight='auto'}}else this.$.tl_watermark.classList.add('hidden');
+    if(p.watermark){const wm=this.$.tl_watermark;wm.classList.remove('hidden');let wmText='Last Updated: '+U.fmt(p.wmDate||U.iso(new Date()),p.dateFormat);if(p.wmShowOwner&&p.owner)wmText+=' | '+p.owner;wm.textContent=wmText;const pos=p.wmPos||'bottom-center';
+      /* Absolute positioning within tl-body-wrap — matches export SVG layout */
+      let css='position:absolute;font-size:11px;color:#888;font-style:italic;padding:4px 8px;z-index:15;pointer-events:none;white-space:nowrap;';
+      if(pos.includes('bottom')){css+='bottom:8px;top:auto;'}else{css+='top:8px;bottom:auto;'}
+      if(pos.includes('left')){css+='left:168px;right:auto;transform:none;'}
+      else if(pos.includes('right')){css+='right:8px;left:auto;transform:none;'}
+      else{css+='left:calc(160px + (100% - 160px)/2);transform:translateX(-50%);right:auto;'}
+      wm.style.cssText=css}else this.$.tl_watermark.classList.add('hidden');
     this.bindRH();if(p.showDeps)requestAnimationFrame(()=>this.rDeps(tl))
   },
 
@@ -1902,12 +1911,12 @@ const App={
         vpW=ext.maxPx-vpX+fitPad;
       }
     }
-    const wmH=p.watermark?24:0;
+    const wmPos=p.wmPos||'bottom-center';const wmH=p.watermark&&wmPos.includes('bottom')?24:0;
     const W=lw+vpW,H=totalHdrH+vpH+wmH;
     let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><style>text{font-family:'DM Sans',sans-serif}</style><rect width="${W}" height="${H}" fill="${th.bg}"/>`;
     /* Weekend shading — match DOM: CSS base rgba(0,0,0,0.15) * inline opacity */
     if(p.showWeekends&&!(p.weekendAutoHide&&p.timescale==='years')){
-      const wkOp=0.15*((p.weekendOpacity||15)/100);
+      const wkOp=0.15*((p.weekendOpacity||8)/100);
       for(let ci=0;ci<tl.cols.length;ci++){
         const c=tl.cols[ci],cs=new Date(c.start+'T12:00:00'),ce=new Date(c.end+'T12:00:00');
         const numDays=Math.max(1,U.days(c.start,c.end)+1);
@@ -2008,10 +2017,10 @@ const App={
           const mMidY=iy+iconH/2+fs*0.35;
           let dateStr='';
           if(it.showDate!==false){const hasOwner=it.showOwner&&it.owner;dateStr=U.fmt(it.date,f);if(hasOwner)dateStr=it.owner+(dateStr?' · '+dateStr:'')}
-          if(lp==='right'){svg+=`<text x="${renderX+12}" y="${dateStr?iy+fs*0.8:mMidY}" fill="${tc}" font-size="${fs}" font-weight="600" opacity="${itemOp}">${U.esc(it.name)}</text>`;if(dateStr)svg+=`<text x="${renderX+12}" y="${iy+fs*0.8+fs}" fill="${th.tlTx2}" font-size="${fs-1}" opacity="${itemOp}">${U.esc(dateStr)}</text>`}
-          else if(lp==='left'){svg+=`<text x="${renderX-12}" y="${dateStr?iy+fs*0.8:mMidY}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="end" opacity="${itemOp}">${U.esc(it.name)}</text>`;if(dateStr)svg+=`<text x="${renderX-12}" y="${iy+fs*0.8+fs}" fill="${th.tlTx2}" font-size="${fs-1}" text-anchor="end" opacity="${itemOp}">${U.esc(dateStr)}</text>`}
-          else if(lp==='top'){svg+=`<text x="${renderX}" y="${iy-4-(dateStr?fs:0)}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`;if(dateStr)svg+=`<text x="${renderX}" y="${iy-4}" fill="${th.tlTx2}" font-size="${fs-1}" text-anchor="middle" opacity="${itemOp}">${U.esc(dateStr)}</text>`}
-          else if(lp==='bottom'){svg+=`<text x="${renderX}" y="${iy+iconH+fs+2}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`;if(dateStr)svg+=`<text x="${renderX}" y="${iy+iconH+fs*2+2}" fill="${th.tlTx2}" font-size="${fs-1}" text-anchor="middle" opacity="${itemOp}">${U.esc(dateStr)}</text>`}
+          if(lp==='right'){svg+=`<text x="${renderX+12}" y="${dateStr?iy+fs*0.8:mMidY}" fill="${tc}" font-size="${fs}" font-weight="600" opacity="${itemOp}">${U.esc(it.name)}</text>`;if(dateStr)svg+=`<text x="${renderX+12}" y="${iy+fs*0.8+fs}" fill="${tc}" font-size="${fs-1}" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`}
+          else if(lp==='left'){svg+=`<text x="${renderX-12}" y="${dateStr?iy+fs*0.8:mMidY}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="end" opacity="${itemOp}">${U.esc(it.name)}</text>`;if(dateStr)svg+=`<text x="${renderX-12}" y="${iy+fs*0.8+fs}" fill="${tc}" font-size="${fs-1}" text-anchor="end" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`}
+          else if(lp==='top'){svg+=`<text x="${renderX}" y="${iy-4-(dateStr?fs:0)}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`;if(dateStr)svg+=`<text x="${renderX}" y="${iy-4}" fill="${tc}" font-size="${fs-1}" text-anchor="middle" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`}
+          else if(lp==='bottom'){svg+=`<text x="${renderX}" y="${iy+iconH+fs+2}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`;if(dateStr)svg+=`<text x="${renderX}" y="${iy+iconH+fs*2+2}" fill="${tc}" font-size="${fs-1}" text-anchor="middle" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`}
           else{svg+=`<text x="${renderX}" y="${mMidY}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`}
         }
         /* Collect vertical line data */
@@ -2105,8 +2114,8 @@ const App={
       const pos=p.wmPos||'bottom-center';let wx,anc;
       const contentW=lw+vpW;/* watermark positioned relative to content area, not text padding */
       if(pos.includes('left')){wx=lw+8;anc='start'}else if(pos.includes('right')){wx=contentW-8;anc='end'}else{wx=(lw+contentW)/2;anc='middle'}
-      const wy=totalHdrH+vpH+16;
-      svg+=`<text x="${wx}" y="${wy}" fill="#888" font-size="10" font-style="italic" text-anchor="${anc}">${U.esc(wmText)}</text>`}
+      const wy=pos.includes('top')?totalHdrH+14:totalHdrH+vpH+16;
+      svg+=`<text x="${wx}" y="${wy}" fill="#888" font-size="11" font-style="italic" text-anchor="${anc}">${U.esc(wmText)}</text>`}
     svg+=`</svg>`;return svg
   },
 

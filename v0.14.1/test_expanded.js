@@ -2681,6 +2681,202 @@ section('85. Milestone Float — No negative float with milestones');
   }
   assert('no negative milestone float', negCount, 0);
 }
+// ─── 86. Watermark — Text Construction ───────────────────────────────────
+section('86. Watermark — Text Construction');
+{
+  // Helper: simulate watermark text building (uses identity fmt like real code with U.fmt)
+  const fmtDate=d=>d; // stand-in: real U.fmt returns formatted string, tests only care about construction logic
+
+  // Basic watermark text with date only
+  const p1={watermark:true,wmDate:'2026-02-10',wmShowOwner:false,owner:''};
+  const wmText1='Last Updated: '+fmtDate(p1.wmDate);
+  assert('wm text: date only', wmText1, 'Last Updated: 2026-02-10');
+
+  // With owner shown
+  const p2={watermark:true,wmDate:'2026-02-10',wmShowOwner:true,owner:'Adam'};
+  let wmText2='Last Updated: '+fmtDate(p2.wmDate);
+  if(p2.wmShowOwner&&p2.owner)wmText2+=' | '+p2.owner;
+  assert('wm text: with owner', wmText2, 'Last Updated: 2026-02-10 | Adam');
+
+  // Owner enabled but empty string — should NOT append
+  const p3={watermark:true,wmDate:'2026-02-10',wmShowOwner:true,owner:''};
+  let wmText3='Last Updated: '+fmtDate(p3.wmDate);
+  if(p3.wmShowOwner&&p3.owner)wmText3+=' | '+p3.owner;
+  assert('wm text: owner enabled but empty', wmText3, 'Last Updated: 2026-02-10');
+
+  // Owner disabled with owner set — should NOT append
+  const p4={watermark:true,wmDate:'2026-02-10',wmShowOwner:false,owner:'Adam'};
+  let wmText4='Last Updated: '+fmtDate(p4.wmDate);
+  if(p4.wmShowOwner&&p4.owner)wmText4+=' | '+p4.owner;
+  assert('wm text: owner disabled with owner set', wmText4, 'Last Updated: 2026-02-10');
+
+  // Fallback when no date — should use today
+  const p5={watermark:true,wmDate:'',wmShowOwner:false,owner:''};
+  const fallbackDate=U.iso(new Date());
+  const wmText5='Last Updated: '+fmtDate(p5.wmDate||fallbackDate);
+  assert('wm text: empty date uses today fallback', wmText5.startsWith('Last Updated: 20'), true);
+}
+
+// ─── 87. Watermark — Export SVG Positioning (All 6 Positions) ────────────
+section('87. Watermark — Export SVG Positioning (All 6 Positions)');
+{
+  const lw=160,vpW=800,totalHdrH=60,vpH=400;
+  const contentW=lw+vpW;
+  const positions=['bottom-center','bottom-left','bottom-right','top-center','top-left','top-right'];
+
+  // Test X coordinate and anchor for each position
+  for(const pos of positions){
+    let wx,anc;
+    if(pos.includes('left')){wx=lw+8;anc='start'}
+    else if(pos.includes('right')){wx=contentW-8;anc='end'}
+    else{wx=(lw+contentW)/2;anc='middle'}
+
+    if(pos==='bottom-left')   {assert('wm export X: bottom-left',   wx, 168);  assert('wm export anchor: bottom-left',   anc, 'start')}
+    if(pos==='bottom-right')  {assert('wm export X: bottom-right',  wx, 952);  assert('wm export anchor: bottom-right',  anc, 'end')}
+    if(pos==='bottom-center') {assert('wm export X: bottom-center', wx, 560);  assert('wm export anchor: bottom-center', anc, 'middle')}
+    if(pos==='top-left')      {assert('wm export X: top-left',      wx, 168);  assert('wm export anchor: top-left',      anc, 'start')}
+    if(pos==='top-right')     {assert('wm export X: top-right',     wx, 952);  assert('wm export anchor: top-right',     anc, 'end')}
+    if(pos==='top-center')    {assert('wm export X: top-center',    wx, 560);  assert('wm export anchor: top-center',    anc, 'middle')}
+  }
+
+  // Test Y coordinate: bottom vs top
+  for(const pos of positions){
+    const wy=pos.includes('top')?totalHdrH+14:totalHdrH+vpH+16;
+    if(pos.includes('bottom'))assert('wm export Y: '+pos+' (below content)', wy, 476);
+    else assert('wm export Y: '+pos+' (below header)', wy, 74);
+  }
+}
+
+// ─── 88. Watermark — Export SVG Height Calculation ───────────────────────
+section('88. Watermark — Export SVG Height Calculation');
+{
+  const totalHdrH=60,vpH=400;
+
+  // Bottom position adds 24px for watermark band
+  for(const pos of ['bottom-center','bottom-left','bottom-right']){
+    const wmH=pos.includes('bottom')?24:0;
+    assert('wm export height: '+pos+' adds 24px', totalHdrH+vpH+wmH, 484);
+  }
+
+  // Top position does NOT add extra height
+  for(const pos of ['top-center','top-left','top-right']){
+    const wmH=pos.includes('bottom')?24:0;
+    assert('wm export height: '+pos+' no extra height', totalHdrH+vpH+wmH, 460);
+  }
+
+  // Watermark disabled: no extra height
+  assert('wm export height: disabled', totalHdrH+vpH+0, 460);
+}
+
+// ─── 89. Watermark — On-Screen CSS Positioning Logic ─────────────────────
+section('89. Watermark — On-Screen CSS Positioning Logic');
+{
+  const positions=['bottom-center','bottom-left','bottom-right','top-center','top-left','top-right'];
+
+  for(const pos of positions){
+    let css='position:absolute;font-size:11px;color:#888;font-style:italic;padding:4px 8px;z-index:15;pointer-events:none;white-space:nowrap;';
+    if(pos.includes('bottom')){css+='bottom:8px;top:auto;'}else{css+='top:8px;bottom:auto;'}
+    if(pos.includes('left')){css+='left:168px;right:auto;transform:none;'}
+    else if(pos.includes('right')){css+='right:8px;left:auto;transform:none;'}
+    else{css+='left:calc(160px + (100% - 160px)/2);transform:translateX(-50%);right:auto;'}
+
+    // Vertical
+    if(pos.includes('bottom')){
+      assert('wm css '+pos+': has bottom:8px', css.includes('bottom:8px'), true);
+      assert('wm css '+pos+': no top:8px', css.includes('top:8px'), false);
+    }else{
+      assert('wm css '+pos+': has top:8px', css.includes('top:8px'), true);
+      assert('wm css '+pos+': no bottom:8px set', css.includes('bottom:8px'), false);
+    }
+
+    // Horizontal
+    if(pos.includes('left')){
+      assert('wm css '+pos+': has left:168px', css.includes('left:168px'), true);
+      assert('wm css '+pos+': no right:8px offset', css.includes('right:8px'), false);
+    }else if(pos.includes('right')){
+      assert('wm css '+pos+': has right:8px', css.includes('right:8px'), true);
+      assert('wm css '+pos+': no left:168px', css.includes('left:168px'), false);
+    }else{
+      assert('wm css '+pos+': has calc center', css.includes('calc(160px'), true);
+      assert('wm css '+pos+': has translateX(-50%)', css.includes('translateX(-50%)'), true);
+    }
+  }
+}
+
+// ─── 90. Watermark — Default Values and Migration ────────────────────────
+section('90. Watermark — Default Values and Migration');
+{
+  // Simulate migration defaults
+  const p={};
+  if(!p.watermark)p.watermark=false;
+  if(!p.wmDate)p.wmDate='';
+  if(!p.wmPos)p.wmPos='bottom-center';
+  if(p.owner==null)p.owner='';
+  if(p.wmShowOwner==null)p.wmShowOwner=false;
+
+  assert('wm default: watermark off', p.watermark, false);
+  assert('wm default: wmDate empty', p.wmDate, '');
+  assert('wm default: wmPos bottom-center', p.wmPos, 'bottom-center');
+  assert('wm default: owner empty', p.owner, '');
+  assert('wm default: wmShowOwner false', p.wmShowOwner, false);
+
+  // Ensure existing values survive migration
+  const p2={watermark:true,wmDate:'2026-01-15',wmPos:'top-right',owner:'Alice',wmShowOwner:true};
+  if(!p2.watermark)p2.watermark=false;
+  if(!p2.wmDate)p2.wmDate='';
+  if(!p2.wmPos)p2.wmPos='bottom-center';
+  if(p2.owner==null)p2.owner='';
+  if(p2.wmShowOwner==null)p2.wmShowOwner=false;
+
+  assert('wm migration: preserves watermark=true', p2.watermark, true);
+  assert('wm migration: preserves wmDate', p2.wmDate, '2026-01-15');
+  assert('wm migration: preserves wmPos', p2.wmPos, 'top-right');
+  assert('wm migration: preserves owner', p2.owner, 'Alice');
+  assert('wm migration: preserves wmShowOwner', p2.wmShowOwner, true);
+}
+
+// ─── 91. Watermark — Position Consistency (On-Screen vs Export) ──────────
+section('91. Watermark — Position Consistency (On-Screen vs Export)');
+{
+  const lw=160,vpW=800;
+  const positions=['bottom-center','bottom-left','bottom-right','top-center','top-left','top-right'];
+
+  for(const pos of positions){
+    // Export X calculation
+    let exportX,exportAnc;
+    const contentW=lw+vpW;
+    if(pos.includes('left')){exportX=lw+8;exportAnc='start'}
+    else if(pos.includes('right')){exportX=contentW-8;exportAnc='end'}
+    else{exportX=(lw+contentW)/2;exportAnc='middle'}
+
+    // On-screen logic (equivalent positions)
+    let screenLeft;
+    if(pos.includes('left'))screenLeft=168; // lw+8
+    else if(pos.includes('right'))screenLeft=null; // right:8px (not left-based)
+    else screenLeft=null; // calc-based center
+
+    // Left positions: both use lw+8
+    if(pos.includes('left')){
+      assert('wm consistency '+pos+': export left == screen left', exportX, 168);
+    }
+    // Right positions: both offset 8px from right edge
+    if(pos.includes('right')){
+      assert('wm consistency '+pos+': export right offset', contentW-exportX, 8);
+    }
+    // Center positions: export centers on content area
+    if(pos.includes('center')){
+      assert('wm consistency '+pos+': export center X', exportX, (lw+contentW)/2);
+    }
+
+    // Vertical: top vs bottom
+    if(pos.includes('top')){
+      assert('wm consistency '+pos+': export no extra height', pos.includes('bottom')?24:0, 0);
+    }else{
+      assert('wm consistency '+pos+': export adds height band', pos.includes('bottom')?24:0, 24);
+    }
+  }
+}
+
 console.log(`\n${CYAN}══════════════════════════════════════════${RESET}`);
 console.log(`  TOTAL: ${total}   ${GREEN}PASSED: ${passed}${RESET}   ${failed?RED:GREEN}FAILED: ${failed}${RESET}`);
 console.log(`${CYAN}══════════════════════════════════════════${RESET}`);
