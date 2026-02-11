@@ -2183,23 +2183,25 @@ const App={
         svg+=`<text x="${lw+ix-vpX+(it.type==='task'?2:10)}" y="${iy+32}" fill="${clr}" font-size="8" font-weight="${fw}" font-family="monospace">${fl}d</text>`
       }
     }
-    /* Swimlane labels ON TOP to mask overflow text */
+    /* Swimlane label backgrounds — draw ALL rects first so no rect masks overflow text */
     yO=0;for(const{sl,h,subMeta:subs,collapsed,hidden}of sm){if(hidden){yO+=h;continue}const rowTop=yO-vpY+totalHdrH;if(!(viewportOnly&&(rowTop+h<totalHdrH||rowTop>H))){
       const clampT=Math.max(totalHdrH,rowTop),clampH=Math.min(h,rowTop+h-clampT);
       svg+=`<rect x="0" y="${clampT}" width="${lw}" height="${clampH}" fill="${sl.color}"/>`;
       const hasSubs=!collapsed&&sl.subSwimlanes?.length>0&&subs.length>1;
+      if(hasSubs){const mainW=60;svg+=`<line x1="${mainW}" y1="${clampT}" x2="${mainW}" y2="${clampT+clampH}" stroke="rgba(255,255,255,0.15)"/>`;
+        let subY=0;for(let si=0;si<subs.length;si++){if(si>0)svg+=`<line x1="${mainW}" y1="${rowTop+subY}" x2="${lw}" y2="${rowTop+subY}" stroke="rgba(255,255,255,0.15)"/>`;subY+=subs[si].h}}
+    }yO+=h}
+    /* Swimlane label text — drawn AFTER all rects so overflow shows on top of all backgrounds */
+    yO=0;for(const{sl,h,subMeta:subs,collapsed,hidden}of sm){if(hidden){yO+=h;continue}const rowTop=yO-vpY+totalHdrH;if(!(viewportOnly&&(rowTop+h<totalHdrH||rowTop>H))){
+      const hasSubs=!collapsed&&sl.subSwimlanes?.length>0&&subs.length>1;
       if(hasSubs){
-        /* Split label: left strip = main name (vertical), right strip = sub-swimlane labels */
         const mainW=60,subW=lw-mainW;
-        /* Vertical main name — wrap text into lines that fit available height, then rotate the group */
         const availH=h-12;const wrapLines=this._wrapText(sl.name,availH>0?availH:h,11,'600');const nLines=wrapLines.length||1;let mfs=11;if(nLines===1){const tw=this._mt(sl.name,11,'600');if(tw>availH&&availH>0)mfs=Math.max(8,Math.round(11*availH/tw))}
         const lh=mfs*1.2;const totalTH=nLines*lh;const cx=mainW/2,cy=rowTop+h/2;
         let vtxt=`<g transform="rotate(-90,${cx},${cy})"><text fill="#fff" font-size="${mfs}" font-weight="600" text-anchor="middle">`;
         for(let li=0;li<nLines;li++){const ly=cy-totalTH/2+lh/2+li*lh;vtxt+=`<tspan x="${cx}" y="${ly}" dominant-baseline="central">${U.esc(wrapLines[li])}</tspan>`}
         vtxt+=`</text></g>`;svg+=vtxt;
-        svg+=`<line x1="${mainW}" y1="${clampT}" x2="${mainW}" y2="${clampT+clampH}" stroke="rgba(255,255,255,0.15)"/>`;
         let subY=0;for(let si=0;si<subs.length;si++){const sub=subs[si];
-          if(si>0)svg+=`<line x1="${mainW}" y1="${rowTop+subY}" x2="${lw}" y2="${rowTop+subY}" stroke="rgba(255,255,255,0.15)"/>`;
           const ss=sl.subSwimlanes.find(s=>s.id===sub.ssId);
           if(ss){if(sub.minimized){svg+=`<text x="${mainW+subW/2}" fill="#fff" font-size="8" font-weight="500" text-anchor="middle" opacity="0.5"><tspan x="${mainW+subW/2}" y="${rowTop+subY+10}" dominant-baseline="central">${U.esc(ss.name)}</tspan></text>`}else{svg+=this._svgText(ss.name,mainW+subW/2,rowTop+subY,subW,sub.h,9.5,'500','opacity="0.85"')}}
           subY+=sub.h}
