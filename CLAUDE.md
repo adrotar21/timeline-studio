@@ -15,7 +15,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.16.1` — export label centering fix (B6), export grid column lines (B7), dual-mode swimlane collapse (F15)
+- **Current:** `v0.17.0` — swimlane collapse UX polish (dominant-baseline centering, dual buttons, curved tab indicator, export cleanup), fit-to-content excludes collapsed swimlane items, F14 archived
 - Version history tracked in `BACKLOG.md` under the Versioning table
 - Git repo initialized at project root; commit after each version cut
 
@@ -36,9 +36,9 @@ TimelineProject/
 ├── CLAUDE.md                       # This file — project context for AI assistants
 ├── BACKLOG.md                      # Prioritized bugs/features with version history
 ├── dependency-prd.md               # Dependency engine PRD (Phase 1 + Phase 2)
-└── v0.16.0/                        # Current version
+└── v0.17.0/                        # Current version
     ├── index.html                  # Complete DOM structure, modals, inline styles
-    ├── app.js                      # All application logic (~2400 lines)
+    ├── app.js                      # All application logic (~2580 lines)
     ├── styles.css                  # Theming via CSS custom properties, layout
     ├── test_comprehensive.js       # 115 tests covering core engine
     ├── test_expanded.js            # 464 tests targeting real bug patterns + watermarks
@@ -119,13 +119,15 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
    - Uses per-item geometry: `{bL, bR}` (bar at z=1) + `{tL, tR}` (fixed-px text offsets)
    - Iterative solver (4 rounds): at each candidate zoom, computes absolute extents `z×barPos ± textOffset`, adjusts zoom to fit viewport
    - **Must be idempotent** — clicking Fit repeatedly should not change the result
+3. **Collapsed swimlane exclusion**: Both implementations build a `Set` of collapsed swimlane IDs (`sl.collapsed !== 'expanded'`) and filter items by `swimlaneId` before computing extents. Items in minimized or hidden swimlanes are treated as if `hideMode + item.hidden` — excluded from fit without modifying actual properties.
 
 ### Text Measurement
 - `_mt(text, fontSize, fontWeight)` — uses a shared offscreen `<canvas>` context for pixel-accurate text width
 - `_itemLabelWidths(it)` — returns `{labelW, edgeLW, edgeRW}` for any item (primary label, secondary label, edge date labels)
 - `_itemExtents(items, tl)` — returns `{minPx, maxPx}` combining bar positions + text widths at the given zoom
 - `_wrapText(text, maxW, fontSize, fontWeight)` — word-wraps text into lines fitting within `maxW` pixels, using `_mt()` for measurement
-- `_svgText(text, x, y, maxW, boxH, fontSize, fontWeight, attrs)` — renders wrapped text as SVG `<text>` with `<tspan>` elements, vertically centered in `boxH`. Used for swimlane labels in export.
+- `_svgText(text, x, y, maxW, boxH, fontSize, fontWeight, attrs)` — renders wrapped text as SVG `<text>` with `<tspan>` elements, vertically centered in `boxH` using `dominant-baseline="central"` for pixel-perfect centering. Used for swimlane labels in export.
+- **SVG text centering**: Always use `dominant-baseline="central"` on `<tspan>` elements. The y-coordinate marks the geometric center of the text line. Never use manual baseline correction factors — they're font-dependent and fragile.
 - **Never use character-count estimation** (`charCount × fontSize × 0.6`) — it's unreliable and causes fit instability
 
 ### Weekend/Holiday Opacity Stacking
@@ -136,17 +138,20 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 ### Hidden Item Handling in Export
 - `hideMode ON + item.hidden` → skip entirely (not rendered, not in fit calculation)
 - `hideMode OFF + item.hidden` → render with `opacity: 0.3` (greyed out, included in fit)
+- **Collapsed swimlane items** → excluded from fit extents (both on-screen and export), swimlane renders at 0px (hidden) or 28px (minimized) with no item content
+- Hidden swimlanes (`sl.collapsed === 'collapsed'`) contribute 0px in export — no rects, no visual trace
 
 ## Running Tests
 Tests are Node.js CLI scripts with no dependencies:
 ```bash
-node v0.16.0/test_comprehensive.js
-node v0.16.0/test_expanded.js
+node v0.17.0/test_comprehensive.js
+node v0.17.0/test_expanded.js
 ```
 Output is color-coded (green pass / red fail) with summary stats. Tests mock the engine functions from app.js internally. **Always run both test suites after making changes to `app.js`.**
 
 ## Key Features
 - Milestones and tasks on a timeline with swimlanes (including sub-swimlanes)
+- Swimlane collapse: 3-state (expanded → minimized → hidden) with dual expand/hide buttons, curved tab indicators, and Expand All / Collapse All controls
 - Dependency arrows with violation/critical-path highlighting
 - Drag-and-drop editing with auto-snap in scheduled mode
 - Holiday management with per-holiday scheduling control

@@ -1,4 +1,4 @@
-/* Timeline Studio v3.5 — Smart Defaults + Auto-Scheduled Mode */
+/* Timeline Studio v0.17.0 — Swimlane Collapse UX, Fit Exclusion, Export Polish */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),

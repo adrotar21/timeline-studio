@@ -6,6 +6,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.17.0** | 2026-02-11 | Swimlane collapse UX polish: SVG `dominant-baseline="central"` for pixel-perfect export label centering, dual expand/hide buttons on minimized swimlanes, 8px curved-tab hidden indicator with hover cue, hidden swimlanes omitted from export. Fit-to-content and export now exclude items in collapsed/hidden swimlanes. Swimlane Manager (F14) archived — current UI covers the use case. |
 | **0.16.1** | 2026-02-11 | Export label centering fix (B6): `_svgText()` line-height 1.3→1.2, baseline factor 0.35→0.38, rotated vertical name +4px correction. Export grid column lines (B7): vertical dividers matching on-screen `.grid-col` borders. Dual-mode swimlane collapse (F15): 3-state cycle (expanded→minimized→collapsed), Expand All / Collapse All buttons in View dropdown with disabled-state management, `sl.collapsed` migrated from boolean to string. |
 | **0.16.0** | 2026-02-11 | Resizable swimlane header column (F16): drag-resize 80–400px, persisted in project, flows through rendering + export + watermark. Fit-to-content hotkey (F12): Ctrl+Shift+F and Alt+1 bindings, tooltip + help modal updated. Export swimlane label text wrapping via `_svgText()`/`_wrapText()` — labels now word-wrap in export/screenshot to match on-screen rendering at narrow column widths. |
 | **0.15.1** | 2026-02-10 | Export structural lines: header cell borders, header-to-body separator, label column edge, strengthened swimlane dividers. |
@@ -58,7 +59,7 @@
 | F8 | **Comprehensive documentation (.md)** | Create full user documentation covering all features, workflows, keyboard shortcuts, and the dependency/scheduling system. | M | P1 | Open |
 | F12 | **Fit-to-content hotkey** | Add a keyboard shortcut for fit-to-content (preferred: Alt+1 if not browser-reserved). Should trigger the existing `fitToContent()` method. | XS | P2 | Done (0.16.0) |
 | F13 | **Keyboard shortcut discoverability** | Surface keyboard shortcuts and power-user actions (Alt+lasso, Ctrl+Scroll zoom, Ctrl+Shift+Scroll fine zoom, etc.) in the UI for new users. Needs design discussion — options include a shortcut cheatsheet panel, tooltip hints, a help modal section, or subtle on-canvas labels. | M | P2 | Open |
-| F14 | **Swimlane Manager modal** | Comprehensive swimlane management modal that consolidates all swimlane operations. Double-clicking a swimlane header opens the manager focused on that swimlane; a toolbar button opens the full list view. Supports per-swimlane property editing (name, color, height, sub-swimlanes) plus bulk operations. Reuses/replaces the current `showSwM()` edit modal. Should include: swimlane reordering, expand/collapse all buttons, and collapse-mode toggles (see F15). | L | P1 | Open |
+| F14 | **Swimlane Manager modal** | Comprehensive swimlane management modal that consolidates all swimlane operations. Double-clicking a swimlane header opens the manager focused on that swimlane; a toolbar button opens the full list view. Supports per-swimlane property editing (name, color, height, sub-swimlanes) plus bulk operations. Reuses/replaces the current `showSwM()` edit modal. Should include: swimlane reordering, expand/collapse all buttons, and collapse-mode toggles (see F15). | L | P1 | Archived (0.17.0) — current inline UI (double-click edit, context menu, collapse buttons, Expand/Collapse All) covers the use case without a separate modal. |
 | F15 | **Dual-mode swimlane collapse** | Expand the collapse toggle to a 3-state cycle: expanded → minimized (28px, header-only, current behavior) → fully collapsed (0px, invisible). "Expand All" and "Collapse All" buttons in the toolbar (Expand All greyed out when all are expanded). Collapse mode per swimlane configurable in the Swimlane Manager (F14). | M | P1 | Done (0.16.1) |
 | F16 | **Resizable swimlane header column** | Allow the user to drag-resize the swimlane label column width (currently hard-coded 160px). Resize handle on the right edge of the label column. Persisted in project settings. Must update on-screen rendering, export SVG (`lw`), fit-to-content, and watermark positioning. | M | P2 | Done (0.16.0) |
 | F17 | **Swimlane header text orientation** | Per-swimlane setting for major header text direction: horizontal, vertical, or angled (e.g., 45°). Configurable in the Swimlane Manager (F14) with propagation to multiple swimlanes via selection or "apply to all". Currently vertical text is auto-applied only when sub-swimlanes exist — this decouples the choice from sub-swimlane presence. | M | P2 | Open |
@@ -73,10 +74,10 @@
 
 1. ~~**F16 — Resizable swimlane header column (M, P2)** — Done (0.16.0).~~
 2. ~~**F15 — Dual-mode swimlane collapse (M, P1)** — Done (0.16.1).~~
-3. **F14 — Swimlane Manager modal (L, P1)** — **Next up.** The big piece: consolidates swimlane editing, reordering, collapse-mode config, and bulk operations into one modal. Depends on F15's collapse model being settled, and benefits from F16's dynamic width being in place.
-4. **F17 — Swimlane header text orientation (M, P2)** — Per-swimlane text direction (horizontal/vertical/angled). Cleanest to implement after the manager modal exists (F14) since the UI for this setting lives there, and the label column width is dynamic (F16).
-5. **F19 — Swimlane header font size (S, P2)** — Per-swimlane font size for header labels. Same implementation pattern as F17 (per-swimlane property, bulk propagation, manager UI). Natural to implement alongside F17 since both are text appearance settings. Must flow through `_svgText()` for export.
-6. **F3 — Collapsible sub-swimlanes (M, P2)** — Individual sub-swimlane expand/collapse. Best done last in this sequence since the Swimlane Manager (F14) provides the natural UI for sub-swimlane collapse controls.
+3. ~~**F14 — Swimlane Manager modal (L, P1)** — Archived (0.17.0). Current inline UI covers the use case.~~
+4. **F17 — Swimlane header text orientation (M, P2)** — Per-swimlane text direction (horizontal/vertical/angled). Settings live in the existing swimlane edit modal (`showSwM()`). Label column width is dynamic (F16).
+5. **F19 — Swimlane header font size (S, P2)** — Per-swimlane font size for header labels. Same implementation pattern as F17 (per-swimlane property). Natural to implement alongside F17 since both are text appearance settings. Must flow through `_svgText()` for export.
+6. **F3 — Collapsible sub-swimlanes (M, P2)** — Individual sub-swimlane expand/collapse. UI via existing swimlane edit modal or context menu.
 
 ---
 
@@ -87,7 +88,6 @@ _All P0 items resolved in v0.14.0._
 
 ### P1 — High Priority for V1
 - **F8** — Comprehensive documentation (M)
-- **F14** — Swimlane Manager modal (L)
 
 ### P2 — Nice to Have for V1
 - **B8** — Toolbar center alignment (XS)
@@ -109,6 +109,7 @@ _All P0 items resolved in v0.14.0._
 
 | # | Title | Size | Version | Notes |
 |---|-------|------|---------|-------|
+| F14 | **Swimlane Manager modal** | L | 0.17.0 | Archived — current inline UI (double-click edit, context menu, collapse buttons, Expand/Collapse All) covers the use case without a separate modal. |
 | F15 | **Dual-mode swimlane collapse** | M | 0.16.1 | 3-state cycle: expanded → minimized (28px) → collapsed (0px, invisible). `sl.collapsed` migrated from boolean to string (`'expanded'`/`'minimized'`/`'collapsed'`). Expand All / Collapse All buttons in View dropdown with disabled-state management. Updated: `renderTL()`, `buildExportSVG()`, `addItem()`, context menu, `migrate()`, all templates. |
 | B7 | **Export missing grid column lines** | S | 0.16.1 | Added vertical `<line>` elements in `buildExportSVG()` iterating `tl.cols` — matches on-screen `.grid-col` `border-right`. Color `#e8ecf0`, bounds-checked to label column and viewport width. |
 | B6 | **Export swimlane label vertical centering** | XS | 0.16.1 | `_svgText()` line-height 1.3→1.2 (match CSS), baseline factor 0.35→0.38 (better DM Sans cap-height). Rotated vertical main name +4px baseline correction in export SVG. |
