@@ -1,4 +1,4 @@
-/* Timeline Studio v0.19.1 — Favicon, Dynamic Tab Title, F6 Kiosk Revert */
+/* Timeline Studio v0.19.3 — Help modal polish, pin badge, data view cleanup */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -356,6 +356,11 @@ const App={
       return 'W:'+fv(workDays,fmt)+' C:'+fv(calDays,fmt)
     }
     return fv(calDays,fmt)
+  },
+  /* Format predecessors for CSV export — e.g. "Task A (FS+2d), Task B (SS)" */
+  _fmtPreds(it){
+    if(!it.deps?.length)return'';
+    return it.deps.map(d=>{const pred=this.gi(this.depId(d));const name=pred?pred.name:'?';const type=this.depType(d);const lag=this.depLag(d);let s=name;if(type!=='FS'||lag!==0){s+=' ('+type;if(lag!==0)s+=(lag>0?'+':'')+lag+'d';s+=')'}return s}).join(', ')
   },
   /* Recalculate all work-mode task endDates after non-working day config changes.
      In auto-scheduled mode also re-runs the scheduling engine. */
@@ -787,9 +792,11 @@ const App={
     on('btn-as-select',()=>this.doAdvSearch(false));on('btn-as-add',()=>this.doAdvSearch(true));
     // Filter bar
     on('btn-dt-filter',()=>{this.$.data_filter_bar.classList.toggle('hidden')});
-    const fltDeb=U.deb(()=>this.sched(false,true),200);
-    ['flt_name','flt_owner','flt_notes','flt_start','flt_end'].forEach(k=>{if(this.$[k])this.$[k].oninput=fltDeb});
-    on('btn-flt-clear',()=>{['flt_name','flt_owner','flt_notes','flt_start','flt_end'].forEach(k=>{if(this.$[k])this.$[k].value=''});this.sched(false,true)});
+    const fltKeys=['flt_name','flt_owner','flt_notes','flt_start','flt_end'];
+    const updateFltInd=()=>{let count=0;fltKeys.forEach(k=>{if(this.$[k]){const has=!!this.$[k].value;this.$[k].classList.toggle('has-value',has);if(has)count++}});const fb=document.getElementById('btn-dt-filter');if(fb){let badge=fb.querySelector('.filter-count');if(count>0){if(!badge){badge=document.createElement('span');badge.className='filter-count';fb.appendChild(badge)}badge.textContent=count}else if(badge)badge.remove()}};
+    const fltDeb=U.deb(()=>{this.sched(false,true);updateFltInd()},200);
+    fltKeys.forEach(k=>{if(this.$[k])this.$[k].oninput=fltDeb});
+    on('btn-flt-clear',()=>{fltKeys.forEach(k=>{if(this.$[k])this.$[k].value=''});updateFltInd();this.sched(false,true)});
     // Settings toggles
     document.getElementById('project-name-display').addEventListener('dblclick',()=>{document.getElementById('pn-name').value=this.proj.name;this.showModal('pname-modal');document.getElementById('pn-name').focus()});
     on('btn-pn-save',()=>{this.snap();this.proj.name=document.getElementById('pn-name').value.trim()||'Untitled';document.getElementById('pname-modal').classList.add('hidden');this.sched();this.autoSave()});
@@ -822,16 +829,18 @@ const App={
       const c=e.ctrlKey||e.metaKey;const inp=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);
       if(c&&e.key==='z'){e.preventDefault();this.undo()}
       else if(c&&e.key==='y'){e.preventDefault();this.redo()}
+      else if(c&&e.shiftKey&&(e.key==='s'||e.key==='S')){e.preventDefault();this.saveFile(true)}
       else if(c&&e.key==='s'){e.preventDefault();this.saveFile()}
       else if(c&&e.key==='n'){e.preventDefault();this.newProjAct()}
       else if(c&&e.key==='o'){e.preventDefault();this.openFile()}
       else if(c&&e.shiftKey&&(e.key==='p'||e.key==='P')&&this.sel.length&&!inp){e.preventDefault();if(this.proj.schedulingMode!=='scheduled')this.propagateFrom(this.sel)}
       else if(c&&e.shiftKey&&(e.key==='f'||e.key==='F')&&!inp){e.preventDefault();this.fitToContent()}
       else if(e.altKey&&e.key==='1'&&!inp){e.preventDefault();this.fitToContent()}
+      else if(c&&(e.key==='a'||e.key==='A')&&!inp&&(this.view==='timeline'||this.view==='split')){e.preventDefault();const items=this.proj.hideMode?this.proj.items.filter(i=>!i.hidden):this.proj.items;this.sel=items.map(i=>i.id);if(this.sel.length>1)this.openBulkPanel();this.sched();this.toast(`Selected ${this.sel.length} item${this.sel.length===1?'':'s'}`)}
       else if(e.key==='Delete'&&this.sel.length&&!inp)this.deleteSel();
       else if(e.key==='Escape'){this.sel=[];if(!this.panelPinned)this.closePanel();this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');document.querySelectorAll('.modal:not(.hidden)').forEach(m=>m.classList.add('hidden'));if(this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}this.sched()}
-      else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&this.sel.length&&!inp&&!this.proj.locked){
-        e.preventDefault();this.nudge(e.key,c)}
+      else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&this.sel.length&&!inp){
+        e.preventDefault();if(this.proj.locked){if(!this._lockToastT||Date.now()-this._lockToastT>2000){this.toast('🔒 Locked — unlock to move items','info',1500);this._lockToastT=Date.now()}}else this.nudge(e.key,c)}
     });
     document.addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){this._nudgeSpeed=1}});
     document.addEventListener('paste',e=>{if(this.view==='data'||this.view==='split'){const t=document.activeElement;if(t&&['INPUT','TEXTAREA','SELECT'].includes(t.tagName))return;const txt=e.clipboardData.getData('text/plain');if(txt.includes('\t')||txt.includes('\n')){e.preventDefault();this.showPaste();setTimeout(()=>{this.$.paste_ta.value=txt;this.previewPaste()},80)}}});
@@ -857,8 +866,12 @@ const App={
   },
 
   /* Arrow key nudging */
+  _lockToastT:0,
   nudge(key,ctrl){
     if(!this.sel.length)return;
+    const isH=key==='ArrowLeft'||key==='ArrowRight';
+    if(isH&&this.proj.lockH){if(!this._lockToastT||Date.now()-this._lockToastT>2000){this.toast('🔒 Horizontal lock is on','info',1500);this._lockToastT=Date.now()}return}
+    if(!isH&&this.proj.lockV){if(!this._lockToastT||Date.now()-this._lockToastT>2000){this.toast('🔒 Vertical lock is on','info',1500);this._lockToastT=Date.now()}return}
     const step=ctrl?Math.min(7,this._nudgeSpeed):1;
     this._nudgeSpeed=Math.min(14,this._nudgeSpeed+0.5);
     if(!this._nudgeSnapped){this.snap();this._nudgeSnapped=true;clearTimeout(this._nudgeSnapTimer)}
@@ -1699,7 +1712,7 @@ const App={
       labelsH+=`<div class="sl-lbl sl-hidden-indicator" data-sl-id="${sl.id}" style="background:${sl.color};height:8px" title="${U.esc(sl.name)} (click to expand)"></div>`;
       bodyH+=`<div class="sw-row sl-hidden-indicator" data-sl-id="${sl.id}" style="height:8px"></div>`;
       }else{
-      labelsH+=`<div class="sl-lbl${isMinimized?' collapsed':''}" data-sl-id="${sl.id}" style="background:${sl.color};height:${totalH}px">`;
+      labelsH+=`<div class="sl-lbl${isMinimized?' collapsed':''}" data-sl-id="${sl.id}" style="background:${sl.color};height:${totalH}px" title="Double-click to edit">`;
       if(isMinimized){labelsH+=`<button class="sl-collapse-btn sl-btn-expand" data-sl-id="${sl.id}" data-action="expand" title="Expand">▶</button>`;labelsH+=`<button class="sl-collapse-btn sl-btn-hide" data-sl-id="${sl.id}" data-action="hide" title="Hide">✕</button>`}else{labelsH+=`<button class="sl-collapse-btn" data-sl-id="${sl.id}" title="Minimize">▼</button>`}
       if(!isCollapsed&&hasSubs){const mainW=Math.min(60,(p.labelWidth||160)/2);const availH=totalH-12;let mfs=12;const tw=this._mt(sl.name,12,'700');if(tw>availH&&availH>0){mfs=Math.max(8,Math.floor(12*availH/tw))}labelsH+=`<div class="sl-lbl-main" style="width:${mainW}px;min-width:${mainW}px;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-size:${mfs}px">${U.esc(sl.name)}</div><div class="sl-lbl-subs">`;for(let smi=0;smi<subMeta.length;smi++){const{ssId,h,minimized}=subMeta[smi];const ss=sl.subSwimlanes.find(s=>s.id===ssId);const nm=ss?U.esc(ss.name):'';const icon=minimized?'&#9654;':'&#9660;';labelsH+=`<div class="sl-sub-lbl${minimized?' ss-minimized':''}" style="height:${h}px"><span class="ss-name">${nm}</span><button class="ss-collapse-btn" data-sl-id="${sl.id}" data-ss-id="${ssId}" title="${minimized?'Expand':'Minimize'}">${icon}</button></div>`}labelsH+=`</div>`}
       else labelsH+=`<div class="sl-lbl-main" style="flex:1;padding-left:20px">${U.esc(sl.name)}</div>`;
@@ -1816,6 +1829,8 @@ const App={
       bodyH+=`<div style="position:absolute;left:${vl.x}px;top:${top}px;height:${bot-top}px;${dash};pointer-events:none;z-index:2;opacity:0.6"></div>`}
     bodyH+=`<svg id="dep-svg" style="width:${tl.tw}px;height:100%"></svg>`;
     this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this.$.tl_body.style.width=tl.tw+'px';
+    /* Empty-state hint for new users */
+    if(p.items.length===0){this.$.tl_body.innerHTML+=`<div class="tl-empty-hint"><div style="font-size:28px;margin-bottom:8px;opacity:.5">📋</div><div>Click <strong>+ Task</strong> or <strong>+ Milestone</strong> in the toolbar to add your first item.</div><div style="margin-top:6px;font-size:11px;opacity:.8">Or choose a template from <strong>New</strong> (📄).<br>Right-click the timeline to add at a specific date.</div></div>`}
 
     // Bind hidden indicators — click to expand
     this.$.tl_sl_labels.querySelectorAll('.sl-hidden-indicator').forEach(ind=>{ind.onclick=e=>{e.stopPropagation();const sl=this.gs(ind.dataset.slId);if(sl){this.snap();sl.collapsed='expanded';this.sched();this.autoSave()}}});
@@ -1860,6 +1875,7 @@ const App={
       if(it.showStartDate)h+=`<div class="tl-edge-label tl-edge-left" style="color:${etc};font-size:${Math.max(8,fs-1)}px">${U.fmt(it.startDate,fmt)}</div>`;
       if(it.showEndDate)h+=`<div class="tl-edge-label tl-edge-right" style="color:${etc};font-size:${Math.max(8,fs-1)}px">${U.fmt(it.endDate,fmt)}</div>`;
     }else{const ic=ICONS.find(i=>i.id===it.iconType)||ICONS[0];h+=`<div class="tl-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="${it.color}" stroke="${it.color}" stroke-width="0.5"><path d="${ic.p}"/></svg></div>`}
+    if(it.pinned)h+=`<div class="tl-pin-badge">📌</div>`;
     const lp=it.labelPosition||'right';
     h+=`<div class="tl-label tl-label-${lp}"><span class="tl-name" style="color:${tc};font-size:${fs}px">${U.esc(it.name)}</span>`;
     if(dateStr)h+=`<span class="tl-date" style="color:${tc};font-size:${Math.max(8,fs-1.5)}px">${dateStr}</span>`;
@@ -2446,16 +2462,16 @@ const App={
   async exportPNG(){this.toast('Generating PNG…');const svg=this.buildExportSVG();const img=new Image();const blob=new Blob([svg],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);const dpr=Math.max(3,window.devicePixelRatio||3);img.onload=()=>{const c=document.createElement('canvas');c.width=img.naturalWidth*dpr;c.height=img.naturalHeight*dpr;const ctx=c.getContext('2d');ctx.scale(dpr,dpr);ctx.drawImage(img,0,0);c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.png';a.click();URL.revokeObjectURL(a.href);this.toast('PNG exported!')},'image/png')};img.src=url},
 
   exportDataCSV(){
-    const p=this.proj,rows=[['Name','Owner','Type','Start','End','Duration','Swimlane','Row','Color','Progress','Pinned','Hidden','Notes']];
+    const p=this.proj,rows=[['Name','Owner','Type','Start','End','Duration','Swimlane','Row','Color','Progress','Pinned','Hidden','Notes','Predecessors']];
     for(const sl of p.swimlanes){for(const it of p.items.filter(i=>i.swimlaneId===sl.id)){
-      rows.push([it.name,it.owner||'',it.type,it.type==='milestone'?it.date:it.startDate,it.endDate||'',it.duration||'',sl.name,it.subRow||0,it.color,it.progress||0,it.pinned?'Y':'N',it.hidden?'Y':'N',it.notes||''])}}
+      rows.push([it.name,it.owner||'',it.type,it.type==='milestone'?it.date:it.startDate,it.endDate||'',it.duration||'',sl.name,it.subRow||0,it.color,it.progress||0,it.pinned?'Y':'N',it.hidden?'Y':'N',it.notes||'',this._fmtPreds(it)])}}
     const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
     const b=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.csv';a.click();URL.revokeObjectURL(a.href);this.toast('CSV exported!')
   },
 
   _deSelectedCols:null,
   showDataExport(){
-    const allCols=['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Color','Progress','Pinned','Hidden','Notes','LabelPos','FontSize','TextColor','DateFormat','ShowDate'];
+    const allCols=['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Color','Progress','Pinned','Hidden','Notes','Predecessors','LabelPos','FontSize','TextColor','DateFormat','ShowDate'];
     this._deSelectedCols=new Set(allCols);
     const cc=document.getElementById('de-custom-cols');
     cc.innerHTML=allCols.map(c=>`<label class="apply-chk" style="min-width:120px"><input type="checkbox" checked data-dc="${c}"> ${c}</label>`).join('');
@@ -2466,9 +2482,9 @@ const App={
   },
   doDataExport(target){
     const p=this.proj,mode=document.getElementById('de-mode').value;
-    const allCols=['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Color','Progress','Pinned','Hidden','Notes','LabelPos','FontSize','TextColor','DateFormat','ShowDate'];
+    const allCols=['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Color','Progress','Pinned','Hidden','Notes','Predecessors','LabelPos','FontSize','TextColor','DateFormat','ShowDate'];
     const cols=mode==='all'?allCols:[...this._deSelectedCols];
-    const getVal=(it,col)=>{const sl=this.gs(it.swimlaneId);switch(col){case'Name':return it.name;case'Owner':return it.owner||'';case'Type':return it.type;case'Start':return it.type==='milestone'?it.date:it.startDate;case'End':return it.endDate||'';case'Duration':return it.duration||'';case'Swimlane':return sl?.name||'';case'SubSwim':const ss=sl?.subSwimlanes?.find(s=>s.id===it.subSwimId);return ss?.name||'';case'Row':return it.subRow||0;case'Color':return it.color;case'Progress':return it.progress||0;case'Pinned':return it.pinned?'Y':'N';case'Hidden':return it.hidden?'Y':'N';case'Notes':return it.notes||'';case'LabelPos':return it.labelPosition;case'FontSize':return it.fontSize||0;case'TextColor':return it.textColor||'';case'DateFormat':return it.dateFormat||'';case'ShowDate':return it.showDate!==false?'Y':'N';default:return''}};
+    const getVal=(it,col)=>{const sl=this.gs(it.swimlaneId);switch(col){case'Name':return it.name;case'Owner':return it.owner||'';case'Type':return it.type;case'Start':return it.type==='milestone'?it.date:it.startDate;case'End':return it.endDate||'';case'Duration':return it.duration||'';case'Swimlane':return sl?.name||'';case'SubSwim':const ss=sl?.subSwimlanes?.find(s=>s.id===it.subSwimId);return ss?.name||'';case'Row':return it.subRow||0;case'Color':return it.color;case'Progress':return it.progress||0;case'Pinned':return it.pinned?'Y':'N';case'Hidden':return it.hidden?'Y':'N';case'Notes':return it.notes||'';case'Predecessors':return this._fmtPreds(it);case'LabelPos':return it.labelPosition;case'FontSize':return it.fontSize||0;case'TextColor':return it.textColor||'';case'DateFormat':return it.dateFormat||'';case'ShowDate':return it.showDate!==false?'Y':'N';default:return''}};
     const rows=[cols];p.items.forEach(it=>rows.push(cols.map(c=>getVal(it,c))));
     const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join('\t')).join('\n');
     document.getElementById('data-export-modal').classList.add('hidden');
@@ -2481,24 +2497,28 @@ const App={
     const h=`<div style="font-size:12.5px;line-height:1.7;color:var(--tx2)">
     <h3 style="color:var(--tx1);margin-bottom:12px;font-size:15px">🚀 Quick Start Guide</h3>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">1. Create Your Timeline</strong><p>Start with a blank project or choose a template from <strong>New</strong> (📄). Your timeline has <em>swimlanes</em> (horizontal sections) and <em>items</em> (milestones & tasks).</p></div>
-    <div style="margin-bottom:16px"><strong style="color:var(--acc)">2. Add Items</strong><p>Click <strong>+ Mile</strong> or <strong>+ Task</strong> in the toolbar. Items appear in the selected swimlane. Right-click the timeline for "Add Here" at a specific date.</p></div>
+    <div style="margin-bottom:16px"><strong style="color:var(--acc)">2. Add Items</strong><p>Click <strong>+ Mile</strong> or <strong>+ Task</strong> in the toolbar. Items appear in the selected swimlane. Right-click the timeline for "Add Here" at a specific date. To bulk-add items, switch to <strong>Data View</strong> and click <strong>📋 Paste</strong> — paste tab-separated rows from Excel (<code>Name [Tab] Date</code> for milestones, or <code>Name [Tab] Start [Tab] End</code> for tasks) and they'll be imported into your chosen swimlane.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">3. Edit Properties</strong><p>Click any item to open the <strong>Properties Panel</strong>. Change dates, colors, icons, owner, notes, and more. Pin the panel 📌 to keep it open.</p></div>
-    <div style="margin-bottom:16px"><strong style="color:var(--acc)">4. Drag & Arrange</strong><p><strong>Drag items</strong> left/right to change dates, or up/down to change rows. Use <strong>Lock Horizontal/Vertical</strong> to constrain movement. Arrow keys for precise nudging; hold <strong>Ctrl</strong> to move faster.</p></div>
+    <div style="margin-bottom:16px"><strong style="color:var(--acc)">4. Drag & Arrange</strong><p><strong>Drag items</strong> left/right to change dates, or up/down to change rows. Arrow keys for precise nudging; hold <strong>Ctrl</strong> to move faster. The <strong>Lock</strong> toggle (Tools menu) prevents all item movement — both dragging and arrow-key nudging — until unlocked.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">5. Task Timing</strong><p>Tasks have <strong>Start/End/Duration</strong>. Changing Start or End recalculates Duration; changing Duration updates End. Use <strong>📌 Pin Date</strong> to protect items from Propagate.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">6. Dependencies</strong><p><strong>Ctrl+click</strong> to multi-select, then right-click → <strong>Link Dependency</strong>. Each link has a <strong>type</strong> (FS, SS, FF) and optional <strong>lag</strong> (days). Right-click → <strong>Propagate to Successors</strong> to push date changes downstream. Violated links show as dashed red arrows. Enable <strong>Critical Path</strong> to highlight zero-float items. Use <strong>View → Show Float</strong> to see scheduling flexibility.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">7. Scheduling Mode</strong><p>Open <strong>Settings → Scheduling</strong> to switch between <strong>Manual</strong> (default — you control dates, Propagate on demand) and <strong>Auto-Scheduled</strong> (dates auto-calculate from dependencies). In Auto mode, successor dates are calculated fields shown in blue. <strong>📌 Pin Date</strong> overrides auto-scheduling for individual items. A preview shows what will change before switching modes.</p></div>
-    <div style="margin-bottom:16px"><strong style="color:var(--acc)">7. Views</strong><p>Switch between <strong>Timeline</strong>, <strong>Data</strong> (spreadsheet with filters), and <strong>Split</strong> views. Use the <strong>Filter Bar</strong> to narrow items by name, owner, notes, or dates.</p></div>
-    <div style="margin-bottom:16px"><strong style="color:var(--acc)">8. Swimlanes</strong><p>Click <strong>+ Lane</strong> to add. Double-click a lane label to edit. <strong>Collapse</strong> lanes with the ▼ button. Create sub-swimlanes for grouping.</p></div>
-    <div style="margin-bottom:16px"><strong style="color:var(--acc)">9. Selection Tools</strong><p><strong>Ctrl+click</strong> for multi-select. <strong>Alt+drag</strong> or use <strong>Lasso Mode</strong> (toolbar) for area selection. <strong>Advanced Search</strong> with regex for complex queries.</p></div>
-    <div style="margin-bottom:16px"><strong style="color:var(--acc)">10. Export & Share</strong><p>Use 📷 for screenshots (full or viewport). Export as SVG, PNG, CSV, or JSON via ⬇. <strong>Fit to Content</strong> auto-zooms to show everything.</p></div>
+    <div style="margin-bottom:16px"><strong style="color:var(--acc)">8. Views</strong><p>Switch between <strong>Timeline</strong>, <strong>Data</strong> (spreadsheet with filters), and <strong>Split</strong> views. Use the <strong>Filter Bar</strong> to narrow items by name, owner, notes, or dates.</p></div>
+    <div style="margin-bottom:16px"><strong style="color:var(--acc)">9. Swimlanes</strong><p>Click <strong>+ Lane</strong> to add. <strong>Double-click</strong> a lane label to edit its name, color, and sub-swimlanes. <strong>Collapse</strong> lanes with the ▼ button (3-state: expanded → minimized → hidden). Drag the resize handle between lane labels and the timeline grid to adjust label column width.</p></div>
+    <div style="margin-bottom:16px"><strong style="color:var(--acc)">10. Selection Tools</strong><p><strong>Ctrl+click</strong> for multi-select. <strong>Alt+drag</strong> or use <strong>Lasso Mode</strong> (toolbar) for area selection. <strong>Ctrl+A</strong> selects all items. <strong>Advanced Search</strong> with regex for complex queries.</p></div>
+    <div style="margin-bottom:16px"><strong style="color:var(--acc)">11. Export & Share</strong><p>Use 📷 for screenshots (full or viewport). Export as SVG, PNG, CSV, or JSON from <strong>Settings → Export</strong>. <strong>Fit to Content</strong> auto-zooms to show everything. Enable the <strong>Watermark</strong> in Settings to add a "Last Updated" date stamp to your timeline — it appears on-screen and is included in all exports and screenshots. You can choose the position and optionally include the project owner.</p></div>
     <h3 style="color:var(--tx1);margin:16px 0 12px;font-size:14px">⌨ Keyboard Shortcuts</h3>
     <table style="width:100%;border-collapse:collapse;font-size:11px"><tbody>
     <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Z</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Undo</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Y</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Redo</td></tr>
     <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+S</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Save</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+N</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">New Project</td></tr>
     <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Delete</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Delete selected</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Escape</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Deselect / close</td></tr>
     <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">←→↑↓</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Nudge items</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+←→</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Nudge faster</td></tr>
-    <tr><td style="padding:3px 8px"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Click</kbd></td><td style="padding:3px">Multi-select</td><td style="padding:3px 8px"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Alt+Drag</kbd></td><td style="padding:3px">Lasso select</td></tr>
-    <tr><td style="padding:3px 8px"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Shift+P</kbd></td><td style="padding:3px">Propagate to Successors</td><td style="padding:3px 8px"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Shift+F / Alt+1</kbd></td><td style="padding:3px">Fit to Content</td></tr>
+    <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Click</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Multi-select</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Alt+Drag</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Lasso select</td></tr>
+    <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Lasso Mode</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Toggle in toolbar — drag to select area; hold <strong>Ctrl</strong> while in Lasso Mode to add to selection</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Scroll</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Zoom in/out (±5%)</td></tr>
+    <tr><td style="padding:3px 8px"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Shift+Scroll</kbd></td><td style="padding:3px">Fine zoom (±1%)</td><td style="padding:3px 8px"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)"></kbd></td><td style="padding:3px">Also works on the view zoom bar</td></tr>
+    <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Shift+P</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Propagate to Successors</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Shift+F / Alt+1</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Fit to Content</td></tr>
+    <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Shift+S</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Save As</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+A</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Select All</td></tr>
+    <tr><td style="padding:3px 8px"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Right-click</kbd></td><td style="padding:3px">Context menu</td><td style="padding:3px 8px"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Double-click</kbd></td><td style="padding:3px">Edit swimlane / project name</td></tr>
     </tbody></table>
     <h3 style="color:var(--tx1);margin:16px 0 12px;font-size:14px">💡 Tips</h3>
     <ul style="padding-left:18px;margin:0">
@@ -2513,6 +2533,19 @@ const App={
     <li>Use <strong>View → Show Float</strong> to see each item's scheduling flexibility (0d = critical path)</li>
     <li>The <strong>Filter Bar</strong> in Data View lets you filter by name, owner, notes, and dates</li>
     <li>Use <strong>Advanced Search</strong> (🔎) with regex for powerful item finding</li>
+    <li><strong>Right-click</strong> any item or the timeline background for quick actions — link dependencies, propagate, auto-arrange, change label position, and more</li>
+    <li><strong>Double-click</strong> a swimlane label to edit its name, color, and sub-swimlanes</li>
+    <li>In <strong>Data View</strong>, use the <strong>⇅ Invert Selection</strong> button (top-left, next to the select-all checkbox) to flip which items are selected</li>
+    <li><strong>Ctrl+Scroll</strong> on the timeline or the view zoom bar to zoom in/out (±5%). Add <strong>Shift</strong> for fine zoom (±1%)</li>
+    </ul>
+    <h3 style="color:var(--tx1);margin:16px 0 12px;font-size:14px">⚠ Notes / Troubleshooting</h3>
+    <ul style="padding-left:18px;margin:0">
+    <li><strong>Items not scheduling correctly?</strong> Check the item's <strong>Work Type</strong> (Calendar vs. Working Days) in the Properties Panel. Calendar counts every day; Working Days skips weekends and holidays. Make sure the type matches your intent.</li>
+    <li><strong>Dates landing on weekends or holidays?</strong> Open <strong>Settings → Scheduling</strong> and check the <strong>"Schedule Around Non-Working Days"</strong> toggle. When enabled, tasks auto-adjust to avoid weekends and configured holidays.</li>
+    <li><strong>Holidays not being respected?</strong> Each holiday has its own <strong>"Schedule Around"</strong> checkbox (Settings → Holidays). You can also toggle all holidays on/off collectively with the master switch. Make sure both the individual holiday and the global toggle are enabled.</li>
+    <li><strong>Can't move or nudge items?</strong> The <strong>Lock</strong> toggle (Tools menu) prevents all item movement. Check the toolbar — if Lock is active, click it to unlock.</li>
+    <li><strong>Missing items on the timeline?</strong> You may have <strong>Hide Mode</strong> enabled (eye icon in the toolbar). Hidden items are only visible when Hide Mode is off (shown at 30% opacity). Toggle Hide Mode to see everything.</li>
+    <li><strong>Quick selection tricks:</strong> In <strong>Data View</strong>, use the <strong>⇅</strong> button (top-left header) to <strong>Invert Selection</strong> — select a few items, then invert to operate on everything else.</li>
     </ul></div>`;
     this.$.help_body.innerHTML=h;this.showModal('help-modal')
   },

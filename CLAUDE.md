@@ -15,7 +15,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.19.1` — inline SVG favicon, dynamic tab title with project name, toast duration parameter. F6 kiosk mode investigated and reverted (browser security blocks URL bar hiding from `file://`)
+- **Current:** `v0.19.3` — help modal polish (B18): paste import in section 2, watermark in section 11, corrected lock/export/invert references, lasso + zoom shortcuts, Notes/Troubleshooting section. Pin badge on timeline items (B19). Data view checkbox centering and invert button styling (B20).
 - Version history tracked in `BACKLOG.md` under the Versioning table
 - Git repo initialized at project root; commit after each version cut
 
@@ -36,7 +36,7 @@ TimelineProject/
 ├── CLAUDE.md                       # This file — project context for AI assistants
 ├── BACKLOG.md                      # Prioritized bugs/features with version history
 ├── dependency-prd.md               # Dependency engine PRD (Phase 1 + Phase 2)
-└── v0.19.1/                        # Current version
+└── v0.19.3/                        # Current version
     ├── index.html                  # Complete DOM structure, modals, inline styles
     ├── app.js                      # All application logic (~2596 lines)
     ├── styles.css                  # Theming via CSS custom properties, layout
@@ -146,8 +146,8 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 ## Running Tests
 Tests are Node.js CLI scripts with no dependencies:
 ```bash
-node v0.19.1/test_comprehensive.js
-node v0.19.1/test_expanded.js
+node v0.19.3/test_comprehensive.js
+node v0.19.3/test_expanded.js
 ```
 Output is color-coded (green pass / red fail) with summary stats. Tests mock the engine functions from app.js internally. **Always run both test suites after making changes to `app.js`.**
 

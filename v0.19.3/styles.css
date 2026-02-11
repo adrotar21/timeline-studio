@@ -138,6 +138,8 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 #tl-body-scroll{flex:1;overflow:auto;position:relative;display:flex;flex-direction:column}
 #tl-body{position:relative;min-height:100%;flex:1}
 #tl-body.lasso-mode{cursor:crosshair}
+.tl-empty-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:var(--tx2,#5a6577);font-size:13px;line-height:1.8;pointer-events:none;opacity:.55;max-width:380px}
+.tl-empty-hint strong{color:var(--tx1,#1a1a1a);font-weight:600}
 .sl-lbl{display:flex;align-items:stretch;color:#fff;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.12);position:relative;user-select:none;box-sizing:border-box}
 .sl-lbl-main{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;padding:6px 4px;text-align:center;word-wrap:break-word;overflow-wrap:break-word;line-height:1.2;overflow:hidden}
 .sl-lbl-subs{display:flex;flex-direction:column;flex:1;min-width:0}
@@ -186,6 +188,7 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .tl-item.crit-path.selected::after{border:2px solid #fb8500;box-shadow:0 0 8px rgba(251,133,0,.5)}
 @keyframes pulse-border{0%,100%{opacity:1}50%{opacity:.4}}
 .tl-item.item-hidden{opacity:.3}
+.tl-pin-badge{position:absolute;top:-8px;right:-6px;font-size:9px;line-height:1;pointer-events:none;z-index:2;filter:drop-shadow(0 0 1px rgba(0,0,0,.3))}
 .tl-item.dragging{opacity:.7;z-index:100;cursor:grabbing}
 .tl-task-bar{height:22px;border-radius:4px;position:relative;overflow:visible;min-width:8px;opacity:.85}
 .tl-task-prog{position:absolute;top:0;left:0;height:100%;background:rgba(255,255,255,.3);border-radius:4px 0 0 4px}
@@ -232,11 +235,15 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .filter-label{font-size:10px;color:var(--tx3);font-weight:600;text-transform:uppercase}
 .filter-input{width:100px;padding:3px 6px;background:var(--bg2);color:var(--tx1);border:1px solid var(--brd);border-radius:3px;font-family:var(--font);font-size:10px}
 .filter-input:focus{border-color:var(--acc);outline:none}
+.filter-input.has-value{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 8%,var(--bg2))}
+.filter-count{font-size:8px;background:var(--acc);color:#fff;border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;margin-left:3px;font-weight:700;vertical-align:middle}
 .filter-date{width:115px}
 #data-table-wrap{flex:1;overflow:auto}
 #data-table{width:100%;border-collapse:collapse;table-layout:fixed}
 #data-table thead{position:sticky;top:0;z-index:10}
 #data-table th{background:var(--bg1);color:var(--tx2);font-size:10px;font-weight:600;padding:6px 4px;text-align:left;border-bottom:2px solid var(--brd);position:relative;cursor:pointer;user-select:none;white-space:nowrap;overflow:hidden}
+#data-table th[data-col="_cb"]{text-align:center;vertical-align:middle}
+#data-table th[data-col="_cb"] input[type="checkbox"]{vertical-align:middle}
 #data-table th:hover{color:var(--tx1)}
 .sort-arrow{font-size:9px;margin-left:1px;color:var(--acc)}
 .th-rs{position:absolute;right:0;top:0;bottom:0;width:6px;cursor:col-resize;background:transparent;z-index:5}
@@ -255,6 +262,8 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .dt-sel{width:100%;padding:1px 2px;background:transparent;color:var(--tx1);border:1px solid transparent;border-radius:2px;font-family:var(--font);font-size:10px}
 .dt-sel:focus{background:var(--bg2);border-color:var(--acc);outline:none}
 .dt-clr{width:22px;height:18px;border:1px solid var(--brd);border-radius:2px;padding:0;cursor:pointer}
+.dt-inv-btn{width:20px;height:20px;padding:0;border:1px solid var(--brd);border-radius:3px;background:var(--bg2);color:var(--tx2);cursor:pointer;font-size:12px;line-height:18px;text-align:center;vertical-align:middle;margin-left:2px;transition:all .1s}
+.dt-inv-btn:hover{background:var(--bg3);color:var(--tx1);border-color:var(--acc)}
 .dep-badge{font-size:10px;color:var(--tx3);cursor:default}.dep-badge.has{color:var(--acc);font-weight:600}
 
 /* DT Context Menu */
