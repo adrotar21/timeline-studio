@@ -1,4 +1,4 @@
-/* Timeline Studio v0.19.0 — Sub-Swimlane Collapse Polish, Export Label Wrapping & Overflow */
+/* Timeline Studio v0.19.1 — Favicon, Dynamic Tab Title, F6 Kiosk Revert */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -151,20 +151,22 @@ const App={
       this.$.ts_sel.value=this.proj.timescale;
       this.$.hl_sel.value=String(this.proj.headerLayers);
       this.$.project_name_text.textContent=this.proj.name||'Untitled';
+      this._docTitle(this._unsaved);
       this.updateStatus();
       if(this._pendingFit){this._pendingFit=false;if(this.view==='timeline'||this.view==='split')requestAnimationFrame(()=>this.fitToContent())}
     })}
   },
 
-  markDirty(){this._unsaved=true;this.$.unsaved_dot.classList.remove('hidden');document.title='● Timeline Studio'},
-  markClean(){this._unsaved=false;this.$.unsaved_dot.classList.add('hidden');document.title='Timeline Studio'},
+  _docTitle(dirty){const n=this.proj?.name||'Timeline Studio';document.title=(dirty?'● ':'')+n+' — Timeline Studio'},
+  markDirty(){this._unsaved=true;this.$.unsaved_dot.classList.remove('hidden');this._docTitle(true)},
+  markClean(){this._unsaved=false;this.$.unsaved_dot.classList.add('hidden');this._docTitle(false)},
   snap(){this.undoStack.push(U.deep(this.proj));if(this.undoStack.length>40)this.undoStack.shift();this.redoStack=[];this.markDirty()},
   undo(){if(!this.undoStack.length)return;this.redoStack.push(U.deep(this.proj));this.proj=this.undoStack.pop();this.migrate();this.sched();this.refreshPanel();this.toast('Undone')},
   redo(){if(!this.redoStack.length)return;this.undoStack.push(U.deep(this.proj));this.proj=this.redoStack.pop();this.migrate();this.sched();this.refreshPanel();this.toast('Redone')},
   refreshPanel(){if(this.editItem&&this.sel.length===1){const it=this.gi(this.sel[0]);if(it){this.editItem=it;this.renderPanel(it)}}else if(this.sel.length>1)this.renderBulkPanel()},
   autoSave:U.deb(function(){try{localStorage.setItem('tls3',JSON.stringify(App.proj))}catch(e){}},400),
   loadAuto(){try{const s=localStorage.getItem('tls3');if(s)this.proj=JSON.parse(s)}catch(e){}},
-  toast(m,t='success'){const el=document.createElement('div');el.className=`toast toast-${t}`;el.textContent=m;const active=document.querySelectorAll('.toast');const offset=active.length*40;el.style.bottom=(18+offset)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),2200)},
+  toast(m,t='success',dur=2200){const el=document.createElement('div');el.className=`toast toast-${t}`;el.textContent=m;const active=document.querySelectorAll('.toast');const offset=active.length*40;el.style.bottom=(18+offset)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),dur)},
 
   async saveFile(saveAs=false){
     const data=JSON.stringify(this.proj,null,2);

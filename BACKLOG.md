@@ -6,6 +6,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.19.1** | 2026-02-11 | Favicon (inline SVG data URI) and dynamic tab title (`ProjectName — Timeline Studio` with unsaved dot). Toast duration parameter. F6 kiosk mode investigated and blocked (browser security restrictions on `file://`). |
 | **0.19.0** | 2026-02-11 | Sub-swimlane collapse polish: parent resize fix (cumulative delta bug), thin 1px dividers, auto-minimize parent when all subs minimized, slimmer minimized subs (20px). Expand All includes sub-swimlanes. Vertical main swimlane text auto-scales font-size (min 8px) when height is short. Export vertical label wrapping via `<g>` rotation with `_wrapText()`. Export label overflow shows in both directions (two-pass rendering). |
 | **0.18.0** | 2026-02-11 | Toolbar center alignment (B8). Sub-swimlane resize handles (B9): per-sub `ss.height`, interactive dividers, `bindRH()` rewrite. Collapsible sub-swimlanes (F3): 2-state `ss.collapsed`, collapse buttons, fit/export exclusion. Major swimlane buttons moved to upper-left. |
 | **0.17.0** | 2026-02-11 | Swimlane collapse UX polish: `dominant-baseline="central"` export centering, dual expand/hide buttons, curved-tab hidden indicator. Fit-to-content excludes collapsed swimlane items. F14 archived. |
@@ -44,7 +45,7 @@
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
 | F4 | **Days scale option** | Add "Days" to the timescale options (currently: Weeks, Months, Quarters, Years). | L | :yellow_circle: P2 | Open |
-| F6 | **Modal/kiosk window mode** | Open the app in a browser window without the URL bar (e.g., `window.open` with toolbar/location disabled, or PWA manifest). | S | :blue_circle: P3 | Open |
+| F6 | **Modal/kiosk window mode** | Open the app in a browser window without the URL bar. **Blocked by browser limitations:** Chrome ignores `window.open` location flags (since ~2017), PWA install requires HTTPS (not `file://`), "Create shortcut → Open as window" is greyed out for local files. Only viable path: serve via localhost (e.g., `python -m http.server`) and use PWA manifest or Chrome shortcut. Revisit if the app moves to a hosted/server model. | S | :blue_circle: P3 | Blocked |
 | F7 | **Multi-project tabs** | Support opening multiple projects in separate tabs or an in-app tab bar, each with its own state. | XL | :blue_circle: P3 | Open |
 | F8 | **Comprehensive documentation (.md)** | Create full user documentation covering all features, workflows, keyboard shortcuts, and the dependency/scheduling system. | M | :orange_circle: P1 | Open |
 | F13 | **Keyboard shortcut discoverability** | Surface keyboard shortcuts and power-user actions in the UI for new users. Options include a cheatsheet panel, tooltip hints, or help modal section. | M | :yellow_circle: P2 | Open |
@@ -70,7 +71,7 @@ _All P0 items resolved in v0.14.0._
 - **F19** — Swimlane header font size (S)
 
 ### :blue_circle: P3 — Backlog for V2+
-- **F6** — Modal/kiosk window mode (S)
+- **F6** — Modal/kiosk window mode (S) — **Blocked**: requires HTTPS/localhost, not possible from `file://`
 - **F7** — Multi-project tabs (XL)
 
 ---
@@ -92,6 +93,7 @@ _All P0 items resolved in v0.14.0._
 
 | # | Title | Size | Version | Notes |
 |---|-------|------|---------|-------|
+| F20 | **Favicon & dynamic tab title** | XS | 0.19.1 | Inline SVG favicon (data URI, no extra file). Dynamic `document.title` shows `ProjectName — Timeline Studio` with `●` unsaved indicator. Updates on render, rename, load, save. Toast `dur` parameter added. |
 | B8 | **Toolbar center alignment** | XS | 0.18.0 | Absolute centering `.toolbar-center` with `position:absolute;left:50%;transform:translateX(-50%)` within `position:relative` toolbar. |
 | B9 | **Sub-swimlane resize handle** | M | 0.18.0 | Per-sub `ss.height` property (default 0 = content-derived). Interactive `.sub-rh` divider handles between subs. `bindRH()` rewrite: parent handle distributes to last sub when subs exist; sub handle sets `ss.height` directly. Migration adds `ss.height` to all existing subs. Export mirrors on-screen height logic. |
 | F3 | **Collapsible sub-swimlanes** | M | 0.18.0 | 2-state `ss.collapsed` (`'expanded'`/`'minimized'`). Collapse buttons (upper-right of each sub label cell). Minimized = 20px header-only with no items rendered. Fit-to-content and export exclude items in minimized subs via `collapsedSubIds` set. Export renders minimized subs with small label. `addItem()` auto-expands minimized target sub. Major swimlane collapse buttons moved to upper-left (all swimlanes). Auto-minimize parent when all subs minimized; auto-expand parent when expanding a sub. |
