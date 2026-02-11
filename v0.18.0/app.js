@@ -2191,8 +2191,12 @@ const App={
       if(hasSubs){
         /* Split label: left strip = main name (vertical), right strip = sub-swimlane labels */
         const mainW=60,subW=lw-mainW;
-        const availH=h-12;let mfs=11;const tw=this._mt(sl.name,11,'600');if(tw>availH&&availH>0){mfs=Math.max(8,Math.round(11*availH/tw))}
-        svg+=`<text x="${mainW/2}" y="${rowTop+h/2}" fill="#fff" font-size="${mfs}" font-weight="600" text-anchor="middle" dominant-baseline="central" transform="rotate(-90,${mainW/2},${rowTop+h/2})">${U.esc(sl.name)}</text>`;
+        /* Vertical main name — wrap text into lines that fit available height, then rotate the group */
+        const availH=h-12;const wrapLines=this._wrapText(sl.name,availH>0?availH:h,11,'600');const nLines=wrapLines.length||1;let mfs=11;if(nLines===1){const tw=this._mt(sl.name,11,'600');if(tw>availH&&availH>0)mfs=Math.max(8,Math.round(11*availH/tw))}
+        const lh=mfs*1.2;const totalTH=nLines*lh;const cx=mainW/2,cy=rowTop+h/2;
+        let vtxt=`<g transform="rotate(-90,${cx},${cy})"><text fill="#fff" font-size="${mfs}" font-weight="600" text-anchor="middle">`;
+        for(let li=0;li<nLines;li++){const ly=cy-totalTH/2+lh/2+li*lh;vtxt+=`<tspan x="${cx}" y="${ly}" dominant-baseline="central">${U.esc(wrapLines[li])}</tspan>`}
+        vtxt+=`</text></g>`;svg+=vtxt;
         svg+=`<line x1="${mainW}" y1="${clampT}" x2="${mainW}" y2="${clampT+clampH}" stroke="rgba(255,255,255,0.15)"/>`;
         let subY=0;for(let si=0;si<subs.length;si++){const sub=subs[si];
           if(si>0)svg+=`<line x1="${mainW}" y1="${rowTop+subY}" x2="${lw}" y2="${rowTop+subY}" stroke="rgba(255,255,255,0.15)"/>`;
