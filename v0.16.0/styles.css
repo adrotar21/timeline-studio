@@ -145,8 +145,13 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 /* Swimlane collapse toggle */
 .sl-collapse-btn{position:absolute;top:2px;right:2px;width:16px;height:16px;border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:2px;cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center;opacity:.6;transition:opacity .15s;z-index:2}
 .sl-collapse-btn:hover{opacity:1;background:rgba(255,255,255,.3)}
-.sl-hidden-indicator{cursor:pointer;opacity:.5;transition:opacity .15s;border-bottom:none!important}
-.sl-hidden-indicator:hover{opacity:1}
+.sl-lbl.collapsed .sl-btn-expand{right:20px}
+.sl-lbl.collapsed .sl-btn-hide{right:2px}
+.sl-lbl.collapsed .sl-collapse-btn{width:14px;height:14px;font-size:8px}
+.sl-hidden-indicator{cursor:pointer;transition:all .15s}
+.sl-lbl.sl-hidden-indicator{opacity:.6;border-radius:0 0 8px 8px;border-bottom:2px solid rgba(255,255,255,0.5)!important}
+.sl-lbl.sl-hidden-indicator:hover{opacity:1}
+.sw-row.sl-hidden-indicator{background:transparent!important;border-bottom:2px solid rgba(0,0,0,0.06)!important}
 .sl-lbl.collapsed{height:28px!important}
 .sl-lbl.collapsed .sl-lbl-main{font-size:10px;opacity:.7}
 .sl-lbl.collapsed .sl-lbl-subs{display:none}
