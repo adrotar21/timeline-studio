@@ -32,7 +32,7 @@ const THEMES={
   midnight:{bg:'#111827',hdr:'#0a0e17',cls:'theme-midnight',tlTx:'#e5e7eb',tlTx2:'#9ca3af'},
 };
 
-function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:true,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:false}],items:[]}}
+function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:true,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
 const App={
   proj:newProj(),sel:[],undoStack:[],redoStack:[],
@@ -97,7 +97,7 @@ const App={
     if(p.tttEnabled==null)p.tttEnabled=false;if(p.tttMilestoneId==null)p.tttMilestoneId='';
     if(p.showFloat==null)p.showFloat=false;if(p.schedulingMode==null)p.schedulingMode='manual';
     if(p.labelWidth==null)p.labelWidth=160;
-    p.swimlanes.forEach(sl=>{if(!sl.subSwimlanes)sl.subSwimlanes=[];if(!sl.height)sl.height=120;if(sl.collapsed==null)sl.collapsed=false});
+    p.swimlanes.forEach(sl=>{if(!sl.subSwimlanes)sl.subSwimlanes=[];if(!sl.height)sl.height=120;if(sl.collapsed===true)sl.collapsed='minimized';else if(!sl.collapsed||sl.collapsed===false)sl.collapsed='expanded'});
     p.items.forEach(it=>{
       if(!it.deps&&it.dependencies){it.deps=it.dependencies;delete it.dependencies}
       if(!it.deps)it.deps=[];
@@ -196,7 +196,7 @@ const App={
     document.getElementById('new-proj-modal').classList.add('hidden');this.toast('Created!')
   },
   tplProductLaunch(){const p=newProj();p.name='Product Launch';const y=new Date().getFullYear();
-    const sl1={id:U.id(),name:'Planning',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:false},sl2={id:U.id(),name:'Development',color:'#1B7F6A',height:120,subSwimlanes:[],collapsed:false},sl3={id:U.id(),name:'Launch',color:'#C0392B',height:120,subSwimlanes:[],collapsed:false};
+    const sl1={id:U.id(),name:'Planning',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'},sl2={id:U.id(),name:'Development',color:'#1B7F6A',height:120,subSwimlanes:[],collapsed:'expanded'},sl3={id:U.id(),name:'Launch',color:'#C0392B',height:120,subSwimlanes:[],collapsed:'expanded'};
     p.swimlanes=[sl1,sl2,sl3];
     const items=[
       {name:'Kickoff',type:'milestone',swimlaneId:sl1.id,date:`${y}-01-15`,iconType:'flag',color:'#2C5F7C',subRow:0},
@@ -211,7 +211,7 @@ const App={
     ];items.forEach(i=>{const it={...{id:U.id(),subSwimId:'',labelPosition:'right',showDate:true,showDuration:false,showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:''},...i};if(it.type==='task')it.duration=U.days(it.startDate,it.endDate)+1;p.items.push(it)});
     p.autoRange=true;return p},
   tplSoftwareDev(){const p=newProj();p.name='Software Development';const y=new Date().getFullYear();
-    const sl1={id:U.id(),name:'Requirements',color:'#264653',height:100,subSwimlanes:[],collapsed:false},sl2={id:U.id(),name:'Engineering',color:'#2E86AB',height:140,subSwimlanes:[],collapsed:false},sl3={id:U.id(),name:'QA & Release',color:'#E76F51',height:120,subSwimlanes:[],collapsed:false};
+    const sl1={id:U.id(),name:'Requirements',color:'#264653',height:100,subSwimlanes:[],collapsed:'expanded'},sl2={id:U.id(),name:'Engineering',color:'#2E86AB',height:140,subSwimlanes:[],collapsed:'expanded'},sl3={id:U.id(),name:'QA & Release',color:'#E76F51',height:120,subSwimlanes:[],collapsed:'expanded'};
     p.swimlanes=[sl1,sl2,sl3];
     const items=[
       {name:'PRD Approved',type:'milestone',swimlaneId:sl1.id,date:`${y}-01-10`,iconType:'diamond',color:'#264653',subRow:0},
@@ -722,6 +722,8 @@ const App={
     on('btn-show-float',()=>{this.$.view_dropdown.classList.add('hidden');this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')});
     on('btn-zoom100',()=>{this.proj.zoom=100;this.sched()});
     on('btn-fit',()=>this.fitToContent());
+    on('btn-expand-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='expanded');this.sched();this.autoSave();this.toast('All swimlanes expanded')});
+    on('btn-collapse-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')});
     on('btn-zi',()=>this.doZoom(10));on('btn-zo',()=>this.doZoom(-10));
     this.$.zoom_lbl.addEventListener('wheel',e=>{e.preventDefault();this.doZoom(e.deltaY<0?5:-5)},{passive:false});
     /* Ctrl+Scroll zoom on timeline body: Ctrl=±5%, Ctrl+Shift=±1% */
@@ -837,7 +839,7 @@ const App={
     this.$.tl_body.addEventListener('dblclick',e=>{const iEl=e.target.closest('.tl-item');if(iEl){const it=this.gi(iEl.dataset.iid);if(it)this.openPanel(it)}});
     this.$.tl_sl_labels.addEventListener('dblclick',e=>{const lbl=e.target.closest('.sl-lbl');if(lbl){const sl=this.gs(lbl.dataset.slId);if(sl)this.showSwM(sl)}});
     // Collapse buttons
-    this.$.tl_sl_labels.addEventListener('click',e=>{const btn=e.target.closest('.sl-collapse-btn');if(btn){e.stopPropagation();const slId=btn.dataset.slId;const sl=this.gs(slId);if(sl){sl.collapsed=!sl.collapsed;this.sched()}}});
+    this.$.tl_sl_labels.addEventListener('click',e=>{const btn=e.target.closest('.sl-collapse-btn');if(btn){e.stopPropagation();const slId=btn.dataset.slId;const sl=this.gs(slId);if(sl){this.snap();sl.collapsed=sl.collapsed==='expanded'?'minimized':sl.collapsed==='minimized'?'collapsed':'expanded';this.sched();this.autoSave()}}});
     // Column resize handle
     const colRH=this.$.sl_col_rh;
     if(colRH){colRH.addEventListener('mousedown',e=>{
@@ -909,7 +911,7 @@ const App={
   /* Render wrapped SVG text as <text> with <tspan> elements, vertically centered in a box. */
   _svgText(text,x,y,maxW,boxH,fontSize,fontWeight,attrs){
     const lines=this._wrapText(text,maxW-8,fontSize,fontWeight);if(!lines.length)return'';
-    const lh=fontSize*1.3;const totalH=lines.length*lh;const startY=y+boxH/2-(totalH/2)+fontSize*0.35;
+    const lh=fontSize*1.2;const totalH=lines.length*lh;const startY=y+boxH/2-(totalH/2)+fontSize*0.38;
     let s=`<text x="${x}" fill="#fff" font-size="${fontSize}" font-weight="${fontWeight}" text-anchor="middle"${attrs?' '+attrs:''}>`;
     for(let i=0;i<lines.length;i++)s+=`<tspan x="${x}" y="${startY+i*lh}">${U.esc(lines[i])}</tspan>`;
     return s+'</text>';
@@ -1048,13 +1050,13 @@ const App={
   addItem(type,atDate,atSlId,atSubSwId,atSubRow){
     this.snap();
     let sl=atSlId?this.gs(atSlId):this.getTargetSl();
-    // If swimlane is collapsed, find next available non-collapsed swimlane
-    if(sl&&sl.collapsed){
+    // If swimlane is collapsed/hidden, find next available expanded swimlane
+    if(sl&&sl.collapsed!=='expanded'){
       const idx=this.proj.swimlanes.indexOf(sl);
       let found=null;
       // Search down first, then up
-      for(let i=idx+1;i<this.proj.swimlanes.length;i++){if(!this.proj.swimlanes[i].collapsed){found=this.proj.swimlanes[i];break}}
-      if(!found){for(let i=idx-1;i>=0;i--){if(!this.proj.swimlanes[i].collapsed){found=this.proj.swimlanes[i];break}}}
+      for(let i=idx+1;i<this.proj.swimlanes.length;i++){if(this.proj.swimlanes[i].collapsed==='expanded'){found=this.proj.swimlanes[i];break}}
+      if(!found){for(let i=idx-1;i>=0;i--){if(this.proj.swimlanes[i].collapsed==='expanded'){found=this.proj.swimlanes[i];break}}}
       if(found){sl=found;atSubSwId='';atSubRow=0}else{this.toast('All swimlanes are collapsed','error');return}
     }
     if(!sl){this.toast('Add swimlane first','error');return}
@@ -1082,7 +1084,7 @@ const App={
       if(e.clientY>=rect.top&&e.clientY<=rect.bottom){
         clickSl=r.dataset.slId;
         const sl=this.gs(clickSl);
-        if(sl&&!sl.collapsed){
+        if(sl&&sl.collapsed==='expanded'){
           const yInSw=e.clientY-rect.top;
           const rH=38;
           const subs=sl.subSwimlanes||[];
@@ -1197,7 +1199,7 @@ const App={
     this.snap();const name=this.$.sw_name.value.trim()||'Untitled';const color=this.$.sw_color.value;
     const subs=this._tmpSubs.filter(s=>s.name.trim()).map(s=>({id:s.id,name:s.name.trim()}));
     if(this._esl){this._esl.name=name;this._esl.color=color;this._esl.subSwimlanes=subs}
-    else this.proj.swimlanes.push({id:U.id(),name,color,height:120,subSwimlanes:subs,collapsed:false});
+    else this.proj.swimlanes.push({id:U.id(),name,color,height:120,subSwimlanes:subs,collapsed:'expanded'});
     document.getElementById('sw-modal').classList.add('hidden');this.sched();this.autoSave()
   },
   delSwM(){if(!this._esl||!confirm(`Delete "${this._esl.name}"?`))return;this.snap();const sid=this._esl.id;this.proj.items=this.proj.items.filter(i=>i.swimlaneId!==sid);this.proj.swimlanes=this.proj.swimlanes.filter(s=>s.id!==sid);document.getElementById('sw-modal').classList.add('hidden');this.sched();this.autoSave()},
@@ -1673,7 +1675,9 @@ const App={
     for(const sl of p.swimlanes){
       const slItems=p.items.filter(i=>i.swimlaneId===sl.id);
       const hasSubs=sl.subSwimlanes?.length>0;const subMeta=[];
-      const isCollapsed=!!sl.collapsed;
+      const isMinimized=sl.collapsed==='minimized';
+      const isHidden=sl.collapsed==='collapsed';
+      const isCollapsed=isMinimized||isHidden;
       if(hasSubs&&!isCollapsed){
         const groups=new Map();for(const ss of sl.subSwimlanes)groups.set(ss.id,[]);
         const unassigned=slItems.filter(i=>!i.subSwimId||!groups.has(i.subSwimId));
@@ -1681,16 +1685,19 @@ const App={
         for(const it of slItems)if(it.subSwimId&&groups.has(it.subSwimId)&&!unassigned.includes(it))groups.get(it.subSwimId).push(it);
         for(const[ssId,items]of groups){const vis=items.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId,h:Math.max(50,(mr+1)*rH+10),items})}
       }else if(!isCollapsed){const vis=slItems.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId:'',h:Math.max(sl.height||120,(mr+1)*rH+10),items:slItems})}
-      const totalH=isCollapsed?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
+      const totalH=isHidden?0:isMinimized?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
       slYMap.set(sl.id,{y:slYAccum,h:totalH});
 
-      labelsH+=`<div class="sl-lbl${isCollapsed?' collapsed':''}" data-sl-id="${sl.id}" style="background:${sl.color};height:${totalH}px">`;
-      labelsH+=`<button class="sl-collapse-btn" data-sl-id="${sl.id}" title="${isCollapsed?'Expand':'Collapse'}">${isCollapsed?'▶':'▼'}</button>`;
+      if(!isHidden){
+      labelsH+=`<div class="sl-lbl${isMinimized?' collapsed':''}" data-sl-id="${sl.id}" style="background:${sl.color};height:${totalH}px">`;
+      labelsH+=`<button class="sl-collapse-btn" data-sl-id="${sl.id}" title="${isMinimized?'Expand':'Minimize'}">${isMinimized?'▶':'▼'}</button>`;
       if(!isCollapsed&&hasSubs){const mainW=Math.min(60,(p.labelWidth||160)/2);labelsH+=`<div class="sl-lbl-main" style="width:${mainW}px;min-width:${mainW}px;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg)">${U.esc(sl.name)}</div><div class="sl-lbl-subs">`;for(const{ssId,h}of subMeta){const ss=sl.subSwimlanes.find(s=>s.id===ssId);labelsH+=`<div class="sl-sub-lbl" style="height:${h}px">${ss?U.esc(ss.name):''}</div>`}labelsH+=`</div>`}
       else labelsH+=`<div class="sl-lbl-main" style="flex:1">${U.esc(sl.name)}</div>`;
       labelsH+=`</div>`;
+      }
 
-      bodyH+=`<div class="sw-row${isCollapsed?' collapsed':''}" data-sl-id="${sl.id}" style="height:${totalH}px">`;
+      if(!isHidden){
+      bodyH+=`<div class="sw-row${isMinimized?' collapsed':''}" data-sl-id="${sl.id}" style="height:${totalH}px">`;
       for(let ci=0;ci<tl.cols.length;ci++)bodyH+=`<div class="grid-col" style="left:${ci*tl.cw}px;width:${tl.cw}px"></div>`;
       if(!isCollapsed){
         let yOff=0;
@@ -1707,6 +1714,7 @@ const App={
         }
       }
       bodyH+=`<div class="sl-rh" data-sl-id="${sl.id}"></div></div>`;
+      }
       slYAccum+=totalH
     }
     // Time-to-Target labels
@@ -1801,7 +1809,7 @@ const App={
     this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this.$.tl_body.style.width=tl.tw+'px';
 
     // Bind collapse buttons
-    this.$.tl_sl_labels.querySelectorAll('.sl-collapse-btn').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();const sl=this.gs(btn.dataset.slId);if(sl){sl.collapsed=!sl.collapsed;this.sched();this.autoSave()}}});
+    this.$.tl_sl_labels.querySelectorAll('.sl-collapse-btn').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();const sl=this.gs(btn.dataset.slId);if(sl){this.snap();sl.collapsed=sl.collapsed==='expanded'?'minimized':sl.collapsed==='minimized'?'collapsed':'expanded';this.sched();this.autoSave()}}});
 
     if(p.watermark){const wm=this.$.tl_watermark;wm.classList.remove('hidden');let wmText='Last Updated: '+U.fmt(p.wmDate||U.iso(new Date()),p.dateFormat);if(p.wmShowOwner&&p.owner)wmText+=' | '+p.owner;wm.textContent=wmText;const pos=p.wmPos||'bottom-center';const lw=p.labelWidth||160;
       /* Absolute positioning within tl-body-wrap — matches export SVG layout */
@@ -1811,7 +1819,14 @@ const App={
       else if(pos.includes('right')){css+='right:8px;left:auto;transform:none;'}
       else{css+=`left:calc(${lw}px + (100% - ${lw}px)/2);transform:translateX(-50%);right:auto;`}
       wm.style.cssText=css}else this.$.tl_watermark.classList.add('hidden');
-    this.bindRH();if(p.showDeps)requestAnimationFrame(()=>this.rDeps(tl))
+    this.bindRH();if(p.showDeps)requestAnimationFrame(()=>this.rDeps(tl));
+    /* Update expand/collapse all button states */
+    const allExpanded=p.swimlanes.every(sl=>sl.collapsed==='expanded');
+    const allCollapsed=p.swimlanes.every(sl=>sl.collapsed==='collapsed');
+    const btnExp=document.getElementById('btn-expand-all');
+    const btnCol=document.getElementById('btn-collapse-all');
+    if(btnExp){btnExp.disabled=allExpanded;btnExp.style.opacity=allExpanded?'.4':'1'}
+    if(btnCol){btnCol.disabled=allCollapsed;btnCol.style.opacity=allCollapsed?'.4':'1'}
   },
 
   rI(it,tl,rH,yOff,violatedIds,th,critIds){
@@ -1933,15 +1948,16 @@ const App={
     const sm=[];for(const sl of p.swimlanes){
       const slItems=p.items.filter(i=>i.swimlaneId===sl.id);
       const visItems=slItems.filter(i=>!(p.hideMode&&i.hidden));
-      const isCollapsed=!!sl.collapsed;const hasSubs=sl.subSwimlanes?.length>0;
+      const isMinimized=sl.collapsed==='minimized';const isHidden=sl.collapsed==='collapsed';
+      const isCollapsed=isMinimized||isHidden;const hasSubs=sl.subSwimlanes?.length>0;
       const subMeta=[];
       if(!isCollapsed&&hasSubs){
         const groups=new Map();for(const ss of sl.subSwimlanes)groups.set(ss.id,[]);
         for(const it of visItems){if(it.subSwimId&&groups.has(it.subSwimId))groups.get(it.subSwimId).push(it);else{const fid=sl.subSwimlanes[0]?.id;if(fid)(groups.get(fid)||[]).push(it)}}
         for(const[ssId,items]of groups){const mr=items.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId,h:Math.max(50,(mr+1)*rH+10),items:slItems.filter(i=>i.subSwimId===ssId||(!i.subSwimId&&ssId===sl.subSwimlanes[0]?.id))})}
       }else if(!isCollapsed){const mr=visItems.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId:'',h:Math.max(sl.height||120,(mr+1)*rH+10),items:slItems})}
-      const h=isCollapsed?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
-      sm.push({sl,items:isCollapsed?[]:slItems,h,subMeta,collapsed:isCollapsed})
+      const h=isHidden?0:isMinimized?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
+      sm.push({sl,items:isCollapsed?[]:slItems,h,subMeta,collapsed:isCollapsed,hidden:isHidden})
     }
     const totalBodyH=sm.reduce((s,m)=>s+m.h,0);
     const lw=this.proj.labelWidth||160;
@@ -2003,10 +2019,13 @@ const App={
         }
       }
     }
+    /* Grid column lines — vertical dividers matching on-screen .grid-col border-right */
+    for(let ci=1;ci<tl.cols.length;ci++){const x=ci*tl.cw-vpX+lw;if(x>lw&&x<W)svg+=`<line x1="${x}" y1="${totalHdrH}" x2="${x}" y2="${totalHdrH+vpH}" stroke="#e8ecf0" stroke-width="1"/>`}
     /* Draw body content (items) */
     let yO=0;const svgItemYMap=new Map();const svgItemXMap=new Map();/* {id: {left,right,midY}} for dep arrows */
     const svgVLines=[];/* vertical line data for export */
-    for(const{sl,items,h,subMeta,collapsed}of sm){
+    for(const{sl,items,h,subMeta,collapsed,hidden}of sm){
+      if(hidden){yO+=h;continue}
       const slYStart=yO;
       const rowTop=yO-vpY+totalHdrH,rowBot=rowTop+h;
       if(viewportOnly&&(rowBot<totalHdrH||rowTop>H)){yO+=h;continue}
@@ -2151,14 +2170,14 @@ const App={
       }
     }
     /* Swimlane labels ON TOP to mask overflow text */
-    yO=0;for(const{sl,h,subMeta:subs,collapsed}of sm){const rowTop=yO-vpY+totalHdrH;if(!(viewportOnly&&(rowTop+h<totalHdrH||rowTop>H))){
+    yO=0;for(const{sl,h,subMeta:subs,collapsed,hidden}of sm){if(hidden){yO+=h;continue}const rowTop=yO-vpY+totalHdrH;if(!(viewportOnly&&(rowTop+h<totalHdrH||rowTop>H))){
       const clampT=Math.max(totalHdrH,rowTop),clampH=Math.min(h,rowTop+h-clampT);
       svg+=`<rect x="0" y="${clampT}" width="${lw}" height="${clampH}" fill="${sl.color}"/>`;
       const hasSubs=!collapsed&&sl.subSwimlanes?.length>0&&subs.length>1;
       if(hasSubs){
         /* Split label: left strip = main name (vertical), right strip = sub-swimlane labels */
         const mainW=60,subW=lw-mainW;
-        svg+=`<text x="${mainW/2}" y="${rowTop+h/2}" fill="#fff" font-size="11" font-weight="600" text-anchor="middle" transform="rotate(-90,${mainW/2},${rowTop+h/2})">${U.esc(sl.name)}</text>`;
+        svg+=`<text x="${mainW/2}" y="${rowTop+h/2+4}" fill="#fff" font-size="11" font-weight="600" text-anchor="middle" transform="rotate(-90,${mainW/2},${rowTop+h/2+4})">${U.esc(sl.name)}</text>`;
         svg+=`<line x1="${mainW}" y1="${clampT}" x2="${mainW}" y2="${clampT+clampH}" stroke="rgba(255,255,255,0.15)"/>`;
         let subY=0;for(let si=0;si<subs.length;si++){const sub=subs[si];
           if(si>0)svg+=`<line x1="${mainW}" y1="${rowTop+subY}" x2="${lw}" y2="${rowTop+subY}" stroke="rgba(255,255,255,0.15)"/>`;

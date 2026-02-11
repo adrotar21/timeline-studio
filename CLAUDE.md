@@ -15,7 +15,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.16.0` — resizable swimlane header column (F16), fit-to-content hotkey (F12)
+- **Current:** `v0.16.1` — export label centering fix (B6), export grid column lines (B7), dual-mode swimlane collapse (F15)
 - Version history tracked in `BACKLOG.md` under the Versioning table
 - Git repo initialized at project root; commit after each version cut
 
