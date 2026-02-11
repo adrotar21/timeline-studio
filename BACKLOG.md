@@ -51,6 +51,8 @@
 | F6 | **Modal/kiosk window mode** | Open the app in a browser window without the URL bar (e.g., `window.open` with toolbar/location disabled, or PWA manifest). | S | P3 | Open |
 | F7 | **Multi-project tabs** | Support opening multiple projects in separate tabs or an in-app tab bar, each with its own state. | XL | P3 | Open |
 | F8 | **Comprehensive documentation (.md)** | Create full user documentation covering all features, workflows, keyboard shortcuts, and the dependency/scheduling system. | M | P1 | Open |
+| F12 | **Fit-to-content hotkey** | Add a keyboard shortcut for fit-to-content (preferred: Alt+1 if not browser-reserved). Should trigger the existing `fitToContent()` method. | XS | P2 | Open |
+| F13 | **Keyboard shortcut discoverability** | Surface keyboard shortcuts and power-user actions (Alt+lasso, Ctrl+Scroll zoom, Ctrl+Shift+Scroll fine zoom, etc.) in the UI for new users. Needs design discussion — options include a shortcut cheatsheet panel, tooltip hints, a help modal section, or subtle on-canvas labels. | M | P2 | Open |
 
 ---
 
@@ -65,6 +67,8 @@ _All P0 items resolved in v0.14.0._
 ### P2 — Nice to Have for V1
 - **F3** — Collapsible sub-swimlanes (M)
 - **F4** — Days scale option (L)
+- **F12** — Fit-to-content hotkey (XS)
+- **F13** — Keyboard shortcut discoverability (M)
 
 ### P3 — Backlog for V2+
 - **F6** — Modal/kiosk window mode (S)
