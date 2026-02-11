@@ -6,6 +6,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.15.1** | 2026-02-10 | Export structural lines: header cell borders, header-to-body separator, label column edge, strengthened swimlane dividers. |
 | **0.15.0** | 2026-02-10 | Settings navigation sidebar (F11): TOC with scroll-spy, click-to-jump, section reordering for logical grouping. Export sub-swimlane visuals (B5): divider lines and split label column with vertical main name + sub-labels. Modal widened to 660px. |
 | **0.14.1** | 2026-02-10 | Watermark positioning fix (all 6 positions, on-screen + export). Ctrl+Scroll zoom (±5%/±1%). Auto fit-to-content on project open. Also fixed: importHolidays undo ordering, export milestone textColor, weekend opacity fallback, debug console.log cleanup. 76 new watermark tests. |
 | **0.14.0** | 2026-02-10 | Export/screenshot overhaul: fixed label alignment, added all missing visual elements (weekends, holidays, today marker, dependency arrows, vertical lines, float/TTT labels, progress bars, edge dates). Canvas-based text measurement for accurate fit-to-content. DPI scaling for crisp PNG/screenshot output. Folder renamed from v13.5. |

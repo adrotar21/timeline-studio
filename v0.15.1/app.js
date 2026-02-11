@@ -1980,7 +1980,7 @@ const App={
       const slYStart=yO;
       const rowTop=yO-vpY+totalHdrH,rowBot=rowTop+h;
       if(viewportOnly&&(rowBot<totalHdrH||rowTop>H)){yO+=h;continue}
-      svg+=`<line x1="${lw}" y1="${rowTop+h}" x2="${W}" y2="${rowTop+h}" stroke="#e8ecf0"/>`;
+      svg+=`<line x1="${lw}" y1="${rowTop+h}" x2="${W}" y2="${rowTop+h}" stroke="#d0d5dc" stroke-width="1"/>`;
       if(!collapsed){
         let subYOff=0;
         for(const sub of subMeta){
@@ -2141,9 +2141,12 @@ const App={
     /* Header rows */
     let hdrY=0;
     hR.forEach(row=>{let hx=lw;svg+=`<rect x="${lw}" y="${hdrY}" width="${vpW}" height="${rowHH}" fill="${th.hdr}"/>`;
-      row.forEach(cell=>{const cw=cell.width!=null?cell.width:cell.span*tl.cw,cx=hx-vpX;if(cx+cw>lw&&cx<lw+vpW)svg+=`<text x="${cx+cw/2}" y="${hdrY+rowHH/2+4}" fill="#fff" font-size="10.5" font-weight="600" text-anchor="middle">${cell.label}</text>`;hx+=cw});hdrY+=rowHH});
+      row.forEach(cell=>{const cw=cell.width!=null?cell.width:cell.span*tl.cw,cx=hx-vpX;if(cx+cw>lw&&cx<lw+vpW){svg+=`<text x="${cx+cw/2}" y="${hdrY+rowHH/2+4}" fill="#fff" font-size="10.5" font-weight="600" text-anchor="middle">${cell.label}</text>`;svg+=`<line x1="${cx+cw}" y1="${hdrY}" x2="${cx+cw}" y2="${hdrY+rowHH}" stroke="rgba(255,255,255,0.1)"/>`}hx+=cw});
+      svg+=`<line x1="${lw}" y1="${hdrY+rowHH}" x2="${lw+vpW}" y2="${hdrY+rowHH}" stroke="rgba(255,255,255,0.1)"/>`;hdrY+=rowHH});
     svg+=`<rect x="0" y="0" width="${lw}" height="${totalHdrH}" fill="${th.hdr}"/>`;
     svg+=`<text x="${lw/2}" y="${totalHdrH/2+4}" fill="#fff" font-size="9" font-weight="600" text-anchor="middle">${U.esc(p.name)}</text>`;
+    svg+=`<line x1="0" y1="${totalHdrH}" x2="${W}" y2="${totalHdrH}" stroke="rgba(0,0,0,0.15)"/>`;
+    svg+=`<line x1="${lw}" y1="${totalHdrH}" x2="${lw}" y2="${totalHdrH+vpH}" stroke="rgba(0,0,0,0.10)"/>`;
     /* Watermark */
     if(p.watermark){let wmText='Last Updated: '+U.fmt(p.wmDate||U.iso(new Date()),p.dateFormat);if(p.wmShowOwner&&p.owner)wmText+=' | '+p.owner;
       const pos=p.wmPos||'bottom-center';let wx,anc;
