@@ -17,8 +17,9 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .tooltip.visible{opacity:1}
 
 /* Toolbar */
-#toolbar{display:flex;align-items:center;justify-content:space-between;height:42px;padding:0 10px;background:var(--bg1);border-bottom:1px solid var(--brd);z-index:100;flex-shrink:0}
-.toolbar-left,.toolbar-center,.toolbar-right{display:flex;align-items:center;gap:3px}
+#toolbar{display:flex;align-items:center;justify-content:space-between;height:42px;padding:0 10px;background:var(--bg1);border-bottom:1px solid var(--brd);z-index:100;flex-shrink:0;position:relative}
+.toolbar-left,.toolbar-right{display:flex;align-items:center;gap:3px}
+.toolbar-center{display:flex;align-items:center;gap:6px;position:absolute;left:50%;transform:translateX(-50%)}
 .app-brand{color:var(--acc);margin-right:4px;display:flex;align-items:center}
 .project-name-display{cursor:pointer;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;color:var(--tx1);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:background .12s}
 .project-name-display:hover{background:var(--bg2)}
@@ -140,13 +141,17 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .sl-lbl{display:flex;align-items:stretch;color:#fff;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.12);position:relative;user-select:none;box-sizing:border-box}
 .sl-lbl-main{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;padding:6px 4px;text-align:center;word-wrap:break-word;overflow-wrap:break-word;line-height:1.2}
 .sl-lbl-subs{display:flex;flex-direction:column;flex:1;min-width:0}
-.sl-sub-lbl{display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:500;opacity:.85;padding:3px 4px;border-top:1px solid rgba(255,255,255,.15);text-align:center}
+.sl-sub-lbl{display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:500;opacity:.85;padding:3px 4px;border-top:1px solid rgba(255,255,255,.15);text-align:center;position:relative}
+.ss-collapse-btn{position:absolute;top:2px;right:2px;width:14px;height:14px;border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:2px;cursor:pointer;font-size:8px;display:flex;align-items:center;justify-content:center;opacity:.5;transition:opacity .15s;z-index:2}
+.ss-collapse-btn:hover{opacity:1;background:rgba(255,255,255,.3)}
+.sl-sub-lbl.ss-minimized{opacity:.7}
+.sl-sub-lbl.ss-minimized .ss-name{font-size:8px}
 .sl-sub-lbl:first-child{border-top:none}
 /* Swimlane collapse toggle */
-.sl-collapse-btn{position:absolute;top:2px;right:2px;width:16px;height:16px;border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:2px;cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center;opacity:.6;transition:opacity .15s;z-index:2}
+.sl-collapse-btn{position:absolute;top:2px;left:2px;width:16px;height:16px;border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:2px;cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center;opacity:.6;transition:opacity .15s;z-index:2}
 .sl-collapse-btn:hover{opacity:1;background:rgba(255,255,255,.3)}
-.sl-lbl.collapsed .sl-btn-expand{right:20px}
-.sl-lbl.collapsed .sl-btn-hide{right:2px}
+.sl-lbl.collapsed .sl-btn-expand{left:2px}
+.sl-lbl.collapsed .sl-btn-hide{left:20px}
 .sl-lbl.collapsed .sl-collapse-btn{width:14px;height:14px;font-size:8px}
 .sl-hidden-indicator{cursor:pointer;transition:all .15s}
 .sl-lbl.sl-hidden-indicator{opacity:.6;border-radius:0 0 8px 8px;border-bottom:2px solid rgba(255,255,255,0.5)!important}
@@ -157,7 +162,8 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .sl-lbl.collapsed .sl-lbl-subs{display:none}
 .sw-row{position:relative;border-bottom:1px solid #e8ecf0;box-sizing:border-box}
 .sw-row.collapsed{height:28px!important;overflow:hidden}
-.sub-sw-div{position:absolute;left:0;right:0;height:1px;background:rgba(0,0,0,.08);pointer-events:none;z-index:2}
+.sub-sw-div{position:absolute;left:0;right:0;height:6px;background:rgba(0,0,0,.08);z-index:5;cursor:row-resize}
+.sub-sw-div:hover{background:rgba(59,130,246,.3)}
 .grid-col{position:absolute;top:0;bottom:0;border-right:1px solid #f0f2f5}
 .sl-rh{position:absolute;bottom:0;left:0;right:0;height:6px;cursor:row-resize;z-index:5}
 .sl-rh:hover{background:rgba(59,130,246,.3)}

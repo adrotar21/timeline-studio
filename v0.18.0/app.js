@@ -1,4 +1,4 @@
-/* Timeline Studio v0.17.0 — Swimlane Collapse UX, Fit Exclusion, Export Polish */
+/* Timeline Studio v0.18.0 — Toolbar Fix, Sub-Swimlane Resize, Collapsible Sub-Swimlanes */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -97,7 +97,7 @@ const App={
     if(p.tttEnabled==null)p.tttEnabled=false;if(p.tttMilestoneId==null)p.tttMilestoneId='';
     if(p.showFloat==null)p.showFloat=false;if(p.schedulingMode==null)p.schedulingMode='manual';
     if(p.labelWidth==null)p.labelWidth=160;
-    p.swimlanes.forEach(sl=>{if(!sl.subSwimlanes)sl.subSwimlanes=[];if(!sl.height)sl.height=120;if(sl.collapsed===true)sl.collapsed='minimized';else if(!sl.collapsed||sl.collapsed===false)sl.collapsed='expanded'});
+    p.swimlanes.forEach(sl=>{if(!sl.subSwimlanes)sl.subSwimlanes=[];if(!sl.height)sl.height=120;if(sl.collapsed===true)sl.collapsed='minimized';else if(!sl.collapsed||sl.collapsed===false)sl.collapsed='expanded';sl.subSwimlanes.forEach(ss=>{if(ss.height==null)ss.height=0;if(!ss.collapsed)ss.collapsed='expanded'})});
     p.items.forEach(it=>{
       if(!it.deps&&it.dependencies){it.deps=it.dependencies;delete it.dependencies}
       if(!it.deps)it.deps=[];
@@ -839,7 +839,7 @@ const App={
     this.$.tl_body.addEventListener('dblclick',e=>{const iEl=e.target.closest('.tl-item');if(iEl){const it=this.gi(iEl.dataset.iid);if(it)this.openPanel(it)}});
     this.$.tl_sl_labels.addEventListener('dblclick',e=>{const lbl=e.target.closest('.sl-lbl');if(lbl){const sl=this.gs(lbl.dataset.slId);if(sl)this.showSwM(sl)}});
     // Hidden indicator click — expand collapsed swimlane
-    this.$.tl_sl_labels.addEventListener('click',e=>{const ind=e.target.closest('.sl-hidden-indicator');if(ind){e.stopPropagation();const sl=this.gs(ind.dataset.slId);if(sl){this.snap();sl.collapsed='expanded';this.sched();this.autoSave()}return}const btn=e.target.closest('.sl-collapse-btn');if(btn){e.stopPropagation();const sl=this.gs(btn.dataset.slId);if(sl){this.snap();const action=btn.dataset.action;if(action==='expand')sl.collapsed='expanded';else if(action==='hide')sl.collapsed='collapsed';else sl.collapsed='minimized';this.sched();this.autoSave()}}});
+    this.$.tl_sl_labels.addEventListener('click',e=>{const ind=e.target.closest('.sl-hidden-indicator');if(ind){e.stopPropagation();const sl=this.gs(ind.dataset.slId);if(sl){this.snap();sl.collapsed='expanded';this.sched();this.autoSave()}return}const ssBtn=e.target.closest('.ss-collapse-btn');if(ssBtn){e.stopPropagation();const sl=this.gs(ssBtn.dataset.slId);if(!sl)return;const ss=sl.subSwimlanes.find(s=>s.id===ssBtn.dataset.ssId);if(!ss)return;this.snap();ss.collapsed=ss.collapsed==='minimized'?'expanded':'minimized';this.sched();this.autoSave();return}const btn=e.target.closest('.sl-collapse-btn');if(btn){e.stopPropagation();const sl=this.gs(btn.dataset.slId);if(sl){this.snap();const action=btn.dataset.action;if(action==='expand')sl.collapsed='expanded';else if(action==='hide')sl.collapsed='collapsed';else sl.collapsed='minimized';this.sched();this.autoSave()}}});
     // Column resize handle
     const colRH=this.$.sl_col_rh;
     if(colRH){colRH.addEventListener('mousedown',e=>{
@@ -981,7 +981,9 @@ const App={
     const vpW=bs.clientWidth;
     const p=this.proj;
     const collapsedSlIds=new Set(p.swimlanes.filter(sl=>sl.collapsed!=='expanded').map(sl=>sl.id));
-    const items=p.items.filter(i=>!(p.hideMode&&i.hidden)&&!collapsedSlIds.has(i.swimlaneId));
+    const collapsedSubIds=new Set();
+    p.swimlanes.forEach(sl=>{if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>{if(ss.collapsed==='minimized')collapsedSubIds.add(ss.id)})});
+    const items=p.items.filter(i=>!(p.hideMode&&i.hidden)&&!collapsedSlIds.has(i.swimlaneId)&&(!i.subSwimId||!collapsedSubIds.has(i.subSwimId)));
     if(!items.length){p.zoom=100;this.sched();return}
     /* Pre-compute per-item: barLeft/barRight at z=1 (scales with zoom) and fixed-px text offsets.
        At any zoom z, item's absolute left = z * barL_z1 - textLeft, right = z * barR_z1 + textRight.
@@ -1061,6 +1063,8 @@ const App={
       if(found){sl=found;atSubSwId='';atSubRow=0}else{this.toast('All swimlanes are collapsed','error');return}
     }
     if(!sl){this.toast('Add swimlane first','error');return}
+    // Auto-expand minimized sub-swimlane when adding item to it
+    if(atSubSwId&&sl.subSwimlanes?.length){const targetSs=sl.subSwimlanes.find(s=>s.id===atSubSwId);if(targetSs&&targetSs.collapsed==='minimized')targetSs.collapsed='expanded'}
     const d=atDate||U.iso(new Date());
     const subSwId=atSubSwId||'';
     const subRow=typeof atSubRow==='number'?atSubRow:0;
@@ -1191,14 +1195,14 @@ const App={
   },
   addSubSw(){
     if(this._tmpSubs.length===0&&this._esl){
-      const defId=U.id();this._tmpSubs.push({id:defId,name:this._esl.name+' (Default)'});
+      const defId=U.id();this._tmpSubs.push({id:defId,name:this._esl.name+' (Default)',height:0,collapsed:'expanded'});
       this.proj.items.filter(i=>i.swimlaneId===this._esl.id&&!i.subSwimId).forEach(i=>i.subSwimId=defId);
     }
-    this._tmpSubs.push({id:U.id(),name:'Sub-lane '+(this._tmpSubs.length+1)});this.renderSSW()
+    this._tmpSubs.push({id:U.id(),name:'Sub-lane '+(this._tmpSubs.length+1),height:0,collapsed:'expanded'});this.renderSSW()
   },
   saveSwM(){
     this.snap();const name=this.$.sw_name.value.trim()||'Untitled';const color=this.$.sw_color.value;
-    const subs=this._tmpSubs.filter(s=>s.name.trim()).map(s=>({id:s.id,name:s.name.trim()}));
+    const subs=this._tmpSubs.filter(s=>s.name.trim()).map(s=>({id:s.id,name:s.name.trim(),height:s.height||0,collapsed:s.collapsed||'expanded'}));
     if(this._esl){this._esl.name=name;this._esl.color=color;this._esl.subSwimlanes=subs}
     else this.proj.swimlanes.push({id:U.id(),name,color,height:120,subSwimlanes:subs,collapsed:'expanded'});
     document.getElementById('sw-modal').classList.add('hidden');this.sched();this.autoSave()
@@ -1684,7 +1688,7 @@ const App={
         const unassigned=slItems.filter(i=>!i.subSwimId||!groups.has(i.subSwimId));
         if(sl.subSwimlanes.length>0&&unassigned.length){const fid=sl.subSwimlanes[0].id;unassigned.forEach(i=>i.subSwimId=fid);(groups.get(fid)||[]).push(...unassigned)}
         for(const it of slItems)if(it.subSwimId&&groups.has(it.subSwimId)&&!unassigned.includes(it))groups.get(it.subSwimId).push(it);
-        for(const[ssId,items]of groups){const vis=items.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId,h:Math.max(50,(mr+1)*rH+10),items})}
+        for(const[ssId,items]of groups){const ss=sl.subSwimlanes.find(s=>s.id===ssId);const isSubMin=ss&&ss.collapsed==='minimized';if(isSubMin){subMeta.push({ssId,h:28,items:[],minimized:true})}else{const vis=items.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);const contentH=Math.max(50,(mr+1)*rH+10);const ssH=ss&&ss.height>0?Math.max(ss.height,contentH):contentH;subMeta.push({ssId,h:ssH,items,minimized:false})}}
       }else if(!isCollapsed){const vis=slItems.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId:'',h:Math.max(sl.height||120,(mr+1)*rH+10),items:slItems})}
       const totalH=isHidden?8:isMinimized?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
       slYMap.set(sl.id,{y:slYAccum,h:totalH});
@@ -1695,16 +1699,17 @@ const App={
       }else{
       labelsH+=`<div class="sl-lbl${isMinimized?' collapsed':''}" data-sl-id="${sl.id}" style="background:${sl.color};height:${totalH}px">`;
       if(isMinimized){labelsH+=`<button class="sl-collapse-btn sl-btn-expand" data-sl-id="${sl.id}" data-action="expand" title="Expand">▶</button>`;labelsH+=`<button class="sl-collapse-btn sl-btn-hide" data-sl-id="${sl.id}" data-action="hide" title="Hide">✕</button>`}else{labelsH+=`<button class="sl-collapse-btn" data-sl-id="${sl.id}" title="Minimize">▼</button>`}
-      if(!isCollapsed&&hasSubs){const mainW=Math.min(60,(p.labelWidth||160)/2);labelsH+=`<div class="sl-lbl-main" style="width:${mainW}px;min-width:${mainW}px;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg)">${U.esc(sl.name)}</div><div class="sl-lbl-subs">`;for(const{ssId,h}of subMeta){const ss=sl.subSwimlanes.find(s=>s.id===ssId);labelsH+=`<div class="sl-sub-lbl" style="height:${h}px">${ss?U.esc(ss.name):''}</div>`}labelsH+=`</div>`}
-      else labelsH+=`<div class="sl-lbl-main" style="flex:1">${U.esc(sl.name)}</div>`;
+      if(!isCollapsed&&hasSubs){const mainW=Math.min(60,(p.labelWidth||160)/2);labelsH+=`<div class="sl-lbl-main" style="width:${mainW}px;min-width:${mainW}px;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg)">${U.esc(sl.name)}</div><div class="sl-lbl-subs">`;for(let smi=0;smi<subMeta.length;smi++){const{ssId,h,minimized}=subMeta[smi];const ss=sl.subSwimlanes.find(s=>s.id===ssId);const nm=ss?U.esc(ss.name):'';const icon=minimized?'&#9654;':'&#9660;';labelsH+=`<div class="sl-sub-lbl${minimized?' ss-minimized':''}" style="height:${h}px"><span class="ss-name">${nm}</span><button class="ss-collapse-btn" data-sl-id="${sl.id}" data-ss-id="${ssId}" title="${minimized?'Expand':'Minimize'}">${icon}</button></div>`}labelsH+=`</div>`}
+      else labelsH+=`<div class="sl-lbl-main" style="flex:1;padding-left:20px">${U.esc(sl.name)}</div>`;
       labelsH+=`</div>`;
 
       bodyH+=`<div class="sw-row${isMinimized?' collapsed':''}" data-sl-id="${sl.id}" style="height:${totalH}px">`;
       for(let ci=0;ci<tl.cols.length;ci++)bodyH+=`<div class="grid-col" style="left:${ci*tl.cw}px;width:${tl.cw}px"></div>`;
       if(!isCollapsed){
         let yOff=0;
-        for(const{ssId,h,items}of subMeta){
-          if(yOff>0)bodyH+=`<div class="sub-sw-div" style="top:${yOff}px"></div>`;
+        for(let smi=0;smi<subMeta.length;smi++){
+          const{ssId,h,items,minimized}=subMeta[smi];
+          if(smi>0){if(!subMeta[smi-1].minimized&&!minimized){bodyH+=`<div class="sub-sw-div sub-rh" data-sl-id="${sl.id}" data-ss-id="${subMeta[smi-1].ssId}" style="top:${yOff-3}px"></div>`}else{bodyH+=`<div class="sub-sw-div" style="top:${yOff}px"></div>`}}
           for(const it of items){
             if(p.hideMode&&it.hidden)continue;
             const itY=slYAccum+yOff+6+(it.subRow||0)*rH;
@@ -1812,6 +1817,8 @@ const App={
 
     // Bind hidden indicators — click to expand
     this.$.tl_sl_labels.querySelectorAll('.sl-hidden-indicator').forEach(ind=>{ind.onclick=e=>{e.stopPropagation();const sl=this.gs(ind.dataset.slId);if(sl){this.snap();sl.collapsed='expanded';this.sched();this.autoSave()}}});
+    // Bind sub-swimlane collapse buttons
+    this.$.tl_sl_labels.querySelectorAll('.ss-collapse-btn').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();const sl=this.gs(btn.dataset.slId);if(!sl)return;const ss=sl.subSwimlanes.find(s=>s.id===btn.dataset.ssId);if(!ss)return;this.snap();ss.collapsed=ss.collapsed==='minimized'?'expanded':'minimized';this.sched();this.autoSave()}});
     // Bind collapse buttons
     this.$.tl_sl_labels.querySelectorAll('.sl-collapse-btn').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();const sl=this.gs(btn.dataset.slId);if(sl){this.snap();const action=btn.dataset.action;if(action==='expand')sl.collapsed='expanded';else if(action==='hide')sl.collapsed='collapsed';else sl.collapsed='minimized';this.sched();this.autoSave()}}});
 
@@ -1940,7 +1947,7 @@ const App={
       this.toast('Work-mode tasks can\'t be resized by dragging — use the Duration field instead','info');return}
     const tl=this.met(),sx=e.clientX,oS=it.startDate,oE=it.endDate;this.snap();const mv=ev=>{const dx=ev.clientX-sx,dayD=Math.round((dx/tl.tw)*U.days(tl.start,tl.end));if(side==='left'){it.startDate=U.addDays(oS,dayD);if(U.days(it.startDate,it.endDate)<0)it.startDate=it.endDate}else{it.endDate=U.addDays(oE,dayD);if(U.days(it.startDate,it.endDate)<0)it.endDate=it.startDate}it.duration=U.days(it.startDate,it.endDate)+1;this.sched(true,false);this.refreshPanel()};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);if(this.proj.autoRange)this.autoRange();this.sched();this.autoSave();this.refreshPanel()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)},
 
-  bindRH(){document.querySelectorAll('.sl-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();const sl=this.gs(h.dataset.slId);if(!sl)return;const slEl=h.closest('.sw-row'),lblEl=this.$.tl_sl_labels.querySelector(`[data-sl-id="${sl.id}"]`);const sY=e.clientY,sH=slEl.offsetHeight;const mv=ev=>{const nh=Math.max(50,sH+ev.clientY-sY);sl.height=nh;slEl.style.height=nh+'px';if(lblEl)lblEl.style.height=nh+'px'};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}})},
+  bindRH(){document.querySelectorAll('.sl-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();const sl=this.gs(h.dataset.slId);if(!sl)return;const slEl=h.closest('.sw-row'),lblEl=this.$.tl_sl_labels.querySelector(`[data-sl-id="${sl.id}"]`);const sY=e.clientY,sH=slEl.offsetHeight;const hasSubs=sl.subSwimlanes?.length>0&&sl.collapsed==='expanded';const mv=ev=>{const nh=Math.max(50,sH+ev.clientY-sY);if(hasSubs){const lastSs=sl.subSwimlanes[sl.subSwimlanes.length-1];if(lastSs)lastSs.height=Math.max(50,(lastSs.height||50)+(ev.clientY-sY))}else{sl.height=nh}slEl.style.height=nh+'px';if(lblEl)lblEl.style.height=nh+'px'};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}});document.querySelectorAll('.sub-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();e.stopPropagation();const sl=this.gs(h.dataset.slId);if(!sl)return;const ss=sl.subSwimlanes.find(s=>s.id===h.dataset.ssId);if(!ss)return;const sY=e.clientY,startH=ss.height||50;const mv=ev=>{ss.height=Math.max(50,startH+ev.clientY-sY);this.sched(true,false)};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}})},
 
   async copyScreenshot(viewportOnly=false){try{const typeLabel=viewportOnly?'Viewport':'Full timeline';this.toast('Generating '+typeLabel+'…');const svg=this.buildExportSVG(viewportOnly);const img=new Image();const blob=new Blob([svg],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);const dpr=Math.max(2,window.devicePixelRatio||2);img.onload=async()=>{const c=document.createElement('canvas');c.width=img.naturalWidth*dpr;c.height=img.naturalHeight*dpr;const ctx=c.getContext('2d');ctx.scale(dpr,dpr);ctx.drawImage(img,0,0);try{const b=await new Promise(r=>c.toBlob(r,'image/png'));await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);this.toast(typeLabel+' copied to clipboard!')}catch(err){this.toast('Copy failed','error')}URL.revokeObjectURL(url)};img.onerror=()=>{this.toast('Failed','error');URL.revokeObjectURL(url)};img.src=url}catch(err){this.toast('Not supported','error')}},
 
@@ -1958,7 +1965,7 @@ const App={
       if(!isCollapsed&&hasSubs){
         const groups=new Map();for(const ss of sl.subSwimlanes)groups.set(ss.id,[]);
         for(const it of visItems){if(it.subSwimId&&groups.has(it.subSwimId))groups.get(it.subSwimId).push(it);else{const fid=sl.subSwimlanes[0]?.id;if(fid)(groups.get(fid)||[]).push(it)}}
-        for(const[ssId,items]of groups){const mr=items.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId,h:Math.max(50,(mr+1)*rH+10),items:slItems.filter(i=>i.subSwimId===ssId||(!i.subSwimId&&ssId===sl.subSwimlanes[0]?.id))})}
+        for(const[ssId,items]of groups){const ss=sl.subSwimlanes.find(s=>s.id===ssId);const isSubMin=ss&&ss.collapsed==='minimized';if(isSubMin){subMeta.push({ssId,h:28,items:[],minimized:true})}else{const mr=items.reduce((m,i)=>Math.max(m,i.subRow||0),0);const contentH=Math.max(50,(mr+1)*rH+10);const ssH=ss&&ss.height>0?Math.max(ss.height,contentH):contentH;subMeta.push({ssId,h:ssH,items:slItems.filter(i=>i.subSwimId===ssId||(!i.subSwimId&&ssId===sl.subSwimlanes[0]?.id)),minimized:false})}}
       }else if(!isCollapsed){const mr=visItems.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId:'',h:Math.max(sl.height||120,(mr+1)*rH+10),items:slItems})}
       const h=isHidden?0:isMinimized?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
       sm.push({sl,items:isCollapsed?[]:slItems,h,subMeta,collapsed:isCollapsed,hidden:isHidden})
@@ -1972,7 +1979,9 @@ const App={
     }else{
       /* Fit-to-content: use shared _itemExtents with canvas text measurement */
       const collapsedSlIds=new Set(p.swimlanes.filter(sl=>sl.collapsed!=='expanded').map(sl=>sl.id));
-      const fitItems=p.items.filter(i=>!(p.hideMode&&i.hidden)&&!collapsedSlIds.has(i.swimlaneId));
+      const collapsedSubIds=new Set();
+      p.swimlanes.forEach(sl=>{if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>{if(ss.collapsed==='minimized')collapsedSubIds.add(ss.id)})});
+      const fitItems=p.items.filter(i=>!(p.hideMode&&i.hidden)&&!collapsedSlIds.has(i.swimlaneId)&&(!i.subSwimId||!collapsedSubIds.has(i.subSwimId)));
       const ext=this._itemExtents(fitItems,tl);
       if(ext){
         const fitPad=20;/* small breathing room on each side */
@@ -2187,7 +2196,7 @@ const App={
         let subY=0;for(let si=0;si<subs.length;si++){const sub=subs[si];
           if(si>0)svg+=`<line x1="${mainW}" y1="${rowTop+subY}" x2="${lw}" y2="${rowTop+subY}" stroke="rgba(255,255,255,0.15)"/>`;
           const ss=sl.subSwimlanes.find(s=>s.id===sub.ssId);
-          if(ss)svg+=this._svgText(ss.name,mainW+subW/2,rowTop+subY,subW,sub.h,9.5,'500','opacity="0.85"');
+          if(ss){if(sub.minimized){svg+=`<text x="${mainW+subW/2}" fill="#fff" font-size="8" font-weight="500" text-anchor="middle" opacity="0.5"><tspan x="${mainW+subW/2}" y="${rowTop+subY+14}" dominant-baseline="central">${U.esc(ss.name)}</tspan></text>`}else{svg+=this._svgText(ss.name,mainW+subW/2,rowTop+subY,subW,sub.h,9.5,'500','opacity="0.85"')}}
           subY+=sub.h}
       }else{
         svg+=this._svgText(sl.name,lw/2,rowTop,lw,h,12,'600','')}

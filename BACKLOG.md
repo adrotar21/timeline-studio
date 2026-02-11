@@ -6,6 +6,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.18.0** | 2026-02-11 | Toolbar center alignment (B8): absolute centering for `.toolbar-center`. Sub-swimlane resize handles (B9): per-sub `ss.height`, interactive divider drag handles, `bindRH()` rewrite for parent + sub resize. Collapsible sub-swimlanes (F3): 2-state `ss.collapsed` (`expanded`/`minimized`), collapse buttons (upper-right of each sub label), fit-to-content and export exclude minimized sub items, export renders minimized subs at 28px with small label. Major swimlane collapse buttons moved to upper-left. |
 | **0.17.0** | 2026-02-11 | Swimlane collapse UX polish: SVG `dominant-baseline="central"` for pixel-perfect export label centering, dual expand/hide buttons on minimized swimlanes, 8px curved-tab hidden indicator with hover cue, hidden swimlanes omitted from export. Fit-to-content and export now exclude items in collapsed/hidden swimlanes. Swimlane Manager (F14) archived — current UI covers the use case. |
 | **0.16.1** | 2026-02-11 | Export label centering fix (B6): `_svgText()` line-height 1.3→1.2, baseline factor 0.35→0.38, rotated vertical name +4px correction. Export grid column lines (B7): vertical dividers matching on-screen `.grid-col` borders. Dual-mode swimlane collapse (F15): 3-state cycle (expanded→minimized→collapsed), Expand All / Collapse All buttons in View dropdown with disabled-state management, `sl.collapsed` migrated from boolean to string. |
 | **0.16.0** | 2026-02-11 | Resizable swimlane header column (F16): drag-resize 80–400px, persisted in project, flows through rendering + export + watermark. Fit-to-content hotkey (F12): Ctrl+Shift+F and Alt+1 bindings, tooltip + help modal updated. Export swimlane label text wrapping via `_svgText()`/`_wrapText()` — labels now word-wrap in export/screenshot to match on-screen rendering at narrow column widths. |
@@ -43,8 +44,8 @@
 |---|-------|-------------|------|----------|--------|
 | B6 | **Export swimlane label vertical centering** | Swimlane header labels and sub-swimlane labels appear slightly off-center vertically in export/screenshot SVG. The `_svgText()` vertical centering math needs tuning to match on-screen CSS flexbox `align-items:center` rendering. Affects both main swimlane names and sub-swimlane labels. | XS | P1 | Done (0.16.1) |
 | B7 | **Export missing grid column lines** | Vertical grid column divider lines (e.g., monthly column borders) that run from the header down through all swimlane rows are not rendered in export/screenshot SVG. On-screen these are `.grid-col` elements with `border-right`. Similar class of bug to the previously-fixed header cell borders and swimlane dividers (v0.15.1). | S | P1 | Done (0.16.1) |
-| B8 | **Toolbar center alignment** | Timeline/Data/Split view toggle in `.toolbar-center` should be visually centered across the full toolbar width, not just positioned between left/right sections via `justify-content:space-between`. Fix: use absolute centering on `.toolbar-center` (e.g., absolute positioning or CSS grid). | XS | P2 | Open |
-| B9 | **Sub-swimlane resize handle** | The `.sl-rh` drag-to-resize handle in `bindRH()` works for simple swimlanes but breaks when sub-swimlanes exist — can't drag down beyond content height. Needs: (1) allow drag-down resize for swimlanes with subs by updating the min-height logic, and (2) add per-sub-swimlane resize handles at sub-swimlane divider lines. | M | P2 | Open |
+| B8 | **Toolbar center alignment** | Timeline/Data/Split view toggle in `.toolbar-center` should be visually centered across the full toolbar width, not just positioned between left/right sections via `justify-content:space-between`. Fix: use absolute centering on `.toolbar-center` (e.g., absolute positioning or CSS grid). | XS | P2 | Done (0.18.0) |
+| B9 | **Sub-swimlane resize handle** | The `.sl-rh` drag-to-resize handle in `bindRH()` works for simple swimlanes but breaks when sub-swimlanes exist — can't drag down beyond content height. Needs: (1) allow drag-down resize for swimlanes with subs by updating the min-height logic, and (2) add per-sub-swimlane resize handles at sub-swimlane divider lines. | M | P2 | Done (0.18.0) |
 
 ---
 
@@ -52,7 +53,7 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
-| F3 | **Collapsible sub-swimlanes** | Allow sub-swimlanes to be individually collapsed/expanded, not just top-level swimlanes. | M | P2 | Open |
+| F3 | **Collapsible sub-swimlanes** | Allow sub-swimlanes to be individually collapsed/expanded, not just top-level swimlanes. | M | P2 | Done (0.18.0) |
 | F4 | **Days scale option** | Add "Days" to the timescale options (currently: Weeks, Months, Quarters, Years). | L | P2 | Open |
 | F6 | **Modal/kiosk window mode** | Open the app in a browser window without the URL bar (e.g., `window.open` with toolbar/location disabled, or PWA manifest). | S | P3 | Open |
 | F7 | **Multi-project tabs** | Support opening multiple projects in separate tabs or an in-app tab bar, each with its own state. | XL | P3 | Open |
@@ -77,7 +78,7 @@
 3. ~~**F14 — Swimlane Manager modal (L, P1)** — Archived (0.17.0). Current inline UI covers the use case.~~
 4. **F17 — Swimlane header text orientation (M, P2)** — Per-swimlane text direction (horizontal/vertical/angled). Settings live in the existing swimlane edit modal (`showSwM()`). Label column width is dynamic (F16).
 5. **F19 — Swimlane header font size (S, P2)** — Per-swimlane font size for header labels. Same implementation pattern as F17 (per-swimlane property). Natural to implement alongside F17 since both are text appearance settings. Must flow through `_svgText()` for export.
-6. **F3 — Collapsible sub-swimlanes (M, P2)** — Individual sub-swimlane expand/collapse. UI via existing swimlane edit modal or context menu.
+6. ~~**F3 — Collapsible sub-swimlanes (M, P2)** — Done (0.18.0). 2-state collapse with upper-right buttons, fit exclusion, export rendering.~~
 
 ---
 
@@ -90,9 +91,6 @@ _All P0 items resolved in v0.14.0._
 - **F8** — Comprehensive documentation (M)
 
 ### P2 — Nice to Have for V1
-- **B8** — Toolbar center alignment (XS)
-- **B9** — Sub-swimlane resize handle (M)
-- **F3** — Collapsible sub-swimlanes (M)
 - **F4** — Days scale option (L)
 - **F13** — Keyboard shortcut discoverability (M)
 - **F17** — Swimlane header text orientation (M)
@@ -109,6 +107,9 @@ _All P0 items resolved in v0.14.0._
 
 | # | Title | Size | Version | Notes |
 |---|-------|------|---------|-------|
+| B8 | **Toolbar center alignment** | XS | 0.18.0 | Absolute centering `.toolbar-center` with `position:absolute;left:50%;transform:translateX(-50%)` within `position:relative` toolbar. |
+| B9 | **Sub-swimlane resize handle** | M | 0.18.0 | Per-sub `ss.height` property (default 0 = content-derived). Interactive `.sub-rh` divider handles between subs. `bindRH()` rewrite: parent handle distributes to last sub when subs exist; sub handle sets `ss.height` directly. Migration adds `ss.height` to all existing subs. Export mirrors on-screen height logic. |
+| F3 | **Collapsible sub-swimlanes** | M | 0.18.0 | 2-state `ss.collapsed` (`'expanded'`/`'minimized'`). Collapse buttons (upper-right of each sub label cell). Minimized = 28px header-only with no items rendered. Fit-to-content and export exclude items in minimized subs via `collapsedSubIds` set. Export renders minimized subs at 28px with small label. `addItem()` auto-expands minimized target sub. Major swimlane collapse buttons moved to upper-left (all swimlanes). |
 | F14 | **Swimlane Manager modal** | L | 0.17.0 | Archived — current inline UI (double-click edit, context menu, collapse buttons, Expand/Collapse All) covers the use case without a separate modal. |
 | F15 | **Dual-mode swimlane collapse** | M | 0.16.1 | 3-state cycle: expanded → minimized (28px) → collapsed (0px, invisible). `sl.collapsed` migrated from boolean to string (`'expanded'`/`'minimized'`/`'collapsed'`). Expand All / Collapse All buttons in View dropdown with disabled-state management. Updated: `renderTL()`, `buildExportSVG()`, `addItem()`, context menu, `migrate()`, all templates. |
 | B7 | **Export missing grid column lines** | S | 0.16.1 | Added vertical `<line>` elements in `buildExportSVG()` iterating `tl.cols` — matches on-screen `.grid-col` `border-right`. Color `#e8ecf0`, bounds-checked to label column and viewport width. |
