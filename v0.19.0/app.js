@@ -1,4 +1,4 @@
-/* Timeline Studio v0.18.2 — Expand All Subs, Vertical Text Overflow, Minimized Sub Height Tweak */
+/* Timeline Studio v0.19.0 — Sub-Swimlane Collapse Polish, Export Label Wrapping & Overflow */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),

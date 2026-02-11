@@ -15,7 +15,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.18.0` — toolbar center alignment (B8), sub-swimlane resize handles (B9), collapsible sub-swimlanes (F3), major swimlane buttons moved to upper-left
+- **Current:** `v0.19.0` — sub-swimlane collapse polish (parent resize fix, thin 1px dividers, auto-minimize parent, slimmer 20px minimized subs), Expand All includes sub-swimlanes, vertical main swimlane text auto-scales font-size, export vertical label wrapping via `<g>` rotation with `_wrapText()`, export label overflow two-pass rendering
 - Version history tracked in `BACKLOG.md` under the Versioning table
 - Git repo initialized at project root; commit after each version cut
 
@@ -36,9 +36,9 @@ TimelineProject/
 ├── CLAUDE.md                       # This file — project context for AI assistants
 ├── BACKLOG.md                      # Prioritized bugs/features with version history
 ├── dependency-prd.md               # Dependency engine PRD (Phase 1 + Phase 2)
-└── v0.18.0/                        # Current version
+└── v0.19.0/                        # Current version
     ├── index.html                  # Complete DOM structure, modals, inline styles
-    ├── app.js                      # All application logic (~2590 lines)
+    ├── app.js                      # All application logic (~2596 lines)
     ├── styles.css                  # Theming via CSS custom properties, layout
     ├── test_comprehensive.js       # 115 tests covering core engine
     ├── test_expanded.js            # 464 tests targeting real bug patterns + watermarks
@@ -104,6 +104,8 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 - Pipeline: `buildExportSVG()` → SVG blob → `Image` → `Canvas` → PNG blob
 - `viewportOnly=true` for viewport screenshot, `false` for full export (fit-to-content)
 - **DPI scaling**: `copyScreenshot` uses `Math.max(2, devicePixelRatio)`, `exportPNG` uses `Math.max(3, devicePixelRatio)`, both via `ctx.scale(dpr, dpr)` on canvas
+- **Two-pass swimlane labels**: Pass 1 renders all background rects and structural lines; Pass 2 renders all label text. This ensures label text overflow is visible in both directions (not masked by adjacent swimlane rects)
+- **Vertical label wrapping**: When swimlanes have sub-swimlanes, the main name is rendered via `<g transform="rotate(-90,cx,cy)">` containing `_wrapText()`-generated `<tspan>` elements — matches on-screen CSS `word-wrap` behavior
 
 ### Coordinate System
 - `dX(date, tl)` returns pixel position from left edge of timeline grid (0 = start of first column)
@@ -144,14 +146,14 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 ## Running Tests
 Tests are Node.js CLI scripts with no dependencies:
 ```bash
-node v0.18.0/test_comprehensive.js
-node v0.18.0/test_expanded.js
+node v0.19.0/test_comprehensive.js
+node v0.19.0/test_expanded.js
 ```
 Output is color-coded (green pass / red fail) with summary stats. Tests mock the engine functions from app.js internally. **Always run both test suites after making changes to `app.js`.**
 
 ## Key Features
 - Milestones and tasks on a timeline with swimlanes (including sub-swimlanes)
-- Swimlane collapse: 3-state (expanded → minimized → hidden) with dual expand/hide buttons, curved tab indicators, and Expand All / Collapse All controls. Sub-swimlane collapse: 2-state (expanded/minimized) with per-sub toggle buttons
+- Swimlane collapse: 3-state (expanded → minimized → hidden) with dual expand/hide buttons, curved tab indicators, and Expand All / Collapse All controls (includes sub-swimlanes). Sub-swimlane collapse: 2-state (expanded/minimized) with per-sub toggle buttons, auto-minimize parent when all subs minimized, auto-expand parent when expanding a sub. Dynamic vertical text scaling (min 8px) when swimlane height is short
 - Dependency arrows with violation/critical-path highlighting
 - Drag-and-drop editing with auto-snap in scheduled mode
 - Holiday management with per-holiday scheduling control
