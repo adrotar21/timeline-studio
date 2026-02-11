@@ -15,7 +15,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.15.1` — export structural lines (header borders, swimlane dividers, separators)
+- **Current:** `v0.16.0` — resizable swimlane header column (F16), fit-to-content hotkey (F12)
 - Version history tracked in `BACKLOG.md` under the Versioning table
 - Git repo initialized at project root; commit after each version cut
 
@@ -36,7 +36,7 @@ TimelineProject/
 ├── CLAUDE.md                       # This file — project context for AI assistants
 ├── BACKLOG.md                      # Prioritized bugs/features with version history
 ├── dependency-prd.md               # Dependency engine PRD (Phase 1 + Phase 2)
-└── v0.15.1/                        # Current version
+└── v0.16.0/                        # Current version
     ├── index.html                  # Complete DOM structure, modals, inline styles
     ├── app.js                      # All application logic (~2400 lines)
     ├── styles.css                  # Theming via CSS custom properties, layout
@@ -93,6 +93,7 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 - **v1→v2 migration**: changed from exclusive to inclusive end dates
 - **Calendar vs. working day** durations handled consistently across all operations
 - **Pinned items** are protected from auto-scheduling and propagation
+- **`proj.labelWidth`**: swimlane header column width in px (default 160, range 80–400). Stored in project, flows through CSS `--sl-w`, on-screen rendering, export SVG, and watermark positioning
 
 ## Export & Rendering Quirks
 
@@ -109,7 +110,7 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 - Positions scale linearly with zoom: `dX_at_z(date) = z × dX_at_z1(date)`
 - `dXEnd(date)` = pixel position at END of a day (for task bar right edges)
 - `dXMid(date)` = pixel position at CENTER of a day (for milestone icons)
-- In export SVG, all positions are offset by `-vpX` (scroll position) and shifted right by `lw` (160px label column)
+- In export SVG, all positions are offset by `-vpX` (scroll position) and shifted right by `lw` (`proj.labelWidth`, default 160px)
 
 ### Fit-to-Content — Two Separate Implementations
 1. **Export fit** (`buildExportSVG` with `viewportOnly=false`): Uses `_itemExtents(items, tl)` to find min/max pixel extents including text labels, then crops SVG to that range. Straightforward — all at current zoom.
@@ -123,6 +124,8 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 - `_mt(text, fontSize, fontWeight)` — uses a shared offscreen `<canvas>` context for pixel-accurate text width
 - `_itemLabelWidths(it)` — returns `{labelW, edgeLW, edgeRW}` for any item (primary label, secondary label, edge date labels)
 - `_itemExtents(items, tl)` — returns `{minPx, maxPx}` combining bar positions + text widths at the given zoom
+- `_wrapText(text, maxW, fontSize, fontWeight)` — word-wraps text into lines fitting within `maxW` pixels, using `_mt()` for measurement
+- `_svgText(text, x, y, maxW, boxH, fontSize, fontWeight, attrs)` — renders wrapped text as SVG `<text>` with `<tspan>` elements, vertically centered in `boxH`. Used for swimlane labels in export.
 - **Never use character-count estimation** (`charCount × fontSize × 0.6`) — it's unreliable and causes fit instability
 
 ### Weekend/Holiday Opacity Stacking
@@ -137,8 +140,8 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 ## Running Tests
 Tests are Node.js CLI scripts with no dependencies:
 ```bash
-node v0.15.1/test_comprehensive.js
-node v0.15.1/test_expanded.js
+node v0.16.0/test_comprehensive.js
+node v0.16.0/test_expanded.js
 ```
 Output is color-coded (green pass / red fail) with summary stats. Tests mock the engine functions from app.js internally. **Always run both test suites after making changes to `app.js`.**
 
@@ -154,6 +157,7 @@ Output is color-coded (green pass / red fail) with summary stats. Tests mock the
 - Themes: Default, Claude, Light, Midnight
 - Lasso selection for bulk operations
 - Project templates (Product Launch, Software Development)
+- Keyboard shortcuts: Ctrl+Z/Y (undo/redo), Ctrl+S/N/O (save/new/open), Ctrl+Shift+F or Alt+1 (fit-to-content), Ctrl+Shift+P (propagate), arrows (nudge), Delete, Escape
 
 ## Known Issues & Backlog
 See `BACKLOG.md` for the prioritized and sized bug/feature backlog with version history.
