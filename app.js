@@ -1829,7 +1829,7 @@ const App={
     bodyH+=`<svg id="dep-svg" style="width:${tl.tw}px;height:100%"></svg>`;
     this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this.$.tl_body.style.width=tl.tw+'px';
     /* Empty-state hint for new users */
-    if(p.items.length===0){this.$.tl_body.innerHTML+=`<div class="tl-empty-hint"><div style="font-size:28px;margin-bottom:8px;opacity:.5">📋</div><div>Click <strong>+ Task</strong> or <strong>+ Milestone</strong> in the toolbar to add your first item.</div><div style="margin-top:6px;font-size:11px;opacity:.8">Or choose a template from <strong>New</strong> (📄).<br>Right-click the timeline to add at a specific date.</div></div>`}
+    if(p.items.length===0){this.$.tl_body.innerHTML+=`<div class="tl-empty-hint"><div style="font-size:28px;margin-bottom:8px;opacity:.7">📋</div><div>Click <strong>+ Task</strong> or <strong>+ Milestone</strong> in the toolbar to add your first item.</div><div style="margin-top:6px;font-size:11px">Or choose a template from <strong>New</strong> (📄).<br>Right-click the timeline to add at a specific date.</div></div>`}
 
     // Bind hidden indicators — click to expand
     this.$.tl_sl_labels.querySelectorAll('.sl-hidden-indicator').forEach(ind=>{ind.onclick=e=>{e.stopPropagation();const sl=this.gs(ind.dataset.slId);if(sl){this.snap();sl.collapsed='expanded';this.sched();this.autoSave()}}});
