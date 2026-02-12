@@ -16,7 +16,8 @@
       "Bash(find:*)",
       "Bash(xcopy \"v0.15.1\" \"v0.16.0\"\" /E /I /Q)",
       "Bash(git status:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(dir:*)"
     ]
   }
 }

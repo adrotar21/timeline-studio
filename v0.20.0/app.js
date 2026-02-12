@@ -1,4 +1,4 @@
-/* Timeline Studio v0.19.3 — Help modal polish, pin badge, data view cleanup */
+/* Timeline Studio v0.20.0 — README documentation, public-facing readiness */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),

@@ -6,6 +6,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.20.0** | 2026-02-11 | Comprehensive README.md documentation (F8). 11-section structure: hero, value prop with comparison table, quick start guide, feature showcase with screenshot placeholders, file format, project structure, keyboard shortcuts, browser compatibility, development guide, roadmap, license. Screenshot guide for 5 key views. Public-facing readiness milestone. |
 | **0.19.3** | 2026-02-11 | Help modal polish (B18): paste import explanation in section 2, watermark feature in section 11, corrected lock/export/invert-selection references, lasso mode + Ctrl+Scroll zoom in shortcuts table, new Notes/Troubleshooting section (work type, scheduling toggle, holidays, lock, hidden items, selection inversion, zoom). Pin badge on timeline items (B19): small 📌 indicator on pinned items, positioned top-right. Data view cleanup (B20): invert-selection button styled as compact 20×20px square, select-all checkbox vertically centered in header cell. |
 | **0.19.2** | 2026-02-11 | Pre-beta first-user experience cleanup. Help modal numbering fix (B10) and content improvements (B17): Lock H/V explanation, swimlane resize handle mention, right-click and double-click tips, new shortcut rows. Swimlane label tooltip. Lock-blocked nudge/drag toast (B12). Ctrl+Shift+S Save As (B13). Ctrl+A Select All on timeline (B14). Active-filter indicator in Data Table (B11). Empty-state hint on blank timeline (B15). Predecessors column in CSV export (B16). |
 | **0.19.1** | 2026-02-11 | Favicon (inline SVG data URI) and dynamic tab title (`ProjectName — Timeline Studio` with unsaved dot). Toast duration parameter. F6 kiosk mode investigated and blocked (browser security restrictions on `file://`). |
@@ -49,7 +50,7 @@
 | F4 | **Days scale option** | Add "Days" to the timescale options (currently: Weeks, Months, Quarters, Years). | L | :yellow_circle: P2 | Open |
 | F6 | **Modal/kiosk window mode** | Open the app in a browser window without the URL bar. **Blocked by browser limitations:** Chrome ignores `window.open` location flags (since ~2017), PWA install requires HTTPS (not `file://`), "Create shortcut → Open as window" is greyed out for local files. Only viable path: serve via localhost (e.g., `python -m http.server`) and use PWA manifest or Chrome shortcut. Revisit if the app moves to a hosted/server model. | S | :blue_circle: P3 | Blocked |
 | F7 | **Multi-project tabs** | Support opening multiple projects in separate tabs or an in-app tab bar, each with its own state. | XL | :blue_circle: P3 | Open |
-| F8 | **Comprehensive documentation (.md)** | Create full user documentation covering all features, workflows, keyboard shortcuts, and the dependency/scheduling system. | M | :orange_circle: P1 | Open |
+| F8 | **Comprehensive documentation (.md)** | Create full user documentation covering all features, workflows, keyboard shortcuts, and the dependency/scheduling system. | M | :orange_circle: P1 | **Done (0.20.0)** |
 | F13 | **Keyboard shortcut discoverability** | Surface keyboard shortcuts and power-user actions in the UI for new users. Options include a cheatsheet panel, tooltip hints, or help modal section. | M | :yellow_circle: P2 | Open |
 | F17 | **Swimlane header text orientation** | Per-swimlane setting for major header text direction: horizontal, vertical, or angled. Configurable in the swimlane edit modal. Decouples text orientation from sub-swimlane presence. | M | :yellow_circle: P2 | Open |
 | F18 | **Configurable keyboard shortcuts** | Settings section for customizing keyboard shortcuts. Multiple shortcuts per action, conflict detection, persisted in project or user preferences. Ties into F13 (discoverability). | M | :yellow_circle: P2 | Open |
@@ -63,7 +64,7 @@
 _All P0 items resolved in v0.14.0._
 
 ### :orange_circle: P1 — High Priority for V1
-- **F8** — Comprehensive documentation (M)
+_All P1 items resolved in v0.20.0._
 
 ### :yellow_circle: P2 — Nice to Have for V1
 - **F4** — Days scale option (L)
@@ -95,6 +96,7 @@ _All P0 items resolved in v0.14.0._
 
 | # | Title | Size | Version | Notes |
 |---|-------|------|---------|-------|
+| F8 | **Comprehensive README.md** | M | 0.20.0 | 11-section README.md: hero with badges, competitive comparison table, 3-step quick start, feature showcase (timeline, data, dependencies, export, themes), file format, project structure, keyboard shortcuts table, browser compatibility, development guide, roadmap, license placeholder. Screenshot guide for 5 key views (hero, timeline-view, data-view, dependencies, themes). Dual-audience structure: sections 1-3 self-contained for initial, sections 4-11 for GitHub visitors. |
 | B18 | **Help modal polish** | S | 0.19.3 | Paste import explanation in section 2 (Data View 📋 Paste, tab-separated from Excel). Watermark feature in section 11 (Last Updated stamp, position, owner, appears in exports). Corrected references: Lock now locks both axes (removed Lock H/V), export via Settings→Export (not ⬇ icon), Invert Selection is a header button (not right-click). Lasso Mode and Ctrl+Scroll/Ctrl+Shift+Scroll zoom added to shortcuts table. New ⚠ Notes/Troubleshooting section: work type, scheduling toggle, holidays, lock, hidden items, selection inversion, zoom. |
 | B19 | **Pin badge on timeline items** | XS | 0.19.3 | Small 📌 emoji badge rendered at top-right of pinned items on the timeline. 9px font, absolute positioned, `pointer-events:none`, drop-shadow for visibility. `.item-pinned` class was applied but had no visual effect — now items show a clear pin indicator. |
 | B20 | **Data view header cleanup** | XS | 0.19.3 | Invert-selection button (⇅) styled as compact 20×20px square with themed border, background, and hover state (was unstyled browser default). Select-all checkbox cell vertically and horizontally centered via `text-align:center; vertical-align:middle` on the `_cb` column header. |
