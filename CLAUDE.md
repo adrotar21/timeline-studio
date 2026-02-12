@@ -15,9 +15,9 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.22.0` — README editorial polish (comparison prose, session recovery, accurate shortcut count). Test files moved to `tests/`. Personal .tlproj files removed from repo + git history scrubbed. .gitignore added. Versioned folder now contains only 3 core files + Showcase.tlproj.
-- Version history tracked in `BACKLOG.md` under the Versioning table
-- Git repo initialized at project root; commit after each version cut
+- **Current:** `v0.22.0` — README editorial polish, repo cleanup, GitHub Pages deployment. Flat repo structure (no versioned folder). Live at `https://adrotar21.github.io/timeline-studio/`.
+- Version history tracked in `BACKLOG.md` under the Versioning table and via **git tags** (`git tag v0.22.0`)
+- Git repo at project root; versions marked with git tags instead of folder names
 
 ## Critical Architecture Rule
 > **The application MUST remain exactly three core files: `index.html`, `styles.css`, and `app.js`.**
@@ -33,18 +33,17 @@ This is a non-negotiable design constraint. The three-file architecture is what 
 ## Project Structure
 ```
 TimelineProject/
+├── index.html                      # Complete DOM structure, modals, inline styles
+├── app.js                          # All application logic (~2596 lines)
+├── styles.css                      # Theming via CSS custom properties, layout
+├── Showcase.tlproj                 # Example project file (JSON)
 ├── CLAUDE.md                       # This file — project context for AI assistants
 ├── BACKLOG.md                      # Prioritized bugs/features with version history
 ├── dependency-prd.md               # Dependency engine PRD (Phase 1 + Phase 2)
 ├── screenshots/                    # README screenshots (5 PNGs)
-├── tests/
-│   ├── test_comprehensive.js       # 115 tests covering core engine
-│   └── test_expanded.js            # 464 tests targeting real bug patterns + watermarks
-└── v0.22.0/                        # Current version
-    ├── index.html                  # Complete DOM structure, modals, inline styles
-    ├── app.js                      # All application logic (~2596 lines)
-    ├── styles.css                  # Theming via CSS custom properties, layout
-    └── Showcase.tlproj             # Example project file (JSON)
+└── tests/
+    ├── test_comprehensive.js       # 115 tests covering core engine
+    └── test_expanded.js            # 464 tests targeting real bug patterns + watermarks
 ```
 
 ## Tech Stack

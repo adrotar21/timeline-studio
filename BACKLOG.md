@@ -6,7 +6,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
-| **0.22.0** | 2026-02-11 | README editorial polish: comparison table replaced with prose, auto-save callout reworded to "session recovery", shortcut count corrected. Test files moved to `tests/` at project root. Personal .tlproj files removed from repo and git history scrubbed via filter-repo. `.gitignore` added. Versioned folder now contains only 3 core files + Showcase.tlproj. |
+| **0.22.0** | 2026-02-11 | README editorial polish (comparison prose, session recovery, accurate shortcut count). Test files moved to `tests/`. Personal .tlproj files removed from repo + git history scrubbed. .gitignore added. Versioned folder now contains only 3 core files + Showcase.tlproj. Repo flattened: core files moved to root for GitHub Pages. Versioning moved from folder names to git tags. Live at `https://adrotar21.github.io/timeline-studio/`. |
 | **0.21.0** | 2026-02-11 | README screenshots finalized (5 PNGs: hero, data-view, dependencies, themes, auto-schedule). New Auto-Scheduling section in README highlighting manual→auto-scheduled workflow. Hero screenshot doubles as timeline view. Bug fix (B21): `showDate` no longer gates task owner/duration display. Showcase.tlproj polish. Lock default fix (newProj/migrate lockV). |
 | **0.20.0** | 2026-02-11 | Comprehensive README.md documentation (F8). 11-section structure: hero, value prop with comparison table, quick start guide, feature showcase with screenshot placeholders, file format, project structure, keyboard shortcuts, browser compatibility, development guide, roadmap, license. Screenshot guide for 5 key views. Public-facing readiness milestone. Bug fix (B21): `showDate` no longer gates task owner/duration display — decoupled in 3 render paths. Showcase.tlproj file with 30-item demo project for README screenshots. |
 | **0.19.3** | 2026-02-11 | Help modal polish (B18): paste import explanation in section 2, watermark feature in section 11, corrected lock/export/invert-selection references, lasso mode + Ctrl+Scroll zoom in shortcuts table, new Notes/Troubleshooting section (work type, scheduling toggle, holidays, lock, hidden items, selection inversion, zoom). Pin badge on timeline items (B19): small 📌 indicator on pinned items, positioned top-right. Data view cleanup (B20): invert-selection button styled as compact 20×20px square, select-all checkbox vertically centered in header cell. |
@@ -22,7 +22,7 @@
 | **0.14.1** | 2026-02-10 | Watermark positioning fix. Ctrl+Scroll zoom. Auto fit-to-content on open. 76 new watermark tests. |
 | **0.14.0** | 2026-02-10 | Export/screenshot overhaul: all missing visual elements, canvas text measurement, DPI scaling. |
 
-> **Versioning scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta. Version 1.0 targets the initial release.
+> **Versioning scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta. Version 1.0 targets the initial release. Versions tracked via **git tags** (`git tag v0.22.0`).
 
 ---
 

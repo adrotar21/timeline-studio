@@ -7,6 +7,8 @@ Download three files. Open `index.html`. Done.
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Files](https://img.shields.io/badge/architecture-3_files-orange)
 
+[**Try it in your browser**](https://adrotar21.github.io/timeline-studio/) -- no download required
+
 ![Timeline Studio](screenshots/hero.png)
 
 ---
@@ -28,7 +30,7 @@ Timeline Studio lives in the same space as Office Timeline Pro (~$149/yr), but w
 
 ## Quick Start
 
-1. **Download** the three files from [`v0.22.0/`](v0.22.0/): `index.html`, `styles.css`, `app.js`
+1. **Download** `index.html`, `styles.css`, and `app.js` from this repo
 2. **Open** `index.html` in Chrome, Edge, Firefox, or Safari
 3. **Start building** -- choose a template (Product Launch, Software Development) or start blank
 
@@ -150,14 +152,13 @@ Files are diffable, version-controllable, and can be programmatically generated.
 The entire application is three files. This is a deliberate architectural constraint -- it makes the tool trivially portable and shareable.
 
 ```
-v0.22.0/
-  index.html          # UI structure and modals
-  styles.css          # Theming via CSS custom properties
-  app.js              # All application logic (~2,600 lines)
-  Showcase.tlproj     # Example project file
+index.html          # UI structure and modals
+styles.css          # Theming via CSS custom properties
+app.js              # All application logic (~2,600 lines)
+Showcase.tlproj     # Example project file
+tests/              # Test suites (not required to run the app)
+screenshots/        # README images
 ```
-
-Test files live in [`tests/`](tests/) and are not required to run the app.
 
 ---
 

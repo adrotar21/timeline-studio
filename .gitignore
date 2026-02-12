@@ -1,6 +1,6 @@
-# Personal project files (keep only Showcase.tlproj in versioned folder)
+# Personal project files (keep only Showcase.tlproj)
 *.tlproj
-!v*/Showcase.tlproj
+!Showcase.tlproj
 
 # Backup files
 *_bak.*
