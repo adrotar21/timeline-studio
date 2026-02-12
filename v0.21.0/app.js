@@ -1,4 +1,4 @@
-/* Timeline Studio v0.20.0 — README documentation, public-facing readiness */
+/* Timeline Studio v0.21.0 — Screenshots, auto-schedule section, showDate bug fix */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -32,7 +32,7 @@ const THEMES={
   midnight:{bg:'#111827',hdr:'#0a0e17',cls:'theme-midnight',tlTx:'#e5e7eb',tlTx2:'#9ca3af'},
 };
 
-function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:true,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
+function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
 const App={
   proj:newProj(),sel:[],undoStack:[],redoStack:[],
@@ -83,7 +83,7 @@ const App={
     if(!p.watermark)p.watermark=false;if(!p.wmDate)p.wmDate='';if(!p.wmPos)p.wmPos='bottom-center';
     if(p.showDeps==null)p.showDeps=true;if(p.showToday==null)p.showToday=true;
     if(p.owner==null)p.owner='';if(p.wmShowOwner==null)p.wmShowOwner=false;
-    if(p.lockH==null)p.lockH=true;if(p.lockV==null)p.lockV=true;
+    if(p.lockH==null)p.lockH=false;if(p.lockV==null)p.lockV=false;
     if(p.showWeekends==null)p.showWeekends=false;if(p.weekendOpacity==null)p.weekendOpacity=8;
     if(p.weekendAutoHide==null)p.weekendAutoHide=true;
     if(p.defaultFolder==null)p.defaultFolder='';
@@ -870,8 +870,7 @@ const App={
   nudge(key,ctrl){
     if(!this.sel.length)return;
     const isH=key==='ArrowLeft'||key==='ArrowRight';
-    if(isH&&this.proj.lockH){if(!this._lockToastT||Date.now()-this._lockToastT>2000){this.toast('🔒 Horizontal lock is on','info',1500);this._lockToastT=Date.now()}return}
-    if(!isH&&this.proj.lockV){if(!this._lockToastT||Date.now()-this._lockToastT>2000){this.toast('🔒 Vertical lock is on','info',1500);this._lockToastT=Date.now()}return}
+    if(this.proj.locked){if(!this._lockToastT||Date.now()-this._lockToastT>2000){this.toast('🔒 Locked — unlock to move items','info',1500);this._lockToastT=Date.now()}return}
     const step=ctrl?Math.min(7,this._nudgeSpeed):1;
     this._nudgeSpeed=Math.min(14,this._nudgeSpeed+0.5);
     if(!this._nudgeSnapped){this.snap();this._nudgeSnapped=true;clearTimeout(this._nudgeSnapTimer)}
@@ -936,7 +935,7 @@ const App={
     const p=this.proj,gfs=p.fontSize||11,fs=it.fontSize||gfs;
     const nameW=this._mt(it.name||'',fs,'600');
     let secW=0;
-    if(it.type==='task'&&it.showDate!==false){
+    if(it.type==='task'){
       const parts=[];if(it.showOwner&&it.owner)parts.push(it.owner);
       if(it.showDuration)parts.push(this._fmtDurLabel?this._fmtDurLabel(it):'00d');
       if(parts.length>1)secW=this._mt(parts[0]+' ('+parts[1]+')',Math.max(8,fs-1.5),'400');
@@ -1865,7 +1864,7 @@ const App={
     if(x===null)return'';const y=yOff+6+(it.subRow||0)*rH,left=x-(isT?0:8);
     let cls='tl-item';if(sel)cls+=' selected';if(it.pinned)cls+=' item-pinned';if(violatedIds.has(it.id))cls+=' dep-error';if(it.hidden)cls+=' item-hidden';if(critIds&&critIds.has(it.id))cls+=' crit-path';
     let dateStr='';
-    if(it.showDate!==false){if(isT){const parts=[];const hasOwner=it.showOwner&&it.owner;const hasDur=it.showDuration;const durTxt=hasDur?this._fmtDurLabel(it):'';if(hasOwner&&hasDur)parts.push(it.owner+' ('+durTxt+')');else if(hasOwner)parts.push(it.owner);else if(hasDur)parts.push(durTxt);dateStr=parts.join(' ')||''}else{const hasOwner=it.showOwner&&it.owner;dateStr=U.fmt(it.date,fmt);if(hasOwner)dateStr=it.owner+(dateStr?' · '+dateStr:'')}}
+    if(isT){const parts=[];const hasOwner=it.showOwner&&it.owner;const hasDur=it.showDuration;const durTxt=hasDur?this._fmtDurLabel(it):'';if(hasOwner&&hasDur)parts.push(it.owner+' ('+durTxt+')');else if(hasOwner)parts.push(it.owner);else if(hasDur)parts.push(durTxt);dateStr=parts.join(' ')||''}else if(it.showDate!==false){const hasOwner=it.showOwner&&it.owner;dateStr=U.fmt(it.date,fmt);if(hasOwner)dateStr=it.owner+(dateStr?' · '+dateStr:'')}
     let h=`<div class="${cls}" data-iid="${it.id}" style="left:${left}px;top:${y}px;${isT?'width:'+w+'px':''}">`;
     if(isT){
       h+=`<div class="tl-task-bar" style="background:${it.color};width:${w}px">`;
@@ -2090,7 +2089,7 @@ const App={
           const lp=it.labelPosition||'right';
           const midY=iy+barH/2+fs*0.35;
           let dateStr='';
-          if(it.showDate!==false){const parts=[];const hasOwner=it.showOwner&&it.owner;const hasDur=it.showDuration;const durTxt=hasDur?this._fmtDurLabel(it):'';if(hasOwner&&hasDur)parts.push(it.owner+' ('+durTxt+')');else if(hasOwner)parts.push(it.owner);else if(hasDur)parts.push(durTxt);dateStr=parts.join(' ')||''}
+          {const parts=[];const hasOwner=it.showOwner&&it.owner;const hasDur=it.showDuration;const durTxt=hasDur?this._fmtDurLabel(it):'';if(hasOwner&&hasDur)parts.push(it.owner+' ('+durTxt+')');else if(hasOwner)parts.push(it.owner);else if(hasDur)parts.push(durTxt);dateStr=parts.join(' ')||''}
           if(lp==='right'){
             svg+=`<text x="${renderX+w+6}" y="${dateStr?midY-fs*0.35:midY}" fill="${tc}" font-size="${fs}" font-weight="600" opacity="${itemOp}">${U.esc(it.name)}</text>`;
             if(dateStr)svg+=`<text x="${renderX+w+6}" y="${midY+fs*0.55}" fill="${tc}" font-size="${Math.max(8,fs-1.5)}" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`;
