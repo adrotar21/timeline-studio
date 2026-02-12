@@ -1,0 +1,10 @@
+# Personal project files (keep only Showcase.tlproj in versioned folder)
+*.tlproj
+!v*/Showcase.tlproj
+
+# Backup files
+*_bak.*
+
+# OS files
+.DS_Store
+Thumbs.db

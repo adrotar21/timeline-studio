@@ -15,7 +15,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.21.0` — README screenshots finalized (5 PNGs). Auto-scheduling section added to README. showDate/owner/duration bug fix (B21). Showcase.tlproj polish.
+- **Current:** `v0.22.0` — README editorial polish (comparison prose, session recovery, accurate shortcut count). Test files moved to `tests/`. Personal .tlproj files removed from repo + git history scrubbed. .gitignore added. Versioned folder now contains only 3 core files + Showcase.tlproj.
 - Version history tracked in `BACKLOG.md` under the Versioning table
 - Git repo initialized at project root; commit after each version cut
 
@@ -36,13 +36,15 @@ TimelineProject/
 ├── CLAUDE.md                       # This file — project context for AI assistants
 ├── BACKLOG.md                      # Prioritized bugs/features with version history
 ├── dependency-prd.md               # Dependency engine PRD (Phase 1 + Phase 2)
-└── v0.21.0/                        # Current version
+├── screenshots/                    # README screenshots (5 PNGs)
+├── tests/
+│   ├── test_comprehensive.js       # 115 tests covering core engine
+│   └── test_expanded.js            # 464 tests targeting real bug patterns + watermarks
+└── v0.22.0/                        # Current version
     ├── index.html                  # Complete DOM structure, modals, inline styles
     ├── app.js                      # All application logic (~2596 lines)
     ├── styles.css                  # Theming via CSS custom properties, layout
-    ├── test_comprehensive.js       # 115 tests covering core engine
-    ├── test_expanded.js            # 464 tests targeting real bug patterns + watermarks
-    └── *.tlproj                    # Sample project files (JSON)
+    └── Showcase.tlproj             # Example project file (JSON)
 ```
 
 ## Tech Stack
@@ -146,8 +148,8 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 ## Running Tests
 Tests are Node.js CLI scripts with no dependencies:
 ```bash
-node v0.21.0/test_comprehensive.js
-node v0.21.0/test_expanded.js
+node tests/test_comprehensive.js
+node tests/test_expanded.js
 ```
 Output is color-coded (green pass / red fail) with summary stats. Tests mock the engine functions from app.js internally. **Always run both test suites after making changes to `app.js`.**
 

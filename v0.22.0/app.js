@@ -1,4 +1,4 @@
-/* Timeline Studio v0.21.0 — Screenshots, auto-schedule section, showDate bug fix */
+/* Timeline Studio v0.22.0 — README polish, repo cleanup, test relocation */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),

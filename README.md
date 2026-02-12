@@ -3,7 +3,7 @@
 **A cross-platform, zero-dependency Gantt chart tool for project managers.**
 Download three files. Open `index.html`. Done.
 
-![Version](https://img.shields.io/badge/version-0.21.0-blue)
+![Version](https://img.shields.io/badge/version-0.22.0-blue)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Files](https://img.shields.io/badge/architecture-3_files-orange)
 
@@ -20,30 +20,21 @@ Download three files. Open `index.html`. Done.
 - **Shareable** -- send via email, USB drive, or file share
 - **Free and open source**
 
-### How it compares
+### Where it fits
 
-| | Timeline Studio | Office Timeline Pro | Frappe Gantt | MS Project |
-|---|:---:|:---:|:---:|:---:|
-| **Price** | Free | ~$149/yr | Free (library) | ~$10-55/mo |
-| **Install required** | No | Yes (PowerPoint) | Yes (npm) | Yes |
-| **Works offline** | Yes | Yes | Yes | Partial |
-| **External dependencies** | 0 | PowerPoint | Node.js | Windows/Web |
-| **Swimlanes** | Yes (with subs) | Yes | No | Yes |
-| **Auto-scheduling** | Yes | No | No | Yes |
-| **Dependency engine** | FS/SS/FF + lag | No | No | Yes |
-| **Export formats** | SVG, PNG, CSV, JSON | PowerPoint | None | MPP |
+Timeline Studio lives in the same space as Office Timeline Pro (~$149/yr), but works cross-platform and doesn't require PowerPoint, plugins, or a license. Compared to open source options like Frappe Gantt (a library with no swimlanes or scheduling engine), it offers a more complete feature set out of the box -- dependencies, auto-scheduling, multiple export formats, and a built-in data table. And unlike heavyweight tools like MS Project or Smartsheet, it's designed for the PM who needs a clean timeline for a leadership review, not an enterprise resource planner.
 
 ---
 
 ## Quick Start
 
-1. **Download** the three files from [`v0.21.0/`](v0.21.0/): `index.html`, `styles.css`, `app.js`
+1. **Download** the three files from [`v0.22.0/`](v0.22.0/): `index.html`, `styles.css`, `app.js`
 2. **Open** `index.html` in Chrome, Edge, Firefox, or Safari
 3. **Start building** -- choose a template (Product Launch, Software Development) or start blank
 
 That's it. No terminal. No package manager. No account.
 
-> **Auto-save:** Your work saves automatically to browser localStorage. Use **File > Save** to export a `.tlproj` file you can share or back up.
+> **Session recovery:** Your work is automatically saved to your browser's local storage, so if you accidentally close the tab you won't lose anything. Use **File > Save** to write a `.tlproj` file to disk -- once you've saved, re-saving overwrites the same file. You choose the location.
 
 > **Fonts:** The app loads [DM Sans](https://fonts.google.com/specimen/DM+Sans) and [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) from Google Fonts for best appearance, but works fine offline with system font fallback.
 
@@ -91,12 +82,12 @@ A full dependency engine with three link types, lag support, and two scheduling 
 
 ### Auto-Scheduling
 
-Start by laying out your timeline manually — drag items where they make sense, set dates visually. When you're ready for more structure, switch to Auto-Scheduled mode and Timeline Studio transforms your project into a fully-functioning schedule with dependency-driven placement, working day calculations, and automatic conflict resolution.
+Start by laying out your timeline manually -- drag items where they make sense, set dates visually. When you're ready for more structure, switch to Auto-Scheduled mode and Timeline Studio transforms your project into a fully-functioning schedule with dependency-driven placement, working day calculations, and automatic conflict resolution.
 
 - **One-click conversion** from manual to auto-scheduled mode with a preview of every item that will move
-- **Working day conversion** — automatically converts calendar durations to working days, skipping weekends and holidays
-- **Dependency-driven dates** — items reposition based on their dependency chain, lag values, and link types
-- **Pin protection** — pinned items stay exactly where you put them during conversion
+- **Working day conversion** -- automatically converts calendar durations to working days, skipping weekends and holidays
+- **Dependency-driven dates** -- items reposition based on their dependency chain, lag values, and link types
+- **Pin protection** -- pinned items stay exactly where you put them during conversion
 
 ![Auto-Scheduling](screenshots/auto-schedule.png)
 
@@ -120,10 +111,10 @@ Four built-in themes. Switch instantly from Settings.
 
 ### More Features
 
-- **40+ keyboard shortcuts** for power users (see table below)
+- **Keyboard shortcuts** for power users (see table below)
 - **Lasso selection** and bulk operations (color, owner, visibility, dependencies)
 - **40-level undo/redo** with full project snapshots
-- **Auto-save** to browser localStorage
+- **Session recovery** via browser local storage
 - **Holiday management** with per-holiday scheduling control and Excel paste import
 - **Lock mode** to prevent accidental item movement
 - **Hide mode** to toggle visibility of marked items
@@ -159,13 +150,14 @@ Files are diffable, version-controllable, and can be programmatically generated.
 The entire application is three files. This is a deliberate architectural constraint -- it makes the tool trivially portable and shareable.
 
 ```
-v0.21.0/
+v0.22.0/
   index.html          # UI structure and modals
   styles.css          # Theming via CSS custom properties
   app.js              # All application logic (~2,600 lines)
+  Showcase.tlproj     # Example project file
 ```
 
-Test files (`test_comprehensive.js`, `test_expanded.js`) and sample projects (`.tlproj`) live alongside but are not required to run the app.
+Test files live in [`tests/`](tests/) and are not required to run the app.
 
 ---
 
@@ -206,11 +198,11 @@ No build step. Edit the three files directly and refresh your browser.
 **Run tests** (Node.js CLI, zero dependencies):
 
 ```bash
-node v0.21.0/test_comprehensive.js   # 115 tests
-node v0.21.0/test_expanded.js        # 464 tests
+node tests/test_comprehensive.js   # 115 tests
+node tests/test_expanded.js        # 464 tests
 ```
 
-**Tech stack:** Vanilla JavaScript (ES6+), SVG for dependency arrows, Canvas API for PNG export with DPI scaling, CSS custom properties for theming, localStorage for auto-save.
+**Tech stack:** Vanilla JavaScript (ES6+), SVG for dependency arrows, Canvas API for PNG export with DPI scaling, CSS custom properties for theming, localStorage for session recovery.
 
 See [`CLAUDE.md`](CLAUDE.md) for full architecture documentation including the rendering pipeline, coordinate system, export mechanics, and dependency engine internals.
 
