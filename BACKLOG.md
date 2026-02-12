@@ -1,6 +1,6 @@
 # Timeline Studio — Backlog
 
-> Prioritized bugs and features sized for the V1 release goal. Legacy items migrated from `timeline project edits.txt` (now deleted — all items represented here).
+> Prioritized bugs and features for the V1 release. Legacy items migrated from `timeline project edits.txt` (now deleted — all items represented here).
 
 ## Versioning
 
@@ -22,7 +22,7 @@
 | **0.14.1** | 2026-02-10 | Watermark positioning fix. Ctrl+Scroll zoom. Auto fit-to-content on open. 76 new watermark tests. |
 | **0.14.0** | 2026-02-10 | Export/screenshot overhaul: all missing visual elements, canvas text measurement, DPI scaling. |
 
-> **Versioning scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta. Version 1.0 targets the initial release. Versions tracked via **git tags** (`git tag v0.22.0`).
+> **Versioning scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta. Version 1.0 targets the first stable release. Versions tracked via **git tags** (`git tag v0.22.0`).
 
 ---
 
@@ -57,6 +57,7 @@
 | F17 | **Swimlane header text orientation** | Per-swimlane setting for major header text direction: horizontal, vertical, or angled. Configurable in the swimlane edit modal. Decouples text orientation from sub-swimlane presence. | M | :yellow_circle: P2 | Open |
 | F18 | **Configurable keyboard shortcuts** | Settings section for customizing keyboard shortcuts. Multiple shortcuts per action, conflict detection, persisted in project or user preferences. Ties into F13 (discoverability). | M | :yellow_circle: P2 | Open |
 | F19 | **Swimlane header font size** | Per-swimlane font size for header labels. Configurable in swimlane edit modal with bulk propagation. Must flow through `_svgText()` for export. | S | :yellow_circle: P2 | Open |
+| F21 | **SharePoint hosting guide** | Document how to host Timeline Studio on SharePoint by renaming `index.html` to `index.aspx` and uploading all three files. Add a note to README Quick Start section after confirming it works. | XS | :blue_circle: P3 | Open |
 
 ---
 
@@ -78,6 +79,7 @@ _All P1 items resolved in v0.20.0._
 ### :blue_circle: P3 — Backlog for V2+
 - **F6** — Modal/kiosk window mode (S) — **Blocked**: requires HTTPS/localhost, not possible from `file://`
 - **F7** — Multi-project tabs (XL)
+- **F21** — SharePoint hosting guide (XS)
 
 ---
 
@@ -98,7 +100,7 @@ _All P1 items resolved in v0.20.0._
 
 | # | Title | Size | Version | Notes |
 |---|-------|------|---------|-------|
-| F8 | **Comprehensive README.md** | M | 0.20.0 | 11-section README.md: hero with badges, competitive comparison table, 3-step quick start, feature showcase (timeline, data, dependencies, export, themes), file format, project structure, keyboard shortcuts table, browser compatibility, development guide, roadmap, license placeholder. Screenshot guide for 5 key views (hero, timeline-view, data-view, dependencies, themes). Dual-audience structure: sections 1-3 self-contained for initial, sections 4-11 for GitHub visitors. |
+| F8 | **Comprehensive README.md** | M | 0.20.0 | 11-section README.md: hero with badges, competitive comparison table, 3-step quick start, feature showcase (timeline, data, dependencies, export, themes), file format, project structure, keyboard shortcuts table, browser compatibility, development guide, roadmap, license placeholder. Screenshot guide for 5 key views (hero, timeline-view, data-view, dependencies, themes). |
 | B18 | **Help modal polish** | S | 0.19.3 | Paste import explanation in section 2 (Data View 📋 Paste, tab-separated from Excel). Watermark feature in section 11 (Last Updated stamp, position, owner, appears in exports). Corrected references: Lock now locks both axes (removed Lock H/V), export via Settings→Export (not ⬇ icon), Invert Selection is a header button (not right-click). Lasso Mode and Ctrl+Scroll/Ctrl+Shift+Scroll zoom added to shortcuts table. New ⚠ Notes/Troubleshooting section: work type, scheduling toggle, holidays, lock, hidden items, selection inversion, zoom. |
 | B19 | **Pin badge on timeline items** | XS | 0.19.3 | Small 📌 emoji badge rendered at top-right of pinned items on the timeline. 9px font, absolute positioned, `pointer-events:none`, drop-shadow for visibility. `.item-pinned` class was applied but had no visual effect — now items show a clear pin indicator. |
 | B20 | **Data view header cleanup** | XS | 0.19.3 | Invert-selection button (⇅) styled as compact 20×20px square with themed border, background, and hover state (was unstyled browser default). Select-all checkbox cell vertically and horizontally centered via `text-align:center; vertical-align:middle` on the `_cb` column header. |

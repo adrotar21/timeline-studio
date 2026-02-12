@@ -211,7 +211,7 @@ See [`CLAUDE.md`](CLAUDE.md) for full architecture documentation including the r
 
 ## Roadmap
 
-Timeline Studio is currently in beta and being tested with an beta testers. We're looking for users and feedback to see if this tool resonates with a broader audience.
+Timeline Studio is currently in beta. We're looking for users and feedback to help shape the 1.0 release.
 
 If you find it useful, have suggestions, or run into issues, please [open an issue](../../issues) or start a [discussion](../../discussions).
 

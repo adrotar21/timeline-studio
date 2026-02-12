@@ -6,12 +6,11 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 **Competitive positioning:** Lives as an Office Timeline Pro alternative that punches above its weight. Comparable tools are either locked to PowerPoint (Office Timeline Pro ~$149/yr), library-only with fewer features (Frappe Gantt), commercially licensed and heavy (DHTMLX Gantt), or heavyweight SaaS overkill for simple timeline needs (MS Project, Smartsheet, Monday).
 
 ## Project Roadmap
-1. Complete remaining updates and thorough testing for defects and usability issues
-2. Share with early users for real-world feedback; stabilize and release V1
-3. Expand to the broader audience, collect feedback, iterate toward V2+
-4. Publish on GitHub with a simple project website, documentation, and usage guidance
-5. Document the problem solved, lightweight setup, and three-file architecture
-6. Share through professional channels for broader adoption
+1. Complete remaining updates and thorough testing
+2. Collect real-world feedback from early users; stabilize and release V1
+3. Iterate toward V2+ based on user feedback
+4. Publish documentation and usage guidance
+5. Share through professional channels for broader adoption
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
