@@ -1493,8 +1493,8 @@ const App={
     h+=`<div class="pr"><label>Label Pos</label><div class="lp-grid"><div class="lp-btn" data-v=""></div><div class="lp-btn ${it.labelPosition==='top'?'active':''}" data-v="top">T</div><div class="lp-btn" data-v=""></div><div class="lp-btn ${it.labelPosition==='left'?'active':''}" data-v="left">L</div><div class="lp-btn ${it.labelPosition==='center'?'active':''}" data-v="center">M</div><div class="lp-btn ${it.labelPosition==='right'?'active':''}" data-v="right">R</div><div class="lp-btn" data-v=""></div><div class="lp-btn ${it.labelPosition==='bottom'?'active':''}" data-v="bottom">B</div><div class="lp-btn" data-v=""></div></div></div></div>`;
 
     h+=`<div class="ps"><div class="ps-t">Date Display</div>
-      <div class="pr"><label>Format</label><select id="pp-df"><option value="">Global (${p.dateFormat.startsWith('custom:')?p.dateFormat.slice(7):p.dateFormat})</option>${['MMM D, YYYY','MM/DD/YYYY','DD/MM/YYYY','YYYY-MM-DD','M/D','MMM D'].map(f=>`<option value="${f}" ${f===it.dateFormat?'selected':''}>${f}</option>`).join('')}</select></div>
-      <div class="pr"><label><input type="checkbox" id="pp-sd" ${it.showDate!==false?'checked':''}> Show Date Label</label></div>`;
+      <div class="pr"><label>Format</label><select id="pp-df"><option value="">Global (${p.dateFormat.startsWith('custom:')?p.dateFormat.slice(7):p.dateFormat})</option>${['MMM D, YYYY','MM/DD/YYYY','DD/MM/YYYY','YYYY-MM-DD','M/D','MMM D'].map(f=>`<option value="${f}" ${f===it.dateFormat?'selected':''}>${f}</option>`).join('')}</select></div>`;
+    if(it.type==='milestone')h+=`<div class="pr"><label><input type="checkbox" id="pp-sd" ${it.showDate!==false?'checked':''}> Show Date Label</label></div>`;
     if(it.type==='task')h+=`<div class="pr"><label><input type="checkbox" id="pp-ssd" ${it.showStartDate?'checked':''}> Start Date (left edge)</label></div><div class="pr"><label><input type="checkbox" id="pp-sed" ${it.showEndDate?'checked':''}> End Date (right edge)</label></div><div class="pr"><label><input type="checkbox" id="pp-sdur" ${it.showDuration?'checked':''}> Duration</label></div><div class="pr"><label><input type="checkbox" id="pp-sown" ${it.showOwner?'checked':''}> Owner</label></div><div class="pr"><label>Dur Fmt</label><select id="pp-durfmt"><option value="days" ${it.durationFmt==='days'?'selected':''}>Days</option><option value="weeks" ${it.durationFmt==='weeks'?'selected':''}>Weeks</option><option value="months" ${it.durationFmt==='months'?'selected':''}>Months</option></select></div>`;
     else h+=`<div class="pr"><label><input type="checkbox" id="pp-sown" ${it.showOwner?'checked':''}> Owner</label></div>`;
     h+=`</div>`;
@@ -1505,7 +1505,7 @@ const App={
     h+=`<div class="ps"><div class="ps-t">Dependencies</div>`;
     if(!cd.length&&!hasSuccs)h+=`<div style="font-size:9.5px;color:var(--tx3);margin-bottom:6px;line-height:1.4">No dependencies yet. Add a predecessor below, or multi-select items on the timeline (Ctrl+click) and right-click → <em>Link Dependency</em>.</div>`;
     if(cd.length){
-      h+=`<div class="pr"><label>Predecessors</label><div class="dep-list">${cd.map((d,di)=>{const dep=this.gi(this.depId(d));if(!dep)return'';const type=this.depType(d),lag=this.depLag(d);return`<div class="dep-chip"><span class="dep-chip-name">${U.esc(dep.name)}</span><select class="dep-chip-type" data-di="${di}" title="Dependency type: FS (Finish→Start), SS (Start→Start), FF (Finish→Finish)"><option value="FS" ${type==='FS'?'selected':''}>FS</option><option value="SS" ${type==='SS'?'selected':''}>SS</option><option value="FF" ${type==='FF'?'selected':''}>FF</option></select><input type="number" class="dep-chip-lag" data-di="${di}" value="${lag}" title="Lag in days: positive = gap, negative = overlap" style="width:38px"><button class="dep-chip-x" data-di="${di}" title="Remove">&times;</button></div>`}).join('')}</div></div>`;
+      h+=`<div class="pr"><label>Predecessors</label><div class="dep-list">${cd.map((d,di)=>{const dep=this.gi(this.depId(d));if(!dep)return'';const type=this.depType(d),lag=this.depLag(d);return`<div class="dep-chip"><span class="dep-chip-name">${U.esc(dep.name)}</span><select class="dep-chip-type" data-di="${di}" title="Dependency type: FS (Finish→Start), SS (Start→Start), FF (Finish→Finish)"><option value="FS" ${type==='FS'?'selected':''}>FS</option><option value="SS" ${type==='SS'?'selected':''}>SS</option><option value="FF" ${type==='FF'?'selected':''}>FF</option></select><input type="number" class="dep-chip-lag" data-di="${di}" value="${lag}" title="Lag in days: positive = gap, negative = overlap" style="width:54px"><button class="dep-chip-x" data-di="${di}" title="Remove">&times;</button></div>`}).join('')}</div></div>`;
       h+=`<div style="font-size:9.5px;color:var(--tx3);margin:-4px 0 6px 0;line-height:1.4">Use the <strong>dropdown</strong> to set link type (FS/SS/FF). Edit the number for lag (+days gap, −days overlap). ${p.schedulingMode==='scheduled'?'Dates update automatically from these links.':'Right-click → <em>Propagate</em> to push date changes through the chain.'}</div>`;
     }
     if(hasSuccs&&!cd.length)h+=`<div style="font-size:9.5px;color:var(--tx3);margin-bottom:6px;line-height:1.4">This item is a predecessor to other items. ${p.schedulingMode==='scheduled'?'Moving it will automatically shift its successors.':'Use <em>Propagate to Successors</em> (right-click) to push date changes downstream.'}</div>`;
@@ -1580,7 +1580,7 @@ const App={
     q('pp-etc')?.addEventListener('input',function(){it.edgeTextColor=this.value;App.sched();App.autoSave()});
     q('pp-fs').onchange=function(){up(()=>it.fontSize=+this.value)};
     q('pp-df').onchange=function(){up(()=>it.dateFormat=this.value)};
-    q('pp-sd').onchange=function(){up(()=>it.showDate=this.checked)};
+    if(q('pp-sd'))q('pp-sd').onchange=function(){up(()=>it.showDate=this.checked)};
     q('pp-ssd')?.addEventListener('change',function(){up(()=>it.showStartDate=this.checked)});
     q('pp-sed')?.addEventListener('change',function(){up(()=>it.showEndDate=this.checked)});
     q('pp-sdur')?.addEventListener('change',function(){up(()=>it.showDuration=this.checked)});
@@ -1816,7 +1816,7 @@ const App={
         }
       }
     }
-    if(p.showToday){const tx=this.dX(U.iso(new Date()),tl);if(tx!==null&&tx>=0&&tx<=tl.tw)bodyH+=`<div class="today-marker" style="left:${tx}px"><div class="today-marker-tri"></div><div class="today-marker-lbl">Today</div></div>`}
+    if(p.showToday){const tx=this.dX(U.iso(new Date()),tl);if(tx!==null&&tx>=0&&tx<=tl.tw)bodyH+=`<div class="today-marker" style="left:${tx}px;height:${slYAccum}px"><div class="today-marker-tri"></div><div class="today-marker-lbl">Today</div></div>`}
     // Vertical Lines
     for(const vl of vLines){const v=vl.it.vLine;if(!v)continue;
       const dash=v.style==='dashed'?'border-left:2px dashed '+v.color:'border-left:2px solid '+v.color;
