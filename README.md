@@ -3,7 +3,7 @@
 **A cross-platform, zero-dependency Gantt chart tool for project managers.**
 Download three files. Open `index.html`. Done.
 
-![Version](https://img.shields.io/badge/version-0.23.0-blue)
+![Version](https://img.shields.io/badge/version-0.23.1-blue)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Files](https://img.shields.io/badge/architecture-3_files-orange)
 
@@ -39,6 +39,8 @@ That's it. No terminal. No package manager. No account.
 > **Session recovery:** Your work is automatically saved to your browser's local storage, so if you accidentally close the tab you won't lose anything. Use **File > Save** to write a `.tlproj` file to disk -- once you've saved, re-saving overwrites the same file. You choose the location.
 
 > **Fonts:** The app loads [DM Sans](https://fonts.google.com/specimen/DM+Sans) and [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) from Google Fonts for best appearance, but works fine offline with system font fallback.
+
+> **Privacy:** Your project files never leave your device. There is no server, no database, and no tracking — the app runs entirely in your browser. See [`PRIVACY.md`](PRIVACY.md) for a full explanation of the architecture and sourced references.
 
 ---
 
