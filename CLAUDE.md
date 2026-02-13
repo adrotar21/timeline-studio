@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.24.0` — Expanded bulk edit panel, Data View type/swimlane/sub filters, filter button toggle state. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.25.0` — Configurable keyboard shortcuts (F18), shortcut manager polish, zoom key bindings. Live at `https://adrotar21.github.io/timeline-studio/`.
 - Version history tracked in `BACKLOG.md` under the Versioning table and via **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 
@@ -50,7 +50,7 @@ TimelineProject/
 - **SVG** for dependency arrow rendering and export
 - **Canvas API** for PNG export/screenshot (with DPI scaling)
 - **CSS custom properties** for theme system
-- **localStorage** for auto-save (key: `tls3`)
+- **localStorage** for auto-save (key: `tls3`) and keyboard shortcut overrides (key: `tls3_shortcuts`)
 - **File System Access API** for native save/open dialogs
 - `.tlproj` files are JSON with a version field for migration
 
@@ -67,6 +67,18 @@ TimelineProject/
 
 ### Constants
 - `COLORS` (20 colors), `TEXT_COLORS`, `ICONS`, `THEMES`
+- `SHORTCUT_ACTIONS` — registry of all keyboard shortcuts with `{id, cat, label, defaults, ctx, global, special, reserved}`
+- `MOUSE_REFS` — read-only reference list of mouse+modifier interactions
+- `RESERVED_COMBOS` / `BROWSER_RESERVED` — sets of key combos blocked or warned during binding
+
+### Keyboard Shortcut Engine
+- **Three-tier system**: Reserved (non-editable: Save, Undo, etc.), Customizable (user-rebindable), Mouse Reference (informational)
+- **Storage**: `localStorage['tls3_shortcuts']` stores user overrides as `{actionId: [combo1, combo2]}`. Missing keys fall back to `SHORTCUT_ACTIONS[].defaults`.
+- **Dispatch**: `_buildShortcutMap()` builds `_scMap: {comboString → actionId}`. The keydown handler normalizes the event via `_normalizeKey(e)`, looks up in `_scMap`, checks context guards (global, tl, sel, sel-manual), then dispatches via `_scDispatch[actionId]`.
+- **Special handlers**: Escape → `_handleEscape()` (multi-step: clear sel, close panel/menus/modals, exit lasso). Nudge → `_handleNudgeKey()` (preserves arrow acceleration system via `_nudgeSpeed`/`_nudgeSnapped`).
+- **Key recorder**: Capture-phase listener absorbs keydown during recording in Settings → Shortcuts. Conflict detection prevents duplicate bindings.
+- **Ctrl+Shift+K** opens Settings scrolled to the Shortcuts section (reserved shortcut).
+- **Help modal** dynamically generates shortcut table from `SHORTCUT_ACTIONS` + overrides. Customized bindings marked with accent `*`.
 
 ### Rendering Pipeline
 ```
@@ -164,7 +176,7 @@ Output is color-coded (green pass / red fail) with summary stats. Tests mock the
 - Themes: Default, Claude, Light, Midnight
 - Lasso selection for bulk operations
 - Project templates (Product Launch, Software Development)
-- Keyboard shortcuts: Ctrl+Z/Y (undo/redo), Ctrl+S/N/O (save/new/open), Ctrl+Shift+F or Alt+1 (fit-to-content), Ctrl+Shift+P (propagate), arrows (nudge), Delete, Escape
+- Customizable keyboard shortcuts with 3-tier manager (Reserved / Customizable / Mouse Reference) in Settings → Shortcuts (Ctrl+Shift+K). Per-user overrides stored in localStorage.
 
 ## Known Issues & Backlog
 See `BACKLOG.md` for the prioritized and sized bug/feature backlog with version history.

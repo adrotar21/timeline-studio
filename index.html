@@ -206,6 +206,7 @@
           <a href="#sect-watermark">Watermark</a>
           <a href="#sect-ttt">Time-to-Target</a>
           <a href="#sect-export">Export</a>
+          <a href="#sect-shortcuts">Shortcuts</a>
           <a href="#sect-advanced">Advanced</a>
         </nav>
         <div class="settings-content" id="settings-content">
@@ -295,6 +296,14 @@
         </div>
         <div class="settings-section" id="sect-export"><div class="settings-section-title">Export</div>
           <div class="export-options"><button class="export-opt" id="btn-exp-svg">🖼 SVG</button><button class="export-opt" id="btn-exp-png">📷 PNG</button><button class="export-opt" id="btn-exp-json">📄 JSON</button><button class="export-opt" id="btn-exp-csv">📊 CSV</button></div>
+        </div>
+        <div class="settings-section" id="sect-shortcuts"><div class="settings-section-title">Keyboard Shortcuts</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:10px;color:var(--tx3)">Click a binding to change it. Press <kbd style="background:var(--bg2);padding:1px 4px;border-radius:3px;border:1px solid var(--brd);font-size:9px">Esc</kbd> to cancel recording.</div>
+            <button class="btn btn-secondary" id="btn-sc-reset" style="font-size:10px;padding:3px 10px">Reset to Defaults</button>
+          </div>
+          <div id="sc-conflict-msg" class="hidden" style="padding:6px 10px;background:#fef3c7;border:1px solid #f59e0b;border-radius:5px;font-size:10px;color:#92400e;margin-bottom:8px"></div>
+          <div id="sc-list" style="max-height:340px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px"></div>
         </div>
         <div class="settings-section" id="sect-advanced"><div class="settings-section-title">Advanced</div>
           <div class="form-group"><label>Default Project Folder</label><input type="text" id="s-default-folder" class="form-input" placeholder="e.g. C:\Users\You\Documents\Timeline Studio"></div>

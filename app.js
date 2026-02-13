@@ -1,4 +1,4 @@
-/* Timeline Studio v0.22.0 — README polish, repo cleanup, test relocation */
+/* Timeline Studio v0.25.0 — Configurable keyboard shortcuts, shortcut manager polish, zoom key bindings */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -32,6 +32,59 @@ const THEMES={
   midnight:{bg:'#111827',hdr:'#0a0e17',cls:'theme-midnight',tlTx:'#e5e7eb',tlTx2:'#9ca3af'},
 };
 
+const SHORTCUT_ACTIONS=[
+  // Tier 1 — Reserved (non-editable)
+  {id:'undo',cat:'Reserved',label:'Undo',defaults:['Ctrl+z'],global:true,reserved:true},
+  {id:'redo',cat:'Reserved',label:'Redo',defaults:['Ctrl+y'],global:true,reserved:true},
+  {id:'save',cat:'Reserved',label:'Save',defaults:['Ctrl+s'],global:true,reserved:true},
+  {id:'saveAs',cat:'Reserved',label:'Save As',defaults:['Ctrl+Shift+s'],global:true,reserved:true},
+  {id:'newProject',cat:'Reserved',label:'New Project',defaults:['Ctrl+n'],global:true,reserved:true},
+  {id:'openFile',cat:'Reserved',label:'Open File',defaults:['Ctrl+o'],global:true,reserved:true},
+  {id:'escape',cat:'Reserved',label:'Deselect / Close',defaults:['Escape'],global:true,reserved:true,special:true},
+  {id:'shortcutMgr',cat:'Reserved',label:'Open Shortcut Manager',defaults:['Ctrl+Shift+k'],global:true,reserved:true},
+  {id:'delete',cat:'Reserved',label:'Delete Selected',defaults:['Delete'],ctx:'sel',reserved:true},
+  {id:'selectAll',cat:'Reserved',label:'Select All',defaults:['Ctrl+a'],ctx:'tl',reserved:true},
+  // Hidden — still dispatched via _scMap but not shown in Settings UI
+  {id:'nudgeLeft',cat:'Edit',label:'Nudge Left',defaults:['ArrowLeft'],ctx:'sel',special:'nudge',hidden:true},
+  {id:'nudgeRight',cat:'Edit',label:'Nudge Right',defaults:['ArrowRight'],ctx:'sel',special:'nudge',hidden:true},
+  {id:'nudgeUp',cat:'Edit',label:'Nudge Up',defaults:['ArrowUp'],ctx:'sel',special:'nudge',hidden:true},
+  {id:'nudgeDown',cat:'Edit',label:'Nudge Down',defaults:['ArrowDown'],ctx:'sel',special:'nudge',hidden:true},
+  // Tier 2 — Customizable: View
+  {id:'fitToContent',cat:'View',label:'Fit to Content',defaults:['Ctrl+Shift+f','Alt+1'],ctx:'tl'},
+  {id:'goToday',cat:'View',label:'Scroll to Today',defaults:[],ctx:'tl'},
+  {id:'zoomIn',cat:'View',label:'Zoom In (5%)',defaults:['=','Shift+='],ctx:'tl'},
+  {id:'zoomOut',cat:'View',label:'Zoom Out (5%)',defaults:['-'],ctx:'tl'},
+  {id:'zoom100',cat:'View',label:'Zoom 100%',defaults:[],ctx:'tl'},
+  {id:'fullscreen',cat:'View',label:'Toggle Fullscreen',defaults:[],global:true},
+  {id:'expandAll',cat:'View',label:'Expand All Swimlanes',defaults:[],ctx:'tl'},
+  {id:'collapseAll',cat:'View',label:'Collapse All Swimlanes',defaults:[],ctx:'tl'},
+  {id:'showFloat',cat:'View',label:'Toggle Float Labels',defaults:[],ctx:'tl'},
+  // Tier 2 — Customizable: Tools
+  {id:'propagate',cat:'Tools',label:'Propagate to Successors',defaults:['Ctrl+Shift+p'],ctx:'sel-manual'},
+  {id:'toggleLock',cat:'Tools',label:'Toggle Lock',defaults:[],global:true},
+  {id:'toggleHide',cat:'Tools',label:'Toggle Hide Mode',defaults:[],global:true},
+  {id:'toggleCritPath',cat:'Tools',label:'Toggle Critical Path',defaults:[],ctx:'tl'},
+  {id:'toggleLasso',cat:'Tools',label:'Toggle Lasso Mode',defaults:[],ctx:'tl'},
+  // Tier 2 — Customizable: Items
+  {id:'addMilestone',cat:'Items',label:'Add Milestone',defaults:[],ctx:'tl'},
+  {id:'addTask',cat:'Items',label:'Add Task',defaults:[],ctx:'tl'},
+  {id:'addSwimlane',cat:'Items',label:'Add Swimlane',defaults:[],global:true},
+  // Tier 2 — Customizable: Export
+  {id:'snapViewport',cat:'Export',label:'Screenshot (Viewport)',defaults:[],ctx:'tl'},
+  {id:'snapFull',cat:'Export',label:'Screenshot (Full)',defaults:[],ctx:'tl'},
+];
+const MOUSE_REFS=[
+  {combo:'Ctrl+Click',desc:'Multi-select items'},
+  {combo:'Shift+Click',desc:'Range-select (Data Table)'},
+  {combo:'Alt+Drag',desc:'Lasso select area'},
+  {combo:'Ctrl+Scroll',desc:'Zoom ±5%'},
+  {combo:'Ctrl+Shift+Scroll',desc:'Fine zoom ±1%'},
+  {combo:'Double-click',desc:'Edit item / swimlane'},
+  {combo:'Right-click',desc:'Context menu'},
+];
+const RESERVED_COMBOS=new Set(['Ctrl+v','Ctrl+c','Ctrl+x']);
+const BROWSER_RESERVED=new Set(['Ctrl+t','Ctrl+w','Ctrl+Tab','Ctrl+Shift+Tab','Ctrl+l','Ctrl+Shift+t','Ctrl+Shift+n','F5','Ctrl+F5','F12']);
+
 function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
 const App={
@@ -42,6 +95,98 @@ const App={
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
   _fileHandle:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
   _lassoMode:false,_collapsedSl:new Set(),_pendingFit:false,
+  _scMap:{},_scOverrides:null,_scRecording:null,_nudgeSnapped:false,_nudgeSnapTimer:null,_scMsgTimer:null,
+
+  /* Keyboard Shortcut Engine */
+  _normalizeKey(e){
+    const parts=[];
+    if(e.ctrlKey||e.metaKey)parts.push('Ctrl');
+    if(e.shiftKey)parts.push('Shift');
+    if(e.altKey)parts.push('Alt');
+    let key=e.key;
+    if(['Control','Shift','Alt','Meta'].includes(key))return null;
+    if(key.length===1)key=key.toLowerCase();
+    parts.push(key);
+    return parts.join('+');
+  },
+  _loadShortcuts(){
+    try{const raw=localStorage.getItem('tls3_shortcuts');this._scOverrides=raw?JSON.parse(raw):null}catch(e){this._scOverrides=null}
+  },
+  _saveShortcuts(){
+    if(!this._scOverrides){localStorage.removeItem('tls3_shortcuts');return}
+    localStorage.setItem('tls3_shortcuts',JSON.stringify(this._scOverrides));
+  },
+  _getBindings(actionId){
+    if(this._scOverrides&&actionId in this._scOverrides)return this._scOverrides[actionId];
+    const a=SHORTCUT_ACTIONS.find(x=>x.id===actionId);
+    return a?[...a.defaults]:[];
+  },
+  _buildShortcutMap(){
+    this._scMap={};
+    for(const a of SHORTCUT_ACTIONS){
+      const bindings=a.reserved?[...a.defaults]:this._getBindings(a.id);
+      for(const combo of bindings)this._scMap[combo.toLowerCase()]=a.id;
+    }
+  },
+  _displayCombo(combo){
+    const m=navigator.platform&&navigator.platform.includes('Mac');
+    let s=combo;
+    if(m){s=s.replace(/Ctrl\+/g,'⌘').replace(/Shift\+/g,'⇧').replace(/Alt\+/g,'⌥')}
+    else{s=s.replace(/Ctrl/g,'Ctrl').replace(/Shift/g,'Shift').replace(/Alt/g,'Alt')}
+    s=s.replace(/ArrowLeft/g,'←').replace(/ArrowRight/g,'→').replace(/ArrowUp/g,'↑').replace(/ArrowDown/g,'↓');
+    // Capitalize single-letter keys for display
+    if(!m)s=s.replace(/\+([a-z])$/,(_, c)=>'+'+c.toUpperCase());
+    else s=s.replace(/([⌘⇧⌥])([a-z])$/,(_, mod, c)=>mod+c.toUpperCase());
+    return s;
+  },
+  _scDispatch:{
+    undo(){this.undo()},
+    redo(){this.redo()},
+    save(){this.saveFile()},
+    saveAs(){this.saveFile(true)},
+    newProject(){this.newProjAct()},
+    openFile(){this.openFile()},
+    shortcutMgr(){this.showSettingsShortcuts()},
+    delete(){if(this.sel.length)this.deleteSel()},
+    selectAll(){const items=this.proj.hideMode?this.proj.items.filter(i=>!i.hidden):this.proj.items;this.sel=items.map(i=>i.id);if(this.sel.length>1)this.openBulkPanel();this.sched();this.toast(`Selected ${this.sel.length} item${this.sel.length===1?'':'s'}`)},
+    fitToContent(){this.fitToContent()},
+    goToday(){this.goToday()},
+    zoomIn(){this.doZoom(5)},
+    zoomOut(){this.doZoom(-5)},
+    zoom100(){this.proj.zoom=100;this.sched()},
+    fullscreen(){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>this.toast('Fullscreen not supported','error'))},
+    expandAll(){this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')},
+    collapseAll(){this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')},
+    showFloat(){this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')},
+    propagate(){if(this.sel.length&&this.proj.schedulingMode!=='scheduled')this.propagateFrom(this.sel)},
+    toggleLock(){this.proj.locked=!this.proj.locked;this.proj.lockH=this.proj.locked;this.proj.lockV=this.proj.locked;this.sched();this.autoSave();this.toast(this.proj.locked?'Locked':'Unlocked')},
+    toggleHide(){this.proj.hideMode=!this.proj.hideMode;this.sched();this.toast(this.proj.hideMode?'Hiding hidden':'Showing all')},
+    toggleCritPath(){this.toggleCritPath()},
+    toggleLasso(){this._lassoMode=!this._lassoMode;document.getElementById('btn-lasso')?.classList.toggle('active',this._lassoMode);this.$.tl_body.classList.toggle('lasso-mode',this._lassoMode);this.toast(this._lassoMode?'Lasso mode ON — click and drag':'Lasso mode OFF')},
+    addMilestone(){this.addItem('milestone')},
+    addTask(){this.addItem('task')},
+    addSwimlane(){this.showSwM()},
+    snapViewport(){this.copyScreenshot(true)},
+    snapFull(){this.copyScreenshot(false)},
+  },
+  _handleEscape(){
+    this.sel=[];if(!this.panelPinned)this.closePanel();
+    this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');
+    document.querySelectorAll('.modal:not(.hidden)').forEach(m=>m.classList.add('hidden'));
+    if(this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}
+    this.sched();
+  },
+  _handleNudgeKey(actionId,ctrl){
+    if(!this.sel.length)return;
+    if(this.proj.locked){if(!this._lockToastT||Date.now()-this._lockToastT>2000){this.toast('🔒 Locked — unlock to move items','info',1500);this._lockToastT=Date.now()}return}
+    const keyMap={nudgeLeft:'ArrowLeft',nudgeRight:'ArrowRight',nudgeUp:'ArrowUp',nudgeDown:'ArrowDown'};
+    this.nudge(keyMap[actionId],ctrl);
+  },
+  showSettingsShortcuts(){
+    const sm=document.getElementById('settings-modal');
+    if(sm.classList.contains('hidden'))this.showSettings();
+    setTimeout(()=>{const sc=document.getElementById('sect-shortcuts');if(sc)sc.scrollIntoView({behavior:'smooth',block:'start'})},100);
+  },
 
   init(){
     this.$={};
@@ -67,7 +212,7 @@ const App={
      'data-filter-bar','flt-type','flt-name','flt-owner','flt-swim','flt-sub','flt-notes','flt-start','flt-end',
      'as-term','as-results',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
-    this.loadAuto();this.migrate();
+    this.loadAuto();this.migrate();this._loadShortcuts();this._buildShortcutMap();
     this.applyTheme();this.bind();this.sched();if(this.proj.items.length)this._pendingFit=true;
     this.$.tl_body_scroll.addEventListener('scroll',()=>{
       this.$.tl_sl_labels.scrollTop=this.$.tl_body_scroll.scrollTop;
@@ -731,7 +876,7 @@ const App={
     on('btn-fit',()=>this.fitToContent());
     on('btn-expand-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')});
     on('btn-collapse-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')});
-    on('btn-zi',()=>this.doZoom(10));on('btn-zo',()=>this.doZoom(-10));
+    on('btn-zi',()=>this.doZoom(5));on('btn-zo',()=>this.doZoom(-5));
     this.$.zoom_lbl.addEventListener('wheel',e=>{e.preventDefault();this.doZoom(e.deltaY<0?5:-5)},{passive:false});
     /* Ctrl+Scroll zoom on timeline body: Ctrl=±5%, Ctrl+Shift=±1% */
     this.$.tl_body_scroll.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();const d=e.shiftKey?1:5;this.doZoom(e.deltaY<0?d:-d)},{passive:false});
@@ -812,6 +957,7 @@ const App={
     document.getElementById('btn-hol-import').onclick=()=>{const box=document.getElementById('hol-import-box');box.classList.toggle('hidden');if(!box.classList.contains('hidden')){document.getElementById('hol-add-box').classList.add('hidden');document.getElementById('hol-paste-ta').focus()}};
     document.getElementById('btn-hol-clear').onclick=()=>{if(confirm('Remove all holidays?')){this.snap();this.proj.holidays=[];this.renderHolList();this._recalcNonWorkingDays();this.sched();this.autoSave()}};
     document.getElementById('btn-hol-do-import').onclick=()=>this.importHolidays();
+    document.getElementById('btn-sc-reset').onclick=()=>{this._pendingShortcuts={};this._hideScMsg();this.renderScList();this.toast('Shortcuts reset to defaults')};
     document.getElementById('hol-paste-ta').oninput=()=>{const r=this.parseHolidays(document.getElementById('hol-paste-ta').value);document.getElementById('hol-paste-prev').textContent=r.length?`Found ${r.length} holiday${r.length>1?'s':''}`:''};
     const opSlider=document.getElementById('s-wknd-opacity');if(opSlider)opSlider.oninput=function(){document.getElementById('s-wknd-opval').textContent=this.value+'%'};
     document.querySelectorAll('.theme-card').forEach(c=>{c.onclick=()=>{document.querySelectorAll('.theme-card').forEach(x=>x.classList.remove('active'));c.classList.add('active')}});
@@ -825,25 +971,23 @@ const App={
     this.$.ctx_menu.addEventListener('click',e=>{const a=e.target.closest('[data-action]')?.dataset.action;if(a&&!e.target.closest('.ctx-disabled'))this.ctxAct(a);this.$.ctx_menu.classList.add('hidden')});
     // DT context menu
     this.$.dt_ctx_menu.addEventListener('click',e=>{const a=e.target.closest('[data-dtact]')?.dataset.dtact;if(a)this.dtCtxAct(a);this.$.dt_ctx_menu.classList.add('hidden')});
-    // Keyboard
+    // Keyboard — dispatch via shortcut map
     document.addEventListener('keydown',e=>{
-      const c=e.ctrlKey||e.metaKey;const inp=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);
-      if(c&&e.key==='z'){e.preventDefault();this.undo()}
-      else if(c&&e.key==='y'){e.preventDefault();this.redo()}
-      else if(c&&e.shiftKey&&(e.key==='s'||e.key==='S')){e.preventDefault();this.saveFile(true)}
-      else if(c&&e.key==='s'){e.preventDefault();this.saveFile()}
-      else if(c&&e.key==='n'){e.preventDefault();this.newProjAct()}
-      else if(c&&e.key==='o'){e.preventDefault();this.openFile()}
-      else if(c&&e.shiftKey&&(e.key==='p'||e.key==='P')&&this.sel.length&&!inp){e.preventDefault();if(this.proj.schedulingMode!=='scheduled')this.propagateFrom(this.sel)}
-      else if(c&&e.shiftKey&&(e.key==='f'||e.key==='F')&&!inp){e.preventDefault();this.fitToContent()}
-      else if(e.altKey&&e.key==='1'&&!inp){e.preventDefault();this.fitToContent()}
-      else if(c&&(e.key==='a'||e.key==='A')&&!inp&&(this.view==='timeline'||this.view==='split')){e.preventDefault();const items=this.proj.hideMode?this.proj.items.filter(i=>!i.hidden):this.proj.items;this.sel=items.map(i=>i.id);if(this.sel.length>1)this.openBulkPanel();this.sched();this.toast(`Selected ${this.sel.length} item${this.sel.length===1?'':'s'}`)}
-      else if(e.key==='Delete'&&this.sel.length&&!inp)this.deleteSel();
-      else if(e.key==='Escape'){this.sel=[];if(!this.panelPinned)this.closePanel();this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');document.querySelectorAll('.modal:not(.hidden)').forEach(m=>m.classList.add('hidden'));if(this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}this.sched()}
-      else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&this.sel.length&&!inp){
-        e.preventDefault();if(this.proj.locked){if(!this._lockToastT||Date.now()-this._lockToastT>2000){this.toast('🔒 Locked — unlock to move items','info',1500);this._lockToastT=Date.now()}}else this.nudge(e.key,c)}
+      const combo=this._normalizeKey(e);if(!combo)return;
+      const actionId=this._scMap[combo.toLowerCase()];if(!actionId)return;
+      const action=SHORTCUT_ACTIONS.find(a=>a.id===actionId);if(!action)return;
+      const inp=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);
+      if(inp&&!action.global)return;
+      const tl=this.view==='timeline'||this.view==='split';
+      if(action.ctx==='tl'&&!tl)return;
+      if(action.ctx==='sel'&&!this.sel.length)return;
+      if(action.ctx==='sel-manual'&&(!this.sel.length||this.proj.schedulingMode==='scheduled'))return;
+      if(action.special===true){e.preventDefault();this._handleEscape();return}
+      if(action.special==='nudge'){e.preventDefault();this._handleNudgeKey(actionId,e.ctrlKey||e.metaKey);return}
+      e.preventDefault();
+      const fn=this._scDispatch[actionId];if(fn)fn.call(this);
     });
-    document.addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){this._nudgeSpeed=1}});
+    document.addEventListener('keyup',e=>{if(this._nudgeSnapped)this._nudgeSpeed=1});
     document.addEventListener('paste',e=>{if(this.view==='data'||this.view==='split'){const t=document.activeElement;if(t&&['INPUT','TEXTAREA','SELECT'].includes(t.tagName))return;const txt=e.clipboardData.getData('text/plain');if(txt.includes('\t')||txt.includes('\n')){e.preventDefault();this.showPaste();setTimeout(()=>{this.$.paste_ta.value=txt;this.previewPaste()},80)}}});
     window.addEventListener('beforeunload',e=>{if(this._unsaved){e.preventDefault();e.returnValue=''}});
     this.$.tl_body.addEventListener('mousedown',e=>this.onTlMD(e));
@@ -1230,6 +1374,133 @@ const App={
     this.sched();this.autoSave();this.toast('Reordered')
   },
 
+  renderScList(){
+    const el=document.getElementById('sc-list');if(!el)return;
+    const ov=this._pendingShortcuts||{};
+    let h='';
+    // Tier 1 — Reserved (2-column compact grid)
+    h+='<div class="sc-cat">Reserved</div>';
+    h+='<div class="sc-reserved-grid">';
+    SHORTCUT_ACTIONS.filter(a=>a.reserved).forEach(a=>{
+      const bindings=a.defaults;
+      h+=`<div class="sc-reserved-cell"><span class="sc-reserved-label">${U.esc(a.label)}</span>`;
+      bindings.forEach(c=>{h+=`<kbd class="sc-reserved-kbd">${U.esc(this._displayCombo(c))}</kbd>`});
+      h+='</div>';
+    });
+    h+='</div>';
+    // Tier 2 — Customizable, grouped by cat
+    const cats=['Edit','View','Tools','Items','Export'];
+    cats.forEach(cat=>{
+      const actions=SHORTCUT_ACTIONS.filter(a=>a.cat===cat&&!a.hidden);
+      if(!actions.length)return;
+      h+=`<div class="sc-cat">${U.esc(cat)}</div>`;
+      actions.forEach(a=>{
+        const bindings=ov[a.id]!==undefined?ov[a.id]:[...a.defaults];
+        h+=`<div class="sc-row" data-sc-id="${a.id}"><span class="sc-label">${U.esc(a.label)}</span><div class="sc-bindings">`;
+        if(!bindings.length)h+='<span class="sc-none">none</span>';
+        bindings.forEach((c,i)=>{
+          h+=`<span class="sc-key" data-sc-id="${a.id}" data-idx="${i}"><kbd>${U.esc(this._displayCombo(c))}</kbd><span class="sc-rm" data-sc-id="${a.id}" data-idx="${i}" title="Remove">&times;</span></span>`;
+        });
+        if(bindings.length<2)h+=`<button class="sc-add" data-sc-id="${a.id}" title="Add shortcut">+</button>`;
+        h+='</div></div>';
+      });
+    });
+    // Tier 3 — Mouse & Modifier Reference
+    h+='<div class="sc-cat">Mouse & Modifiers (Reference)</div>';
+    MOUSE_REFS.forEach(r=>{
+      h+=`<div class="sc-ref-row"><span class="sc-ref-combo">${U.esc(r.combo)}</span><span class="sc-ref-desc">${U.esc(r.desc)}</span></div>`;
+    });
+    el.innerHTML=h;
+    // Wire click handlers for Tier 2
+    el.querySelectorAll('.sc-rm').forEach(btn=>{
+      btn.onclick=e=>{e.stopPropagation();const aid=btn.dataset.scId,idx=+btn.dataset.idx;
+        if(!this._pendingShortcuts)this._pendingShortcuts={};
+        const cur=this._pendingShortcuts[aid]!==undefined?[...this._pendingShortcuts[aid]]:[...(SHORTCUT_ACTIONS.find(a=>a.id===aid)?.defaults||[])];
+        cur.splice(idx,1);this._pendingShortcuts[aid]=cur;
+        this._hideScMsg();
+        this.renderScList();
+      };
+    });
+    el.querySelectorAll('.sc-add').forEach(btn=>{
+      btn.onclick=e=>{e.stopPropagation();this._startScRecord(btn.dataset.scId,-1,btn)};
+    });
+    el.querySelectorAll('.sc-key[data-idx]').forEach(k=>{
+      if(k.closest('.sc-reserved'))return;
+      k.onclick=e=>{if(e.target.closest('.sc-rm'))return;this._startScRecord(k.dataset.scId,+k.dataset.idx,k)};
+    });
+  },
+  _startScRecord(actionId,idx,el){
+    if(this._scRecording)this._stopScRecord();
+    this._scRecording={actionId,idx,el};
+    el.classList.add('recording');
+    const kbd=el.querySelector('kbd');
+    if(idx===-1)el.textContent='…';else if(kbd)kbd.textContent='…';
+    this._scRecordHandler=e=>{
+      e.preventDefault();e.stopPropagation();
+      if(e.key==='Escape'){this._hideScMsg();this._stopScRecord();return}
+      const combo=this._normalizeKey(e);if(!combo)return;
+      this._applyScRecord(combo);
+    };
+    document.addEventListener('keydown',this._scRecordHandler,true);
+  },
+  _stopScRecord(){
+    if(!this._scRecording)return;
+    this._scRecording.el.classList.remove('recording');
+    document.removeEventListener('keydown',this._scRecordHandler,true);
+    this._scRecording=null;this._scRecordHandler=null;
+    this.renderScList();
+  },
+  _showScMsg(text,duration=5000){
+    const msg=document.getElementById('sc-conflict-msg');if(!msg)return;
+    if(this._scMsgTimer){clearTimeout(this._scMsgTimer);this._scMsgTimer=null}
+    msg.textContent=text;msg.classList.remove('hidden','sc-msg-fade');
+    this._scMsgTimer=setTimeout(()=>{
+      msg.classList.add('sc-msg-fade');
+      const onEnd=()=>{msg.classList.add('hidden');msg.classList.remove('sc-msg-fade');msg.removeEventListener('transitionend',onEnd)};
+      msg.addEventListener('transitionend',onEnd);
+    },duration);
+  },
+  _hideScMsg(){
+    const msg=document.getElementById('sc-conflict-msg');if(!msg)return;
+    if(this._scMsgTimer){clearTimeout(this._scMsgTimer);this._scMsgTimer=null}
+    msg.classList.add('hidden');msg.classList.remove('sc-msg-fade');
+  },
+  _applyScRecord(combo){
+    const{actionId,idx}=this._scRecording;
+    const norm=combo.toLowerCase();
+    // Block clipboard combos
+    if(RESERVED_COMBOS.has(norm)){
+      this._showScMsg(`"${this._displayCombo(combo)}" is reserved by the browser for clipboard operations and cannot be bound.`);
+      this._stopScRecord();return;
+    }
+    // Warn about browser-reserved
+    if(BROWSER_RESERVED.has(norm)){
+      this._showScMsg(`⚠ "${this._displayCombo(combo)}" is used by your browser and may not work reliably.`);
+    }
+    // Check conflicts
+    const conflict=this._findScConflict(combo,actionId);
+    if(conflict){
+      const cLabel=SHORTCUT_ACTIONS.find(a=>a.id===conflict)?.label||conflict;
+      this._showScMsg(`"${this._displayCombo(combo)}" is already bound to "${cLabel}". Remove it from that action first.`);
+      this._stopScRecord();return;
+    }
+    if(!this._pendingShortcuts)this._pendingShortcuts={};
+    const cur=this._pendingShortcuts[actionId]!==undefined?[...this._pendingShortcuts[actionId]]:[...(SHORTCUT_ACTIONS.find(a=>a.id===actionId)?.defaults||[])];
+    if(idx===-1)cur.push(combo);else cur[idx]=combo;
+    this._pendingShortcuts[actionId]=cur;
+    if(!BROWSER_RESERVED.has(norm))this._hideScMsg();
+    this._stopScRecord();
+  },
+  _findScConflict(combo,excludeId){
+    const norm=combo.toLowerCase();
+    const ov=this._pendingShortcuts||{};
+    for(const a of SHORTCUT_ACTIONS){
+      if(a.id===excludeId)continue;
+      const bindings=a.reserved?a.defaults:(ov[a.id]!==undefined?ov[a.id]:[...a.defaults]);
+      if(bindings.some(b=>b.toLowerCase()===norm))return a.id;
+    }
+    return null;
+  },
   showSettings(){
     const p=this.proj;this.$.s_name.value=p.name;this.$.s_owner.value=p.owner||'';
     this.$.s_start.value=p.timelineStart;this.$.s_end.value=p.timelineEnd;
@@ -1290,6 +1561,9 @@ const App={
       })
     }
     }catch(err){console.error('[Timeline Studio] Card setup error:',err)}
+    // Shortcuts section
+    this._pendingShortcuts=this._scOverrides?U.deep(this._scOverrides):{};
+    this.renderScList();
     this.showModal('settings-modal');
     /* Settings nav: scroll-to-top, click-to-jump, scroll-spy */
     const sContent=document.getElementById('settings-content');
@@ -1335,6 +1609,9 @@ const App={
     const dfEl=document.getElementById('s-default-folder');if(dfEl)p.defaultFolder=dfEl.value.trim();
     const tttChk=document.getElementById('s-ttt-enabled');if(tttChk)p.tttEnabled=tttChk.checked;
     const tttSel=document.getElementById('s-ttt-milestone');if(tttSel)p.tttMilestoneId=tttSel.value;
+    // Save shortcut overrides
+    if(this._pendingShortcuts&&Object.keys(this._pendingShortcuts).length){this._scOverrides=U.deep(this._pendingShortcuts);this._saveShortcuts();this._buildShortcutMap()}
+    else{this._scOverrides=null;this._saveShortcuts();this._buildShortcutMap()}
     // Scheduling mode transition — read from active card class + fallback to property
     try{
     const activeCard=document.querySelector('#sched-mode-cards .sched-card.active');
@@ -2516,6 +2793,43 @@ const App={
   },
 
   /* Help Modal */
+  _buildHelpShortcutTable(){
+    const kbdS='background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)';
+    const tdS='padding:3px 8px;border-bottom:1px solid var(--brd)';
+    const tdS2='padding:3px;border-bottom:1px solid var(--brd)';
+    let rows=[];
+    const boundActions=SHORTCUT_ACTIONS.filter(a=>a.special!=='nudge').filter(a=>{
+      const b=this._getBindings(a.id);return b.length>0;
+    });
+    // Build pairs of (label, kbd) for 2-column layout
+    const pairs=[];
+    boundActions.forEach(a=>{
+      const bindings=this._getBindings(a.id);
+      const isCustom=this._scOverrides&&a.id in this._scOverrides&&!a.reserved;
+      const marker=isCustom?'<span style="color:var(--acc);font-weight:700"> *</span>':'';
+      const kbds=bindings.map(b=>`<kbd style="${kbdS}">${U.esc(this._displayCombo(b))}</kbd>`).join(' / ');
+      pairs.push({kbd:kbds,label:U.esc(a.label)+marker});
+    });
+    // Add nudge as a single combined entry
+    const nudgeBindings=this._getBindings('nudgeLeft');
+    if(nudgeBindings.length){
+      pairs.push({kbd:`<kbd style="${kbdS}">←→↑↓</kbd>`,label:'Nudge items'});
+      pairs.push({kbd:`<kbd style="${kbdS}">Ctrl+←→</kbd>`,label:'Nudge faster (hold)'});
+    }
+    // Add mouse references
+    MOUSE_REFS.forEach(r=>{pairs.push({kbd:`<kbd style="${kbdS}">${U.esc(r.combo)}</kbd>`,label:U.esc(r.desc)})});
+    // Render as 2-column table
+    let h='<table style="width:100%;border-collapse:collapse;font-size:11px"><tbody>';
+    for(let i=0;i<pairs.length;i+=2){
+      const a=pairs[i],b=pairs[i+1];
+      h+=`<tr><td style="${tdS}">${a.kbd}</td><td style="${tdS2}">${a.label}</td>`;
+      if(b)h+=`<td style="${tdS}">${b.kbd}</td><td style="${tdS2}">${b.label}</td>`;
+      else h+='<td style="'+tdS+'"></td><td style="'+tdS2+'"></td>';
+      h+='</tr>';
+    }
+    h+='</tbody></table>';
+    return h;
+  },
   showHelp(){
     const h=`<div style="font-size:12.5px;line-height:1.7;color:var(--tx2)">
     <h3 style="color:var(--tx1);margin-bottom:12px;font-size:15px">🚀 Quick Start Guide</h3>
@@ -2531,18 +2845,8 @@ const App={
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">10. Selection Tools</strong><p><strong>Ctrl+click</strong> for multi-select. <strong>Alt+drag</strong> or use <strong>Lasso Mode</strong> (toolbar) for area selection. <strong>Ctrl+A</strong> selects all items. <strong>Advanced Search</strong> with regex for complex queries.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">11. Export & Share</strong><p>Use 📷 for screenshots (full or viewport). Export as SVG, PNG, CSV, or JSON from <strong>Settings → Export</strong>. <strong>Fit to Content</strong> auto-zooms to show everything. Enable the <strong>Watermark</strong> in Settings to add a "Last Updated" date stamp to your timeline — it appears on-screen and is included in all exports and screenshots. You can choose the position and optionally include the project owner.</p></div>
     <h3 style="color:var(--tx1);margin:16px 0 12px;font-size:14px">⌨ Keyboard Shortcuts</h3>
-    <table style="width:100%;border-collapse:collapse;font-size:11px"><tbody>
-    <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Z</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Undo</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Y</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Redo</td></tr>
-    <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+S</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Save</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+N</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">New Project</td></tr>
-    <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Delete</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Delete selected</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Escape</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Deselect / close</td></tr>
-    <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">←→↑↓</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Nudge items</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+←→</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Nudge faster</td></tr>
-    <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Click</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Multi-select</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Alt+Drag</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Lasso select</td></tr>
-    <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Lasso Mode</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Toggle in toolbar — drag to select area; hold <strong>Ctrl</strong> while in Lasso Mode to add to selection</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Scroll</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Zoom in/out (±5%)</td></tr>
-    <tr><td style="padding:3px 8px"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Shift+Scroll</kbd></td><td style="padding:3px">Fine zoom (±1%)</td><td style="padding:3px 8px"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)"></kbd></td><td style="padding:3px">Also works on the view zoom bar</td></tr>
-    <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Shift+P</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Propagate to Successors</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Shift+F / Alt+1</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Fit to Content</td></tr>
-    <tr><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+Shift+S</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Save As</td><td style="padding:3px 8px;border-bottom:1px solid var(--brd)"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Ctrl+A</kbd></td><td style="padding:3px;border-bottom:1px solid var(--brd)">Select All</td></tr>
-    <tr><td style="padding:3px 8px"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Right-click</kbd></td><td style="padding:3px">Context menu</td><td style="padding:3px 8px"><kbd style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-family:var(--mono)">Double-click</kbd></td><td style="padding:3px">Edit swimlane / project name</td></tr>
-    </tbody></table>
+    ${this._buildHelpShortcutTable()}
+    <div style="font-size:10px;color:var(--tx3);margin-top:6px">Shortcuts marked with <span style="color:var(--acc);font-weight:700">*</span> have been customized from defaults. Manage shortcuts in <strong>Settings → Shortcuts</strong> (<kbd style="background:var(--bg2);padding:1px 4px;border-radius:3px;font-size:9px;font-family:var(--mono)">Ctrl+Shift+K</kbd>).</div>
     <h3 style="color:var(--tx1);margin:16px 0 12px;font-size:14px">💡 Tips</h3>
     <ul style="padding-left:18px;margin:0">
     <li>Use <strong>Auto-Arrange</strong> (right-click → context menu) to automatically space overlapping items</li>

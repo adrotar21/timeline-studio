@@ -6,6 +6,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.25.0** | 2026-02-13 | Configurable keyboard shortcuts (F18): three-tier shortcut manager in Settings (Reserved / Customizable / Mouse Reference). `SHORTCUT_ACTIONS` registry with `_normalizeKey()` → `_scMap` hash dispatch replacing hardcoded if/else chain. Key recorder with capture-phase listener, conflict detection with auto-fade messaging, max 2 bindings per action. Per-user `localStorage['tls3_shortcuts']`. Reserved 2-column compact grid (Delete Selected, Select All moved to Reserved). Nudge actions hidden from UI but still functional. Zoom In/Out (5%) default bindings (`=`/`-`). Toolbar zoom buttons aligned to ±5%. `Ctrl+Shift+K` opens Settings scrolled to Shortcuts. Help modal dynamically generated from registry with `*` markers on customized bindings. |
 | **0.24.0** | 2026-02-12 | Bulk edit panel expanded: duration display toggle, duration format, owner text, show owner/start/end checkboxes, edge text color — all with type-aware propagation (task-only fields skip milestones). Data View filters: new Type (task/milestone), Swimlane, and Sub-Swimlane dropdown filters; swimlane dropdowns populate dynamically on open. Filter button active state: accent-colored toggle shows whether filter bar is open. Shared `_fltMatch()` refactor eliminates duplicated filter logic in `renderDT()`. |
 | **0.23.1** | 2026-02-12 | PRIVACY.md: privacy architecture document with sourced references from GitHub Docs and MDN. Explains static hosting, File API, and Local Storage architecture. Privacy architecture diagram added (`screenshots/privacy-architecture.png`). README updated with privacy blurb linking to PRIVACY.md. |
 | **0.23.0** | 2026-02-12 | Non-shifting properties pane (F24): panel converted from flex-layout sibling to right-side `position:absolute` overlay with `z-index:50`, `box-shadow`, GPU-accelerated `transform:translateX`. Zero layout shift on open/close. Split view reordered: data table on left, timeline on right. Today marker fix: explicit height for full swimlane coverage. UI polish: "Show Date Label" hidden for tasks (milestone-only), dependency lag input widened (38→54px), data table header checkbox left-aligned. Backlog: F22 (Status field), F23 (Legend), F24 (done), F25 (Links), F26 (Status import). |
@@ -55,15 +56,12 @@
 | F4 | **Days scale option** | Add "Days" to the timescale options (currently: Weeks, Months, Quarters, Years). | L | :yellow_circle: P2 | Open |
 | F6 | **Modal/kiosk window mode** | Open the app in a browser window without the URL bar. **Blocked by browser limitations:** Chrome ignores `window.open` location flags (since ~2017), PWA install requires HTTPS (not `file://`), "Create shortcut → Open as window" is greyed out for local files. Only viable path: serve via localhost (e.g., `python -m http.server`) and use PWA manifest or Chrome shortcut. Revisit if the app moves to a hosted/server model. | S | :blue_circle: P3 | Blocked |
 | F7 | **Multi-project tabs** | Support opening multiple projects in separate tabs or an in-app tab bar, each with its own state. | XL | :blue_circle: P3 | Open |
-| F8 | **Comprehensive documentation (.md)** | Create full user documentation covering all features, workflows, keyboard shortcuts, and the dependency/scheduling system. | M | :orange_circle: P1 | **Done (0.20.0)** |
 | F13 | **Keyboard shortcut discoverability** | Surface keyboard shortcuts and power-user actions in the UI for new users. Options include a cheatsheet panel, tooltip hints, or help modal section. | M | :yellow_circle: P2 | Open |
 | F17 | **Swimlane header text orientation** | Per-swimlane setting for major header text direction: horizontal, vertical, or angled. Configurable in the swimlane edit modal. Decouples text orientation from sub-swimlane presence. | M | :yellow_circle: P2 | Open |
-| F18 | **Configurable keyboard shortcuts** | Settings section for customizing keyboard shortcuts. Multiple shortcuts per action, conflict detection, persisted in project or user preferences. Ties into F13 (discoverability). | M | :yellow_circle: P2 | Open |
 | F19 | **Swimlane header font size** | Per-swimlane font size for header labels. Configurable in swimlane edit modal with bulk propagation. Must flow through `_svgText()` for export. | S | :yellow_circle: P2 | Open |
 | F21 | **SharePoint hosting guide** | Document how to host Timeline Studio on SharePoint by renaming `index.html` to `index.aspx` and uploading all three files. Add a note to README Quick Start section after confirming it works. | XS | :blue_circle: P3 | Open |
 | F22 | **Status field for tasks/milestones** | **[Plan — needs refinement/discussion]** Add a configurable Status property to tasks and milestones. **Data model — global status definitions:** Each status entry (globally configured in project settings) stores: Status Name (used in selection dropdown), Status Description (shown after a status is selected in properties pane), Color (maps to a palette — red, yellow, green, blue, grey/white, plus user-configurable extras), Short Name (e.g. "R", "Y", "G", "Gr" for compact display), Emoji (bubble emoji mapped to color, plus other common emojis for non-color statuses). **Required default statuses:** (a) Blank/None — the default for all items; no status assigned, skipped entirely for rendering, export, legend, and any status-based logic; allows users to un-select a previously set status back to empty. (b) "TBD" / Unknown — explicitly marks an item as not-yet-determined; distinct from Blank so it can be filtered, displayed, and propagated. **Data model — per-item status properties:** Current Status Name (references a global definition, or Blank), Last Status Update Date (auto-set when status changes), Previous Status 1 Name + Date (auto-captured on status change, stores the prior status — reserved for future delta/trend checks, not surfaced in initial UI), Previous Status 2 Name + Date (one level deeper history — same purpose, not surfaced initially). The 2-deep status history protects the data model for future features like staleness detection, trend indicators, and import-based status diffing without requiring a migration later. **Timeline display options:** Configurable per-project how status appears on items — text label, short name only, emoji bubble, and/or override task/milestone color with the status color for easy visual propagation. Must support multiple display modes simultaneously (e.g. emoji + short name). **Accessibility:** Short name text option is critical for color-blind users — must always be available as an alternative to color-only display. **Configuration UI:** Global status configuration lives in Project Settings with a dedicated section. Properties pane shows a status dropdown per item plus a link/button to jump directly to the status configuration in settings. Dropdown options are the globally-configured status names. Default presets: Blank/None (default, no rendering), "TBD"→grey/?/❓, "On Track"→green/G/🟢, "At Risk"→yellow/Y/🟡, "Off Track"→red/R/🔴, "Complete"→blue/B/🔵, "Not Started"→grey-white/Gr/⚪ — fully customizable, users can rename, reorder, add, remove statuses. **TBD propagation:** Ability to bulk-propagate TBD status in logical ways — e.g. set all items with no status (Blank) to TBD, or flag items whose last status update date exceeds a staleness threshold (configurable) as TBD. More complex propagation rules (e.g. auto-TBD based on previous status age delta using the 2-deep history) deferred to future iteration. **Export:** Status display must render correctly in SVG/PNG export matching the on-screen appearance. **Sub-features to break down:** (1) Data model & migration, (2) Global config UI in settings, (3) Per-item dropdown in properties pane, (4) Timeline rendering (all display modes), (5) Export rendering, (6) Data table column, (7) CSV export column, (8) Default presets & customization, (9) Emoji picker/selection for statuses. | XL | :orange_circle: P1 | Plan |
 | F23 | **Legend watermark** | **[Plan — needs refinement/discussion]** A structured legend overlay on the timeline, similar to the existing watermark but purpose-built for conveying meaning. **Content sources:** Can pull from Status (F22), Team/Owner, Swimlane/Sub-swimlane names, Milestone shape types, Color types, and other item properties — grouping multiple dimensions into one legend. **Positioning & layout:** Separate from the existing watermark with its own position setting (corner, edge, or custom x/y coordinates). Movable on the timeline (drag to reposition). **Styling options:** Toggle border on/off, border thickness, background color, text color, opacity/transparency slider. Legend entries show a visual swatch (color dot, emoji, shape icon, or line sample) paired with label text. **Configuration UI:** Dedicated "Legend" section in Project Settings. User selects which property dimensions to include and in what order. Separate "Apply" button so users can preview changes without closing the modal. Modal should be movable/draggable (non-blocking) so users can see the timeline underneath while configuring. **Export:** Legend must render in SVG/PNG export at the configured position, matching on-screen appearance. **Open questions:** How to handle legends that are too tall for the timeline area (scrollable? multi-column?). Whether legend should auto-update when items change or be manually refreshed. Interaction with the existing watermark (coexist independently? shared positioning grid?). How custom/freeform legend entries work (not tied to a property). | XL | :blue_circle: P3 | Plan |
-| F24 | **Non-shifting properties pane** | **[Plan — needs refinement/discussion]** Prevent the timeline from visually shifting when the properties pane opens on item click or item creation. Currently, opening the pane pushes content to the right, which is jarring and disorienting — the user loses their visual anchor. **Core approach:** Pixel-perfect compensation logic: (1) calculate how many pixels the properties pane will consume on the right, (2) shift the swimlane header column left by that amount, (3) simultaneously scroll the timeline content back to compensate, so the clicked item stays exactly under the cursor. **Item creation:** Same compensation applies when adding new tasks/milestones — the pane opens without shifting the viewport. **Edge case — far-left items:** When an item is near the left edge of the visible timeline (within a configurable buffer zone), there's no room to scroll-compensate leftward. For this case: slowly/smoothly animate the properties pane open (slide-in transition) and, if technically feasible, nudge the cursor position to keep the user anchored on their item (note: `MouseEvent.movementX` is read-only and `element.setPointerCapture` can't reposition — may need a visual anchor approach instead, like briefly highlighting the clicked item). **Alternative approaches to explore:** (a) Overlay mode — properties pane floats over the timeline instead of pushing it (like a sidebar overlay with slight transparency or shadow), (b) Split-pane with animation — smoothly animate the width transition with eased scrollback, (c) Bottom panel — properties appear below the timeline instead of beside it, (d) Pinned pane — option to keep properties pane always open (reduces its width, but eliminates the shift entirely), (e) Hybrid — overlay by default, pin on user request. **Best-practice research needed:** How do tools like Figma, Linear, Notion, and Monday.com handle inspector/properties panels without disrupting the main canvas? Document findings in refinement. | L | :red_circle: P0.5 | **Done (0.23.0)** |
 | F26 | **Status import & field linking** | **[Plan — V3+ future]** Enable re-importing updated data (e.g. from Excel paste or CSV) and linking imported columns to item fields — especially Status — so users can quickly pull in bulk status updates without manually editing each item. **Ties into F22:** Leverages the 2-deep status history (prev status 1 & 2) to compute deltas on import (e.g. "changed from On Track to At Risk since last import"). Could surface import-diff summaries, highlight changed items, and optionally auto-apply or prompt for confirmation. **Open questions:** Column mapping UI for linking import fields to item properties. Conflict resolution when imported data disagrees with manual edits. Whether to support scheduled/watched file re-import. | L | :blue_circle: P3+ | Plan |
 | F25 | **Item links/URLs** | **[Plan — needs refinement/discussion]** Allow tasks and milestones to store one or more hyperlinks. **Data model:** Each item gets a `links` array of objects, each with: URL, Display Name (optional — falls back to URL), and optionally a Link Type or category (e.g. "JIRA", "Confluence", "SharePoint", "Other"). **Properties pane UI:** A links section in the item properties pane — add/remove/edit links, each rendered as a clickable hyperlink that opens in a new tab. Compact display (icon + short name) with expand/edit on click. **Configuration:** Project-level settings for default link types/categories (so users can predefine "JIRA", "Wiki", etc. with URL templates like `https://jira.company.com/browse/{key}`). **Timeline display:** Optional — small link icon badge on items that have links (similar to pin badge). Click or hover to reveal link list. **Data table:** Links column showing count or first link, with expand to see all. **Export:** Links are metadata-only in PNG export (no clickable links in images). SVG export could include `<a>` elements for clickable links. CSV export includes links as a delimited string. **Open questions:** Maximum number of links per item? Should links support drag-and-drop URL paste? Integration with paste-import from Excel (link column)? | M | :blue_circle: P3 | Plan |
 | F27 | **Multi-instance file sync** | **[Research complete — V3+ future, implement after beta]** Real-time sync between multiple Timeline Studio instances viewing the same project file. Six-layer architecture: (1) StorageEvent for instant same-browser tab sync, (2) File System Access API polling for cross-browser/cross-instance sync, (3) Visual indicators for file handle state and active sessions, (4) `_lastSavedBy` metadata for conflict detection, (5) View-Only mode for safe read-only access, (6) Opt-in auto-save-to-disk for automatic propagation. **Risk:** Auto-save-to-disk on OneDrive/SharePoint-synced files creates conflict files when multiple users edit simultaneously — this is an inherent OneDrive limitation, not solvable without a server. Feature deferred to post-beta to avoid disrupting early users. **See:** Appendix B for full research, use-case walkthroughs, and implementation plan. | L | :blue_circle: P3+ | Research |
@@ -78,14 +76,10 @@ _All P0 items resolved in v0.14.0._
 ### :orange_circle: P1 — High Priority for V1
 - **F22** — Status field for tasks/milestones (XL) — **Plan**
 
-### :red_circle: P0.5 — Critical Priority
-_F24 resolved in v0.23.0 (right-side overlay panel)._
-
 ### :yellow_circle: P2 — Nice to Have for V1
 - **F4** — Days scale option (L)
 - **F13** — Keyboard shortcut discoverability (M)
 - **F17** — Swimlane header text orientation (M)
-- **F18** — Configurable keyboard shortcuts (M)
 - **F19** — Swimlane header font size (S)
 
 ### :blue_circle: P3 — Backlog for V2+
@@ -116,6 +110,7 @@ _F24 resolved in v0.23.0 (right-side overlay panel)._
 
 | # | Title | Size | Version | Notes |
 |---|-------|------|---------|-------|
+| F18 | **Configurable keyboard shortcuts** | M | 0.25.0 | Three-tier shortcut manager in Settings: Reserved (2-column compact grid — Save, Undo, Redo, New, Open, Save As, Escape, Shortcut Manager, Delete Selected, Select All), Customizable (rebindable — View, Tools, Items, Export actions), Mouse Reference (read-only — Ctrl+Click, Alt+Drag, Ctrl+Scroll, etc.). `SHORTCUT_ACTIONS` registry with `_normalizeKey()` → `_scMap` hash dispatch replacing hardcoded if/else chain. Key recorder with capture-phase listener, conflict detection with auto-fade messaging (5s timeout + CSS opacity transition), max 2 bindings per action. Nudge actions hidden from UI but functional via arrow keys. Zoom In/Out (5%) default bindings (`=`/`Shift+=`/`-`). Toolbar zoom buttons aligned to ±5%. Per-user `localStorage['tls3_shortcuts']` (not per-project). `_buildShortcutMap()` skips user overrides for reserved actions. `Ctrl+Shift+K` opens Settings scrolled to Shortcuts. Help modal dynamically generated from registry with `*` markers on customized bindings. |
 | F24 | **Non-shifting properties pane** | L | 0.23.0 | Converted properties panel from flex-layout sibling (290px, pushed timeline right on open) to `position:absolute` right-side overlay with `z-index:50`. Panel now slides in/out via `transform:translateX(100%)` (GPU-accelerated) instead of `margin-left:-290px` (layout reflow). Timeline never resizes — zero layout shift on open/close/add-item. Theme-specific `box-shadow` for depth cue (lighter on light theme, darker on midnight). Panel HTML moved to end of `#main-content` (after `#dt-ctx-menu`) to remove from flex flow. Zero JS changes — all `openPanel()`/`closePanel()` calls work unchanged via CSS class toggle. |
 | F8 | **Comprehensive README.md** | M | 0.20.0 | 11-section README.md: hero with badges, competitive comparison table, 3-step quick start, feature showcase (timeline, data, dependencies, export, themes), file format, project structure, keyboard shortcuts table, browser compatibility, development guide, roadmap, license placeholder. Screenshot guide for 5 key views (hero, timeline-view, data-view, dependencies, themes). |
 | B18 | **Help modal polish** | S | 0.19.3 | Paste import explanation in section 2 (Data View 📋 Paste, tab-separated from Excel). Watermark feature in section 11 (Last Updated stamp, position, owner, appears in exports). Corrected references: Lock now locks both axes (removed Lock H/V), export via Settings→Export (not ⬇ icon), Invert Selection is a header button (not right-click). Lasso Mode and Ctrl+Scroll/Ctrl+Shift+Scroll zoom added to shortcuts table. New ⚠ Notes/Troubleshooting section: work type, scheduling toggle, holidays, lock, hidden items, selection inversion, zoom. |
@@ -221,26 +216,87 @@ t=+2s    Machine B: polling detects new lastModified → reloads → toast
 
 **Total latency:** 7–67 seconds depending on OneDrive sync speed.
 
-### The OneDrive Conflict Problem
+### How OneDrive Conflict Detection Actually Works
 
-**If both machines edit simultaneously:**
+OneDrive uses **optimistic concurrency control** via **eTags** — opaque version strings assigned by the server. The server is a dumb storage layer; all conflict detection logic lives in the local sync client.
+
+**What the sync client tracks:** Every file in its local database has a last-synced eTag and content hash (quickXorHash). When the sync client detects a local file change, it checks the server's current eTag before uploading.
+
+**The decision tree:**
+
+| Server eTag | Local file | Outcome |
+|-------------|-----------|---------|
+| Unchanged since last sync | Changed | **Clean upload** — no conflict |
+| Changed since last sync | Unchanged | **Download new version** — no conflict |
+| Changed since last sync | Also changed | **Conflict copy created** (e.g., `timeline-MachineB.tlproj`) |
+| Changed since last sync | Same hash as server | **No action** — pseudo-conflict, content identical |
+
+**Important:** The server never "reconciles" or "merges" anything. It accepts uploads and returns HTTP 412 (Precondition Failed) when an eTag doesn't match. The sync client on the uploading machine decides what to do with the rejection.
+
+#### Outcome 1: Conflict File (Expected, Safe)
 
 ```
-t=0s   Machine A: saves version with edit X → writes to disk
-t=2s   Machine B: saves version with edit Y → writes to disk
-       OneDrive receives two different versions from two machines
-       → OneDrive creates a CONFLICT FILE on one machine (e.g., "timeline-MachineB.tlproj")
-       → Original file keeps the version from whichever machine synced first
-       → The other machine's changes are in the conflict file — NOT lost, but requires manual merge
+State: Server has file at eTag "abc". Both machines synced to "abc".
+
+t=0s   Machine A saves locally → sync client uploads → Server eTag now "def"
+t=2s   Machine B saves locally → sync client tries to upload with If-Match: "abc"
+       → Server returns 412: eTag is "def", not "abc"
+       → Machine B's sync client creates "timeline-MachineB.tlproj"
+       → Original file keeps Machine A's version
+       → Machine B's edits preserved in the conflict copy (requires manual merge)
 ```
 
-This is **OneDrive's standard behavior** for any file type (not specific to Timeline Studio). It happens with Excel, Word, etc. when co-authoring is not supported for the file format. `.tlproj` is JSON — OneDrive doesn't know how to merge it.
+This is the "safe" path — nothing is lost, but the user sees confusing extra files.
 
-**Why auto-save-to-disk makes this worse:** Without auto-save-to-disk, conflicts only happen when two people explicitly save (Ctrl+S) at overlapping times — relatively rare. With auto-save-to-disk, the app writes to disk every 5 seconds during active editing, dramatically increasing the window for conflicts.
+#### Outcome 2: Silent Overwrite (Dangerous, No Warning)
+
+```
+State: Server has file at eTag "abc". Both machines synced to "abc".
+
+t=0s    Machine A saves → sync client uploads → Server eTag now "def"
+t=5-30s OneDrive propagates "def" down to Machine B's local copy
+        Machine B's sync client updates its local DB: last-synced eTag = "def"
+t=30s+  Machine B's user saves → sync client sees local change against eTag "def"
+        → Server still at "def" → clean upload → Server eTag now "ghi"
+        → Machine A's changes SILENTLY OVERWRITTEN. No conflict file. No warning.
+```
+
+This happens when the sync propagation from A→cloud→B completes **before** B saves. From B's sync client's perspective, it's just a normal local edit against the current version — it has no way to know B's user never reviewed A's changes.
+
+#### Which Outcome Depends Entirely on Timing
+
+The variable is whether Machine B's sync client learns about Machine A's upload **before or after** Machine B's user saves:
+
+- **B saves before sync propagates A's changes:** Conflict file created (safe — both versions preserved)
+- **B saves after sync propagates A's changes:** Silent overwrite (dangerous — A's work gone from main file)
+
+OneDrive version history (cloud-side, 30 days) is the only safety net for silent overwrites. The overwritten version still exists in the recycle bin / version history on OneDrive's web interface.
+
+#### Why No Auto-Save Mechanism Can Guarantee Safety
+
+For non-merge-supported file types like `.tlproj` (JSON), **there is fundamentally no way to have two simultaneous editors without either conflicts or silent overwrites.** OneDrive is a file sync service, not a real-time collaboration platform for arbitrary formats. The only file types that avoid this are Office formats (.docx, .xlsx, .pptx) which use Microsoft's proprietary co-authoring protocol — unavailable for JSON/custom formats.
+
+Any mechanism that writes to disk — whether auto-save, heartbeat, or manual save — changes the file content, increments the eTag, and enters the conflict-or-overwrite lottery above.
+
+### The Auto-Save Tradeoff
+
+The choice between auto-save-to-disk ON vs OFF isn't "safe vs risky" — it's choosing **which failure mode**:
+
+| | Auto-save ON (every 5s) | Auto-save OFF (manual Ctrl+S) |
+|---|---|---|
+| **Conflict frequency** | High — every 5s of concurrent editing | Low — only when both users happen to Ctrl+S at overlapping times |
+| **Data loss per conflict** | Minimal — at most 5 seconds of edits in each conflict copy | Potentially catastrophic — hours of unsaved work silently overwritten |
+| **Silent overwrite risk** | Lower — frequent saves mean the eTag mismatch is usually detected before sync propagates | Higher — long gaps between saves mean sync propagation likely completes, enabling clean-upload overwrite |
+| **OneDrive churn** | High — constant file writes generate sync traffic, bandwidth use, version history bloat | Low — file only changes on explicit save |
+| **User experience** | Frequent conflict files appearing in the folder (confusing for non-technical users) | Rare conflicts but devastating when they happen (hours of work vanish silently) |
+
+**Key insight:** Auto-save creates more visible problems (conflict files) but less invisible data loss. Manual save creates fewer visible problems but the invisible failures are catastrophic. Neither is strictly "better" — it depends on user sophistication and how much they value data safety vs clean folder hygiene.
 
 **What happens when you just open a file but don't edit?** Nothing — file polling is read-only (`handle.getFile()` doesn't modify the file). Two people can have the same file open simultaneously without any conflict, as long as only one is actively editing and saving.
 
 ### Proposed Conflict Mitigations
+
+#### Tier 1 — Already Planned (in Layers 1–5)
 
 1. **`_lastSavedBy` metadata in `.tlproj`**: Add fields `_lastSavedBy` (machine identity string) and `_lastSavedAt` (ISO timestamp) to the project JSON. On file open, check: if `_lastSavedAt` is within the last 10 minutes and `_lastSavedBy` ≠ current identity → show warning.
 
@@ -251,6 +307,18 @@ This is **OneDrive's standard behavior** for any file type (not specific to Time
 4. **File handle indicator (🔗)**: Visual badge showing whether the app has a retained file handle (direct save to disk) or not (will prompt file picker). Helps users understand their save context.
 
 5. **Active-session indicator (👥)**: Pulsing badge when the file was updated by an external source within the last 60 seconds. Alerts user that someone else may be editing.
+
+#### Tier 2 — Additional Mitigations (New)
+
+6. **Pre-save conflict check (XS effort, high value)**: Before writing to disk on Ctrl+S, re-read the file via `handle.getFile()` and compare `lastModified` against `_lastFileModified`. If the file changed since our last read/write, prompt: "This file was modified externally since you last saved. Overwrite, Save As Copy, or Cancel?" Prevents the silent-overwrite scenario at the application level — catches it before OneDrive's sync client even gets involved.
+
+7. **Generation counter in `.tlproj` JSON (XS effort)**: Add an incrementing `_saveGeneration` field. On pre-save conflict check, compare generations: if the file's generation is higher than expected, another instance wrote to it. More reliable than `lastModified` alone (timestamps can be unreliable across OneDrive sync).
+
+8. **Auto-backup on conflict detection (S effort)**: When the pre-save check detects external changes, automatically save the current in-memory state as `projectname-backup-YYYYMMDD-HHMMSS.tlproj` in the same directory before prompting. Guarantees zero data loss even if the user makes the wrong choice in the conflict dialog.
+
+9. **Session heartbeat in `.tlproj` (S effort)**: Write a `_sessionHeartbeat` timestamp and `_sessionId` to the JSON on a 30-second interval (only when auto-sync-to-disk is ON). Other instances can read this to detect active editing sessions. **Caveat:** This itself is a file write and triggers OneDrive sync — use with caution. Best paired with the pre-save conflict check.
+
+10. **Default to "Save As Copy" on conflict (XS effort)**: When the pre-save check detects external changes, default the conflict dialog to "Save As Copy" rather than "Overwrite." Nudges users toward the safe choice. The copy gets a timestamp suffix: `projectname-copy-20260212-143022.tlproj`.
 
 ### SharePoint / OneDrive Technical Details
 
@@ -279,6 +347,9 @@ This is **OneDrive's standard behavior** for any file type (not specific to Time
 |-------|------|---------|
 | `_lastSavedBy` | string | Machine/user identity (user-configurable) |
 | `_lastSavedAt` | string | ISO timestamp of last save |
+| `_saveGeneration` | number | Incrementing counter, bumped on every save to disk |
+| `_sessionHeartbeat` | string | ISO timestamp of last heartbeat write (when auto-sync ON) |
+| `_sessionId` | string | Random ID for the current editing session |
 | `autoSyncToDisk` | boolean | Opt-in auto-save-to-disk (default `false`) |
 
 **Methods to add:**
@@ -293,11 +364,17 @@ This is **OneDrive's standard behavior** for any file type (not specific to Time
 
 ### Decision: Deferred to Post-Beta
 
-**Reason:** The OneDrive conflict file behavior could confuse non-technical early users and create a negative first impression. The feature should be beta-tested with real OneDrive/SharePoint environments before shipping. Layers 1–5 are safe individually, but the interaction with Layer 6 on shared drives needs real-world validation.
+**Reason:** OneDrive's conflict detection is fundamentally unsuitable for real-time multi-editor scenarios on non-Office file types. The eTag-based optimistic concurrency model produces two failure modes (conflict files or silent overwrites), neither of which can be eliminated — only shifted between. This was confirmed through deep analysis of OneDrive's sync client architecture, Microsoft Graph API conflict behavior, and real-world user reports of silent overwrites.
+
+Layers 1–5 are safe individually and add real value for the common case (same browser, same machine). Layer 6 (auto-save-to-disk) is the only one with OneDrive risk and should be opt-in. The Tier 2 mitigations (#6–#10) significantly reduce the danger of Layer 6, especially the pre-save conflict check (#6) which catches silent overwrites at the application level before OneDrive's sync client gets involved.
 
 **Recommended implementation order (when ready):**
 1. Layers 1 + 3 (StorageEvent + indicators) — safe, no disk I/O, immediate value
 2. Layer 2 (file polling) — safe, read-only, detects external changes
-3. Layer 4 (`_lastSavedBy` metadata) — safe, just extra JSON fields
-4. Layer 5 (View-Only mode) — safe, no writes
-5. Layer 6 (auto-save-to-disk) — last, opt-in only, with OneDrive warnings
+3. Mitigation #6 (pre-save conflict check) — XS effort, catches silent overwrites, no downside
+4. Layer 4 (`_lastSavedBy` + `_saveGeneration` metadata) — safe, just extra JSON fields
+5. Mitigation #7 (generation counter) — XS effort, pairs with #6 for reliable detection
+6. Layer 5 (View-Only mode) — safe, no writes
+7. Mitigation #10 (default Save As Copy on conflict) — XS effort, nudges toward safe choice
+8. Layer 6 (auto-save-to-disk) — last, opt-in only, with OneDrive warnings
+9. Mitigations #8–#9 (auto-backup + heartbeat) — only if Layer 6 is enabled
