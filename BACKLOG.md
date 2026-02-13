@@ -66,6 +66,7 @@
 | F24 | **Non-shifting properties pane** | **[Plan — needs refinement/discussion]** Prevent the timeline from visually shifting when the properties pane opens on item click or item creation. Currently, opening the pane pushes content to the right, which is jarring and disorienting — the user loses their visual anchor. **Core approach:** Pixel-perfect compensation logic: (1) calculate how many pixels the properties pane will consume on the right, (2) shift the swimlane header column left by that amount, (3) simultaneously scroll the timeline content back to compensate, so the clicked item stays exactly under the cursor. **Item creation:** Same compensation applies when adding new tasks/milestones — the pane opens without shifting the viewport. **Edge case — far-left items:** When an item is near the left edge of the visible timeline (within a configurable buffer zone), there's no room to scroll-compensate leftward. For this case: slowly/smoothly animate the properties pane open (slide-in transition) and, if technically feasible, nudge the cursor position to keep the user anchored on their item (note: `MouseEvent.movementX` is read-only and `element.setPointerCapture` can't reposition — may need a visual anchor approach instead, like briefly highlighting the clicked item). **Alternative approaches to explore:** (a) Overlay mode — properties pane floats over the timeline instead of pushing it (like a sidebar overlay with slight transparency or shadow), (b) Split-pane with animation — smoothly animate the width transition with eased scrollback, (c) Bottom panel — properties appear below the timeline instead of beside it, (d) Pinned pane — option to keep properties pane always open (reduces its width, but eliminates the shift entirely), (e) Hybrid — overlay by default, pin on user request. **Best-practice research needed:** How do tools like Figma, Linear, Notion, and Monday.com handle inspector/properties panels without disrupting the main canvas? Document findings in refinement. | L | :red_circle: P0.5 | **Done (0.23.0)** |
 | F26 | **Status import & field linking** | **[Plan — V3+ future]** Enable re-importing updated data (e.g. from Excel paste or CSV) and linking imported columns to item fields — especially Status — so users can quickly pull in bulk status updates without manually editing each item. **Ties into F22:** Leverages the 2-deep status history (prev status 1 & 2) to compute deltas on import (e.g. "changed from On Track to At Risk since last import"). Could surface import-diff summaries, highlight changed items, and optionally auto-apply or prompt for confirmation. **Open questions:** Column mapping UI for linking import fields to item properties. Conflict resolution when imported data disagrees with manual edits. Whether to support scheduled/watched file re-import. | L | :blue_circle: P3+ | Plan |
 | F25 | **Item links/URLs** | **[Plan — needs refinement/discussion]** Allow tasks and milestones to store one or more hyperlinks. **Data model:** Each item gets a `links` array of objects, each with: URL, Display Name (optional — falls back to URL), and optionally a Link Type or category (e.g. "JIRA", "Confluence", "SharePoint", "Other"). **Properties pane UI:** A links section in the item properties pane — add/remove/edit links, each rendered as a clickable hyperlink that opens in a new tab. Compact display (icon + short name) with expand/edit on click. **Configuration:** Project-level settings for default link types/categories (so users can predefine "JIRA", "Wiki", etc. with URL templates like `https://jira.company.com/browse/{key}`). **Timeline display:** Optional — small link icon badge on items that have links (similar to pin badge). Click or hover to reveal link list. **Data table:** Links column showing count or first link, with expand to see all. **Export:** Links are metadata-only in PNG export (no clickable links in images). SVG export could include `<a>` elements for clickable links. CSV export includes links as a delimited string. **Open questions:** Maximum number of links per item? Should links support drag-and-drop URL paste? Integration with paste-import from Excel (link column)? | M | :blue_circle: P3 | Plan |
+| F27 | **Multi-instance file sync** | **[Research complete — V3+ future, implement after beta]** Real-time sync between multiple Timeline Studio instances viewing the same project file. Six-layer architecture: (1) StorageEvent for instant same-browser tab sync, (2) File System Access API polling for cross-browser/cross-instance sync, (3) Visual indicators for file handle state and active sessions, (4) `_lastSavedBy` metadata for conflict detection, (5) View-Only mode for safe read-only access, (6) Opt-in auto-save-to-disk for automatic propagation. **Risk:** Auto-save-to-disk on OneDrive/SharePoint-synced files creates conflict files when multiple users edit simultaneously — this is an inherent OneDrive limitation, not solvable without a server. Feature deferred to post-beta to avoid disrupting early users. **See:** Appendix B for full research, use-case walkthroughs, and implementation plan. | L | :blue_circle: P3+ | Research |
 
 ---
 
@@ -94,6 +95,7 @@ _F24 resolved in v0.23.0 (right-side overlay panel)._
 - **F23** — Legend watermark (XL) — **Plan**
 - **F25** — Item links/URLs (M) — **Plan**
 - **F26** — Status import & field linking (L) — **Plan, V3+**
+- **F27** — Multi-instance file sync (L) — **Research complete, V3+** (see Appendix B)
 
 ---
 
@@ -149,3 +151,153 @@ _F24 resolved in v0.23.0 (right-side overlay panel)._
 | F5 | **Sharper export/screenshot** | S | 0.14.0 | `copyScreenshot` renders at 2x DPI min, `exportPNG` at 3x DPI min. Uses `devicePixelRatio` with floor. |
 | F9 | **Fit-to-content (on-screen)** | M | 0.14.0 | Canvas `measureText()` for accuracy. Iterative zoom solver separating scalable bar positions from fixed-pixel text. |
 | F10 | **Fit-to-content (export)** | M | 0.14.0 | Shared `_itemExtents()` with canvas measurement. Handles all label positions, edge dates, secondary labels. |
+
+---
+
+## Appendix B: Multi-Instance File Sync Research (F27)
+
+> Full feasibility analysis and implementation plan for real-time sync between multiple Timeline Studio instances. Researched in v0.24.0. Deferred to post-beta (V3+) due to OneDrive conflict risk.
+
+### Use Cases
+
+1. **Same browser, two tabs** — User opens the same project in two tabs to view timeline and data table side by side. Edits in one tab should appear in the other.
+2. **Same machine, two browsers** — User has Chrome and Edge both open on the same `.tlproj` file. Saves in one should be visible in the other.
+3. **Two machines, OneDrive sync** — Two people on different machines both have the OneDrive folder synced locally. One edits, the other should see the changes.
+4. **Presentation mode** — One person edits while another has it open in view-only for a meeting/review.
+
+### Current Architecture (No Sync)
+
+- `autoSave()` writes to `localStorage['tls3']` every 400ms (debounced). Single-tab, single-browser only.
+- `saveFile()` writes to disk via `FileSystemFileHandle` on explicit Ctrl+S. Handle stored in `App._fileHandle` (ephemeral — lost on page refresh).
+- No `StorageEvent` listener, no `BroadcastChannel`, no file polling, no `FileSystemObserver`.
+- Each tab is fully isolated. Opening two tabs = two independent copies.
+
+### Proposed Six-Layer Architecture
+
+| Layer | Mechanism | Scope | Latency | Risk | Effort |
+|-------|-----------|-------|---------|------|--------|
+| 1. **StorageEvent** | `window.addEventListener('storage', ...)` | Same-browser tabs | ~400ms | None | XS |
+| 2. **File polling** | `setInterval` + `handle.getFile()` every 2s | Cross-browser, same machine | ~2s | None (read-only) | S |
+| 3. **Sync indicators** | 🔗 handle badge + 👥 active-session badge | Visual awareness | Instant | None | XS |
+| 4. **`_lastSavedBy` metadata** | Embed machine ID + timestamp in `.tlproj` JSON | Conflict detection | On file read | None | XS |
+| 5. **View-Only mode** | `App._viewOnly = true`, disable all writes | Safe shared viewing | N/A | None | S |
+| 6. **Auto-save-to-disk** | Debounced `handle.createWritable()` every 5s | Cross-instance propagation | ~5-7s | **OneDrive conflicts** | S |
+
+Layers 1–5 are low-risk and can be implemented independently. Layer 6 (auto-save-to-disk) is the only one with OneDrive conflict risk and should be opt-in with clear warnings.
+
+### Walkthrough: Same Browser, Two Tabs (Layers 1 + 3)
+
+```
+t=0.0s  Tab A: user edits task name "Alpha" → "Beta"
+t=0.4s  autoSave → localStorage['tls3'] updated
+t=0.4s  Browser fires StorageEvent on Tab B (NOT on Tab A — per spec)
+t=0.4s  Tab B: handler parses new value, replaces App.proj, re-renders
+        Toast: "🔄 Synced from another tab"
+        👥 badge lights up on both tabs
+```
+
+**Key detail:** The `storage` event fires only on *other* same-origin tabs, never on the tab that wrote. No suppression flag needed.
+
+### Walkthrough: Same Machine, Two Browsers (Layers 2 + 3)
+
+```
+t=0.0s  Chrome: user edits and saves (Ctrl+S) → writes .tlproj to disk
+t=0-2s  Edge: polling tick fires, calls handle.getFile()
+t=~2s   Edge: detects lastModified changed, reads file, parses JSON, replaces proj
+        Toast: "🔄 File updated"
+        👥 badge lights up
+```
+
+**Self-save suppression:** After writing to disk, `_updateFileTimestamp()` records the new `lastModified`. Next poll tick sees `file.lastModified === this._lastFileModified` → no reload.
+
+### Walkthrough: Two Machines, OneDrive Sync (Layers 2 + 4 + 6)
+
+```
+t=0s     Machine A: user edits → auto-save-to-disk fires after 5s → writes .tlproj
+t=0-30s  OneDrive syncs Machine A's version to cloud
+t=0-60s  OneDrive syncs cloud version down to Machine B's local copy
+t=+2s    Machine B: polling detects new lastModified → reloads → toast
+```
+
+**Total latency:** 7–67 seconds depending on OneDrive sync speed.
+
+### The OneDrive Conflict Problem
+
+**If both machines edit simultaneously:**
+
+```
+t=0s   Machine A: saves version with edit X → writes to disk
+t=2s   Machine B: saves version with edit Y → writes to disk
+       OneDrive receives two different versions from two machines
+       → OneDrive creates a CONFLICT FILE on one machine (e.g., "timeline-MachineB.tlproj")
+       → Original file keeps the version from whichever machine synced first
+       → The other machine's changes are in the conflict file — NOT lost, but requires manual merge
+```
+
+This is **OneDrive's standard behavior** for any file type (not specific to Timeline Studio). It happens with Excel, Word, etc. when co-authoring is not supported for the file format. `.tlproj` is JSON — OneDrive doesn't know how to merge it.
+
+**Why auto-save-to-disk makes this worse:** Without auto-save-to-disk, conflicts only happen when two people explicitly save (Ctrl+S) at overlapping times — relatively rare. With auto-save-to-disk, the app writes to disk every 5 seconds during active editing, dramatically increasing the window for conflicts.
+
+**What happens when you just open a file but don't edit?** Nothing — file polling is read-only (`handle.getFile()` doesn't modify the file). Two people can have the same file open simultaneously without any conflict, as long as only one is actively editing and saving.
+
+### Proposed Conflict Mitigations
+
+1. **`_lastSavedBy` metadata in `.tlproj`**: Add fields `_lastSavedBy` (machine identity string) and `_lastSavedAt` (ISO timestamp) to the project JSON. On file open, check: if `_lastSavedAt` is within the last 10 minutes and `_lastSavedBy` ≠ current identity → show warning.
+
+2. **View-Only mode**: On file open, if recent external save detected, offer: "This file was last modified by *Adam-Desktop* 7 minutes ago. Open in Edit mode or View-Only mode?" View-Only disables all saves and writes, but file polling still runs — live viewer sees updates from the editor.
+
+3. **Auto-save-to-disk is opt-in, OFF by default**: Setting `proj.autoSyncToDisk` with clear warning about OneDrive conflict risk. Most users should leave this off and rely on explicit saves.
+
+4. **File handle indicator (🔗)**: Visual badge showing whether the app has a retained file handle (direct save to disk) or not (will prompt file picker). Helps users understand their save context.
+
+5. **Active-session indicator (👥)**: Pulsing badge when the file was updated by an external source within the last 60 seconds. Alerts user that someone else may be editing.
+
+### SharePoint / OneDrive Technical Details
+
+- **File System Access API reads/writes the local synced copy**, not the network. `handle.getFile()` returns the cached local file — no cloud round-trip.
+- **OneDrive sync is background and asynchronous.** After a local write, OneDrive takes seconds to minutes to push to cloud and propagate to other machines.
+- **SharePoint document libraries accessed directly (via URL) are NOT supported** by File System Access API — files must be synced locally via OneDrive first.
+- **OneDrive may create `~$filename.tlproj` temp files** during sync conflicts. File polling should ignore these — it only checks `lastModified` on the original handle.
+- **If OneDrive moves/renames the file** (conflict resolution), `handle.getFile()` will throw. Polling must catch this gracefully, stop polling, clear the handle indicator, and toast a warning.
+- **The File System Access API does NOT lock files.** Two instances can both hold handles to the same file. No `flock()` equivalent exists in the browser.
+- **Browser `File` object metadata is limited:** `name`, `size`, `lastModified` only. No "modified by", no NTFS metadata, no OneDrive author tracking. Machine identity must be stored inside the JSON itself.
+
+### Implementation Blueprint
+
+**State variables to add to `App`:**
+
+| Variable | Type | Purpose |
+|----------|------|---------|
+| `_filePollId` | number\|null | `setInterval` ID for file polling loop |
+| `_lastFileModified` | number | `file.lastModified` from last read/write |
+| `_lastExtUpdate` | number | `Date.now()` of last external sync event |
+| `_viewOnly` | boolean | View-only mode flag |
+
+**Project data fields to add:**
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `_lastSavedBy` | string | Machine/user identity (user-configurable) |
+| `_lastSavedAt` | string | ISO timestamp of last save |
+| `autoSyncToDisk` | boolean | Opt-in auto-save-to-disk (default `false`) |
+
+**Methods to add:**
+
+- `_startFilePolling()` — start `setInterval` (2s) on `_fileHandle`
+- `_stopFilePolling()` — `clearInterval`, cleanup
+- `_updateFileTimestamp()` — record `lastModified` after own write
+- `_autoSaveToDisk` — debounced (5s) disk write via handle, guarded by `autoSyncToDisk`
+- `_updateSyncInd()` — toggle 🔗 and 👥 indicators
+
+**Files to modify:** `app.js` (logic), `index.html` (indicator elements), `styles.css` (indicator styles)
+
+### Decision: Deferred to Post-Beta
+
+**Reason:** The OneDrive conflict file behavior could confuse non-technical early users and create a negative first impression. The feature should be beta-tested with real OneDrive/SharePoint environments before shipping. Layers 1–5 are safe individually, but the interaction with Layer 6 on shared drives needs real-world validation.
+
+**Recommended implementation order (when ready):**
+1. Layers 1 + 3 (StorageEvent + indicators) — safe, no disk I/O, immediate value
+2. Layer 2 (file polling) — safe, read-only, detects external changes
+3. Layer 4 (`_lastSavedBy` metadata) — safe, just extra JSON fields
+4. Layer 5 (View-Only mode) — safe, no writes
+5. Layer 6 (auto-save-to-disk) — last, opt-in only, with OneDrive warnings
