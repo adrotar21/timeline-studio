@@ -6,7 +6,7 @@
   "timescale": "months",
   "headerLayers": 3,
   "timelineStart": "2025-12-01",
-  "timelineEnd": "2026-08-01",
+  "timelineEnd": "2026-09-01",
   "autoRange": true,
   "showToday": true,
   "showDeps": true,
@@ -17,11 +17,11 @@
   "theme": "default",
   "bgColor": "#ffffff",
   "headerColor": "#1a2332",
-  "zoom": 217,
+  "zoom": 172,
   "fontSize": 11,
   "watermark": true,
-  "wmDate": "2026-02-11",
-  "wmPos": "bottom-right",
+  "wmDate": "2026-02-12",
+  "wmPos": "bottom-center",
   "wmShowOwner": true,
   "showWeekends": true,
   "weekendOpacity": 21,
@@ -65,7 +65,7 @@
       "schedAround": true
     }
   ],
-  "holidayOpacity": 12,
+  "holidayOpacity": 34,
   "holidayColor": "#e5534b",
   "holidayLabels": true,
   "scheduleAroundNonWorking": true,
@@ -163,9 +163,9 @@
       "subSwimId": "ss_research",
       "subRow": 0,
       "startDate": "2026-01-06",
-      "endDate": "2026-02-06",
+      "endDate": "2026-02-20",
       "duration": 32,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#2E86AB",
       "labelPosition": "right",
       "showDate": true,
@@ -191,7 +191,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 15
     },
     {
       "id": "t_competitive",
@@ -201,9 +202,9 @@
       "subSwimId": "ss_research",
       "subRow": 1,
       "startDate": "2026-01-13",
-      "endDate": "2026-02-13",
+      "endDate": "2026-02-27",
       "duration": 32,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#2E86AB",
       "labelPosition": "right",
       "showDate": true,
@@ -229,7 +230,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 141
     },
     {
       "id": "t_interviews",
@@ -239,9 +241,9 @@
       "subSwimId": "ss_research",
       "subRow": 2,
       "startDate": "2026-02-03",
-      "endDate": "2026-02-27",
+      "endDate": "2026-03-10",
       "duration": 25,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#81B29A",
       "labelPosition": "center",
       "showDate": true,
@@ -267,7 +269,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": -14
     },
     {
       "id": "m_bizcase",
@@ -279,7 +282,7 @@
       "date": "2026-02-14",
       "color": "#E87D2F",
       "iconType": "diamond",
-      "labelPosition": "right",
+      "labelPosition": "left",
       "showDate": true,
       "showDuration": false,
       "showStartDate": false,
@@ -310,7 +313,8 @@
         "color": "#E87D2F",
         "direction": "down",
         "extent": "swim"
-      }
+      },
+      "_float": 13
     },
     {
       "id": "m_signoff",
@@ -319,7 +323,7 @@
       "swimlaneId": "sl_strategy",
       "subSwimId": "ss_approvals",
       "subRow": 1,
-      "date": "2026-02-28",
+      "date": "2026-02-24",
       "color": "#FB8500",
       "iconType": "flag",
       "labelPosition": "right",
@@ -353,7 +357,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 27
     },
     {
       "id": "m_budget",
@@ -362,7 +367,7 @@
       "swimlaneId": "sl_strategy",
       "subSwimId": "ss_approvals",
       "subRow": 0,
-      "date": "2026-03-06",
+      "date": "2026-02-25",
       "color": "#FFB703",
       "iconType": "star",
       "labelPosition": "right",
@@ -396,7 +401,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 27
     },
     {
       "id": "t_personas",
@@ -405,10 +411,10 @@
       "swimlaneId": "sl_design",
       "subSwimId": "ss_ux",
       "subRow": 0,
-      "startDate": "2026-02-16",
-      "endDate": "2026-03-06",
+      "startDate": "2026-02-18",
+      "endDate": "2026-03-16",
       "duration": 19,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#A23B72",
       "labelPosition": "left",
       "showDate": true,
@@ -422,7 +428,7 @@
           "lag": 10
         }
       ],
-      "progress": 30,
+      "progress": 31,
       "textColor": "",
       "edgeTextColor": "",
       "dateFormat": "",
@@ -440,7 +446,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": -15
     },
     {
       "id": "t_wireframes",
@@ -449,10 +456,10 @@
       "swimlaneId": "sl_design",
       "subSwimId": "ss_ux",
       "subRow": 1,
-      "startDate": "2026-03-02",
-      "endDate": "2026-03-27",
+      "startDate": "2026-03-10",
+      "endDate": "2026-04-14",
       "duration": 26,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#A23B72",
       "labelPosition": "center",
       "showDate": true,
@@ -484,7 +491,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 64
     },
     {
       "id": "m_designreview",
@@ -493,7 +501,7 @@
       "swimlaneId": "sl_design",
       "subSwimId": "ss_ux",
       "subRow": 0,
-      "date": "2026-03-27",
+      "date": "2026-04-15",
       "color": "#A23B72",
       "iconType": "diamond",
       "labelPosition": "right",
@@ -527,7 +535,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 68
     },
     {
       "id": "t_designsys",
@@ -536,10 +545,10 @@
       "swimlaneId": "sl_design",
       "subSwimId": "ss_ux",
       "subRow": 1,
-      "startDate": "2026-03-30",
-      "endDate": "2026-04-17",
+      "startDate": "2026-04-16",
+      "endDate": "2026-05-12",
       "duration": 19,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#A23B72",
       "labelPosition": "center",
       "showDate": true,
@@ -571,7 +580,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 68
     },
     {
       "id": "t_arch",
@@ -580,10 +590,10 @@
       "swimlaneId": "sl_design",
       "subSwimId": "ss_eng",
       "subRow": 0,
-      "startDate": "2026-03-02",
-      "endDate": "2026-03-20",
+      "startDate": "2026-03-04",
+      "endDate": "2026-03-30",
       "duration": 19,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#3D5A80",
       "labelPosition": "right",
       "showDate": true,
@@ -615,7 +625,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": -14
     },
     {
       "id": "t_sprint1",
@@ -624,10 +635,10 @@
       "swimlaneId": "sl_design",
       "subSwimId": "ss_eng",
       "subRow": 1,
-      "startDate": "2026-03-23",
-      "endDate": "2026-04-10",
+      "startDate": "2026-03-31",
+      "endDate": "2026-04-24",
       "duration": 19,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#3D5A80",
       "labelPosition": "right",
       "showDate": true,
@@ -659,7 +670,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": -14
     },
     {
       "id": "t_sprint2",
@@ -668,10 +680,10 @@
       "swimlaneId": "sl_design",
       "subSwimId": "ss_eng",
       "subRow": 0,
-      "startDate": "2026-04-13",
-      "endDate": "2026-05-01",
+      "startDate": "2026-04-27",
+      "endDate": "2026-05-21",
       "duration": 19,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#3D5A80",
       "labelPosition": "right",
       "showDate": true,
@@ -703,7 +715,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": -6
     },
     {
       "id": "t_sprint3",
@@ -712,10 +725,10 @@
       "swimlaneId": "sl_design",
       "subSwimId": "ss_eng",
       "subRow": 1,
-      "startDate": "2026-05-04",
-      "endDate": "2026-05-22",
+      "startDate": "2026-05-22",
+      "endDate": "2026-06-18",
       "duration": 19,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#3D5A80",
       "labelPosition": "right",
       "showDate": true,
@@ -747,7 +760,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": -4
     },
     {
       "id": "m_codefreeze",
@@ -790,7 +804,8 @@
         "color": "#264653",
         "direction": "both",
         "extent": "all"
-      }
+      },
+      "_float": -8
     },
     {
       "id": "t_testplan",
@@ -799,10 +814,10 @@
       "swimlaneId": "sl_design",
       "subSwimId": "ss_qa",
       "subRow": 0,
-      "startDate": "2026-03-16",
-      "endDate": "2026-03-27",
+      "startDate": "2026-03-18",
+      "endDate": "2026-04-02",
       "duration": 12,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#E07A5F",
       "labelPosition": "left",
       "showDate": true,
@@ -834,7 +849,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 106
     },
     {
       "id": "t_integration_test",
@@ -843,10 +859,10 @@
       "swimlaneId": "sl_design",
       "subSwimId": "ss_qa",
       "subRow": 0,
-      "startDate": "2026-04-13",
-      "endDate": "2026-05-08",
+      "startDate": "2026-04-27",
+      "endDate": "2026-06-02",
       "duration": 26,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#E07A5F",
       "labelPosition": "center",
       "showDate": true,
@@ -878,7 +894,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": -14
     },
     {
       "id": "t_uat",
@@ -887,10 +904,10 @@
       "swimlaneId": "sl_design",
       "subSwimId": "ss_qa",
       "subRow": 0,
-      "startDate": "2026-05-11",
-      "endDate": "2026-05-29",
+      "startDate": "2026-06-03",
+      "endDate": "2026-06-30",
       "duration": 19,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#E07A5F",
       "labelPosition": "center",
       "showDate": true,
@@ -922,7 +939,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": -15
     },
     {
       "id": "m_qa_signoff",
@@ -931,7 +949,7 @@
       "swimlaneId": "sl_design",
       "subSwimId": "ss_qa",
       "subRow": 0,
-      "date": "2026-05-29",
+      "date": "2026-07-01",
       "color": "#C0392B",
       "iconType": "flag",
       "labelPosition": "right",
@@ -965,7 +983,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": -15
     },
     {
       "id": "t_messaging",
@@ -974,10 +993,10 @@
       "swimlaneId": "sl_gtm",
       "subSwimId": "ss_mktg",
       "subRow": 0,
-      "startDate": "2026-03-09",
-      "endDate": "2026-04-03",
+      "startDate": "2026-02-26",
+      "endDate": "2026-04-02",
       "duration": 26,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#F18F01",
       "labelPosition": "right",
       "showDate": true,
@@ -1009,7 +1028,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 27
     },
     {
       "id": "t_content",
@@ -1018,10 +1038,10 @@
       "swimlaneId": "sl_gtm",
       "subSwimId": "ss_mktg",
       "subRow": 1,
-      "startDate": "2026-04-06",
-      "endDate": "2026-05-01",
+      "startDate": "2026-04-03",
+      "endDate": "2026-05-08",
       "duration": 26,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#F18F01",
       "labelPosition": "right",
       "showDate": true,
@@ -1053,7 +1073,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 27
     },
     {
       "id": "t_campaign",
@@ -1062,10 +1083,10 @@
       "swimlaneId": "sl_gtm",
       "subSwimId": "ss_mktg",
       "subRow": 0,
-      "startDate": "2026-05-04",
-      "endDate": "2026-05-29",
+      "startDate": "2026-05-11",
+      "endDate": "2026-06-16",
       "duration": 26,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#F18F01",
       "labelPosition": "right",
       "showDate": true,
@@ -1097,7 +1118,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 28
     },
     {
       "id": "t_press",
@@ -1106,10 +1128,10 @@
       "swimlaneId": "sl_gtm",
       "subSwimId": "ss_mktg",
       "subRow": 1,
-      "startDate": "2026-05-18",
-      "endDate": "2026-06-05",
+      "startDate": "2026-05-26",
+      "endDate": "2026-06-22",
       "duration": 19,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#E87D2F",
       "labelPosition": "right",
       "showDate": true,
@@ -1141,7 +1163,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 28
     },
     {
       "id": "t_salesmaterial",
@@ -1150,10 +1173,10 @@
       "swimlaneId": "sl_gtm",
       "subSwimId": "ss_sales",
       "subRow": 0,
-      "startDate": "2026-04-20",
-      "endDate": "2026-05-15",
+      "startDate": "2026-04-17",
+      "endDate": "2026-05-22",
       "duration": 26,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#219EBC",
       "labelPosition": "center",
       "showDate": true,
@@ -1185,7 +1208,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 39
     },
     {
       "id": "t_partner",
@@ -1195,9 +1219,9 @@
       "subSwimId": "ss_sales",
       "subRow": 1,
       "startDate": "2026-05-04",
-      "endDate": "2026-05-29",
+      "endDate": "2026-06-09",
       "duration": 26,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#219EBC",
       "labelPosition": "center",
       "showDate": true,
@@ -1229,7 +1253,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 37
     },
     {
       "id": "m_saleskickoff",
@@ -1238,7 +1263,7 @@
       "swimlaneId": "sl_gtm",
       "subSwimId": "ss_sales",
       "subRow": 0,
-      "date": "2026-06-01",
+      "date": "2026-06-10",
       "color": "#FFB703",
       "iconType": "star",
       "labelPosition": "right",
@@ -1272,7 +1297,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 40
     },
     {
       "id": "t_staging",
@@ -1281,10 +1307,10 @@
       "swimlaneId": "sl_launch",
       "subSwimId": "",
       "subRow": 0,
-      "startDate": "2026-06-01",
-      "endDate": "2026-06-05",
+      "startDate": "2026-07-02",
+      "endDate": "2026-07-09",
       "duration": 5,
-      "durMode": "cal",
+      "durMode": "work",
       "color": "#023047",
       "labelPosition": "right",
       "showDate": true,
@@ -1321,7 +1347,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": -15
     },
     {
       "id": "m_proddeploy",
@@ -1330,7 +1357,7 @@
       "swimlaneId": "sl_launch",
       "subSwimId": "",
       "subRow": 1,
-      "date": "2026-06-08",
+      "date": "2026-07-10",
       "color": "#C0392B",
       "iconType": "arrow",
       "labelPosition": "left",
@@ -1364,7 +1391,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": -15
     },
     {
       "id": "m_launch",
@@ -1376,7 +1404,7 @@
       "date": "2026-06-15",
       "color": "#FB8500",
       "iconType": "flag",
-      "labelPosition": "right",
+      "labelPosition": "bottom",
       "showDate": true,
       "showDuration": false,
       "showStartDate": false,
@@ -1407,7 +1435,8 @@
         "color": "#FB8500",
         "direction": "both",
         "extent": "all"
-      }
+      },
+      "_float": -15
     },
     {
       "id": "m_postlaunch",
@@ -1416,7 +1445,7 @@
       "swimlaneId": "sl_launch",
       "subSwimId": "",
       "subRow": 1,
-      "date": "2026-06-30",
+      "date": "2026-07-01",
       "color": "#2C5F7C",
       "iconType": "diamond",
       "labelPosition": "right",
@@ -1450,7 +1479,8 @@
         "color": "#999999",
         "direction": "both",
         "extent": "swim"
-      }
+      },
+      "_float": 19
     }
   ]
 }

@@ -64,7 +64,7 @@ const App={
      'project-name-text','unsaved-dot',
      'hide-label','ctx-link-dep',
      'help-body','np-template','np-name',
-     'data-filter-bar','flt-name','flt-owner','flt-notes','flt-start','flt-end',
+     'data-filter-bar','flt-type','flt-name','flt-owner','flt-swim','flt-sub','flt-notes','flt-start','flt-end',
      'as-term','as-results',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
     this.loadAuto();this.migrate();
@@ -791,11 +791,12 @@ const App={
     on('btn-adv-search',()=>{document.getElementById('as-term').value='';document.getElementById('as-results').textContent='';this.showModal('adv-search-modal')});
     on('btn-as-select',()=>this.doAdvSearch(false));on('btn-as-add',()=>this.doAdvSearch(true));
     // Filter bar
-    on('btn-dt-filter',()=>{this.$.data_filter_bar.classList.toggle('hidden')});
-    const fltKeys=['flt_name','flt_owner','flt_notes','flt_start','flt_end'];
+    on('btn-dt-filter',()=>{const bar=this.$.data_filter_bar,fb=document.getElementById('btn-dt-filter');bar.classList.toggle('hidden');if(fb)fb.classList.toggle('filter-active',!bar.classList.contains('hidden'));if(!bar.classList.contains('hidden'))this._populateFilterDropdowns()});
+    const fltKeys=['flt_type','flt_name','flt_owner','flt_swim','flt_sub','flt_notes','flt_start','flt_end'];
     const updateFltInd=()=>{let count=0;fltKeys.forEach(k=>{if(this.$[k]){const has=!!this.$[k].value;this.$[k].classList.toggle('has-value',has);if(has)count++}});const fb=document.getElementById('btn-dt-filter');if(fb){let badge=fb.querySelector('.filter-count');if(count>0){if(!badge){badge=document.createElement('span');badge.className='filter-count';fb.appendChild(badge)}badge.textContent=count}else if(badge)badge.remove()}};
     const fltDeb=U.deb(()=>{this.sched(false,true);updateFltInd()},200);
-    fltKeys.forEach(k=>{if(this.$[k])this.$[k].oninput=fltDeb});
+    const fltImm=()=>{this.sched(false,true);updateFltInd()};
+    fltKeys.forEach(k=>{if(this.$[k]){if(this.$[k].tagName==='SELECT')this.$[k].onchange=fltImm;else this.$[k].oninput=fltDeb}});
     on('btn-flt-clear',()=>{fltKeys.forEach(k=>{if(this.$[k])this.$[k].value=''});updateFltInd();this.sched(false,true)});
     // Settings toggles
     document.getElementById('project-name-display').addEventListener('dblclick',()=>{document.getElementById('pn-name').value=this.proj.name;this.showModal('pname-modal');document.getElementById('pn-name').focus()});
@@ -1423,26 +1424,47 @@ const App={
   renderBulkPanel(){
     const items=this.sel.map(id=>this.gi(id)).filter(Boolean);if(!items.length)return;
     const first=items[0];
+    const hasTasks=items.some(i=>i.type==='task');
+    const hasMilestones=items.some(i=>i.type==='milestone');
     let h=`<div class="ps"><div class="ps-t">Bulk Edit — ${items.length} items</div>
       <div class="pr"><label>Color</label><div class="pcr"><input type="color" id="bp-clr" class="pci" value="${first.color}"><div class="color-presets-h">${COLORS.slice(0,10).map(c=>`<div class="cs" style="background:${c}" data-c="${c}"></div>`).join('')}</div></div></div>
-      <div class="pr"><label>Text Color</label><div class="pcr"><input type="color" id="bp-tc" class="pci" value="${first.textColor||'#1a1a1a'}"><div class="color-presets-h">${TEXT_COLORS.slice(0,8).map(c=>`<div class="cs" style="background:${c}" data-c="${c}" data-f="tc"></div>`).join('')}</div></div></div>
-      <div class="pr"><label>Font Size (0 = global)</label><input type="number" id="bp-fs" value="${first.fontSize||0}" min="0" max="20"></div>
+      <div class="pr"><label>Text Color</label><div class="pcr"><input type="color" id="bp-tc" class="pci" value="${first.textColor||'#1a1a1a'}"><div class="color-presets-h">${TEXT_COLORS.slice(0,8).map(c=>`<div class="cs" style="background:${c}" data-c="${c}" data-f="tc"></div>`).join('')}</div></div></div>`;
+    if(hasTasks)h+=`<div class="pr"><label>Edge Text Color</label><div class="pcr"><input type="color" id="bp-etc" class="pci" value="${(items.find(i=>i.type==='task')||first).edgeTextColor||'#5a6577'}"><div class="color-presets-h">${TEXT_COLORS.slice(0,8).map(c=>`<div class="cs" style="background:${c}" data-c="${c}" data-f="etc"></div>`).join('')}</div></div></div>`;
+    h+=`<div class="pr"><label>Font Size (0 = global)</label><input type="number" id="bp-fs" value="${first.fontSize||0}" min="0" max="20"></div>
       <div class="pr"><label>Label Pos</label><div class="lp-grid"><div class="lp-btn" data-v=""></div><div class="lp-btn" data-v="top">T</div><div class="lp-btn" data-v=""></div><div class="lp-btn" data-v="left">L</div><div class="lp-btn" data-v="center">M</div><div class="lp-btn" data-v="right">R</div><div class="lp-btn" data-v=""></div><div class="lp-btn" data-v="bottom">B</div><div class="lp-btn" data-v=""></div></div></div>`;
-    if(items.some(i=>i.type==='milestone'))h+=`<div class="pr"><label>Icon</label><div class="icon-grid">${ICONS.map(ic=>`<button class="ic-btn" data-ic="${ic.id}" title="${ic.l}"><svg width="14" height="14" viewBox="0 0 24 24" fill="${first.color}"><path d="${ic.p}"/></svg></button>`).join('')}</div></div>`;
+    if(hasMilestones)h+=`<div class="pr"><label>Icon</label><div class="icon-grid">${ICONS.map(ic=>`<button class="ic-btn" data-ic="${ic.id}" title="${ic.l}"><svg width="14" height="14" viewBox="0 0 24 24" fill="${first.color}"><path d="${ic.p}"/></svg></button>`).join('')}</div></div>`;
     h+=`<div class="pr"><label><input type="checkbox" id="bp-hidden" ${items.every(i=>i.hidden)?'checked':''}> Hidden</label></div>
       <div class="pr"><label><input type="checkbox" id="bp-pin" ${items.every(i=>i.pinned)?'checked':''}> 📌 Pin Date</label>
-        <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">Pinned items are protected from Propagate and auto-scheduling.</div></div>
-      <div class="pr"><label>Date Format</label><select id="bp-df"><option value="">Global</option>${['MMM D, YYYY','MM/DD/YYYY','DD/MM/YYYY','YYYY-MM-DD','M/D','MMM D'].map(f=>`<option value="${f}">${f}</option>`).join('')}</select></div>
-    </div>`;
+        <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">Pinned items are protected from Propagate and auto-scheduling.</div></div></div>`;
+
+    h+=`<div class="ps"><div class="ps-t">Date Display</div>
+      <div class="pr"><label>Format</label><select id="bp-df"><option value="">Global</option>${['MMM D, YYYY','MM/DD/YYYY','DD/MM/YYYY','YYYY-MM-DD','M/D','MMM D'].map(f=>`<option value="${f}">${f}</option>`).join('')}</select></div>
+      <div class="pr"><label>Owner</label><input type="text" id="bp-owner" value="" placeholder="Set owner for all selected"></div>
+      <div class="pr"><label><input type="checkbox" id="bp-sown" ${items.every(i=>i.showOwner)?'checked':''}> Show Owner</label></div>`;
+    if(hasTasks)h+=`<div class="pr"><label><input type="checkbox" id="bp-ssd" ${items.filter(i=>i.type==='task').every(i=>i.showStartDate)?'checked':''}> Show Start Date</label></div>
+      <div class="pr"><label><input type="checkbox" id="bp-sed" ${items.filter(i=>i.type==='task').every(i=>i.showEndDate)?'checked':''}> Show End Date</label></div>
+      <div class="pr"><label><input type="checkbox" id="bp-sdur" ${items.filter(i=>i.type==='task').every(i=>i.showDuration)?'checked':''}> Show Duration</label></div>
+      <div class="pr"><label>Dur Fmt</label><select id="bp-durfmt"><option value="days" ${(items.find(i=>i.type==='task')||{}).durationFmt==='days'?'selected':''}>Days</option><option value="weeks" ${(items.find(i=>i.type==='task')||{}).durationFmt==='weeks'?'selected':''}>Weeks</option><option value="months" ${(items.find(i=>i.type==='task')||{}).durationFmt==='months'?'selected':''}>Months</option></select></div>`;
+    if(hasMilestones)h+=`<div class="pr"><label><input type="checkbox" id="bp-sd" ${items.filter(i=>i.type==='milestone').every(i=>i.showDate!==false)?'checked':''}> Show Date Label</label></div>`;
+    h+=`</div>`;
+
     this.$.panel_body.innerHTML=h;
     const up=fn=>{this.snap();items.forEach(fn);this.sched();this.autoSave()};
     const q=id=>document.getElementById(id);
     q('bp-clr').oninput=function(){up(i=>i.color=this.value)};
     q('bp-tc').oninput=function(){up(i=>i.textColor=this.value)};
+    if(q('bp-etc')){q('bp-etc').oninput=function(){up(i=>{if(i.type==='task')i.edgeTextColor=this.value})};this.$.panel_body.querySelectorAll('[data-f="etc"]').forEach(s=>{s.onclick=()=>{const c=s.dataset.c;q('bp-etc').value=c;up(i=>{if(i.type==='task')i.edgeTextColor=c})}})}
     q('bp-fs').onchange=function(){up(i=>i.fontSize=+this.value)};
     q('bp-hidden').onchange=function(){up(i=>i.hidden=this.checked)};
     q('bp-pin').onchange=function(){up(i=>i.pinned=this.checked)};
     q('bp-df').onchange=function(){up(i=>i.dateFormat=this.value)};
+    q('bp-owner').onchange=function(){if(this.value)up(i=>i.owner=this.value)};
+    q('bp-sown').onchange=function(){up(i=>i.showOwner=this.checked)};
+    if(q('bp-ssd'))q('bp-ssd').onchange=function(){up(i=>{if(i.type==='task')i.showStartDate=this.checked})};
+    if(q('bp-sed'))q('bp-sed').onchange=function(){up(i=>{if(i.type==='task')i.showEndDate=this.checked})};
+    if(q('bp-sdur'))q('bp-sdur').onchange=function(){up(i=>{if(i.type==='task')i.showDuration=this.checked})};
+    if(q('bp-durfmt'))q('bp-durfmt').onchange=function(){up(i=>{if(i.type==='task')i.durationFmt=this.value})};
+    if(q('bp-sd'))q('bp-sd').onchange=function(){up(i=>{if(i.type==='milestone')i.showDate=this.checked})};
     this.$.panel_body.querySelectorAll('.color-presets-h .cs:not([data-f])').forEach(s=>{s.onclick=()=>{const c=s.dataset.c;q('bp-clr').value=c;up(i=>i.color=c)}});
     this.$.panel_body.querySelectorAll('[data-f="tc"]').forEach(s=>{s.onclick=()=>{const c=s.dataset.c;q('bp-tc').value=c;up(i=>i.textColor=c)}});
     this.$.panel_body.querySelectorAll('.lp-btn').forEach(b=>{if(!b.dataset.v||!['top','bottom','left','right','center'].includes(b.dataset.v))return;b.onclick=()=>up(i=>i.labelPosition=b.dataset.v)});
@@ -2245,30 +2267,41 @@ const App={
   },
 
   /* ===== DATA TABLE ===== */
+  _populateFilterDropdowns(){
+    const p=this.proj;
+    if(this.$.flt_swim){const cur=this.$.flt_swim.value;let h='<option value="">Lane…</option>';p.swimlanes.forEach(sl=>{h+=`<option value="${sl.id}">${U.esc(sl.name)}</option>`});this.$.flt_swim.innerHTML=h;this.$.flt_swim.value=cur}
+    if(this.$.flt_sub){const cur=this.$.flt_sub.value;let h='<option value="">Sub…</option>';const seen=new Set();p.swimlanes.forEach(sl=>{(sl.subSwimlanes||[]).forEach(ss=>{if(!seen.has(ss.id)){seen.add(ss.id);h+=`<option value="${ss.id}">${U.esc(ss.name)}</option>`}})});this.$.flt_sub.innerHTML=h;this.$.flt_sub.value=cur}
+  },
   renderDT(){
     const p=this.proj;
     const cols=[{k:'_cb',l:'',w:52},{k:'name',l:'Name',w:160},{k:'owner',l:'Owner',w:90},{k:'type',l:'Type',w:55},{k:'startDate',l:'Start',w:100},{k:'endDate',l:'End',w:100},{k:'duration',l:'Dur',w:50},{k:'swimlaneId',l:'Lane',w:90},{k:'subSwimId',l:'Sub',w:75},{k:'color',l:'',w:28},{k:'subRow',l:'Row',w:34},{k:'deps',l:'Dep',w:32},{k:'progress',l:'%',w:36},{k:'pinned',l:'📌',w:28},{k:'hidden',l:'👁',w:28},{k:'notes',l:'Notes',w:120}];
     const sc=this._sortCol,sd=this._sortDir;
     /* Build visible item ids first so header checkbox can reflect state */
     const visibleIds=[];
+    const fltType=this.$.flt_type?.value||'';
     const fltName=(this.$.flt_name?.value||'').toLowerCase();
     const fltOwner=(this.$.flt_owner?.value||'').toLowerCase();
+    const fltSwim=this.$.flt_swim?.value||'';
+    const fltSub=this.$.flt_sub?.value||'';
     const fltNotes=(this.$.flt_notes?.value||'').toLowerCase();
     const fltStart=this.$.flt_start?.value||'';
     const fltEnd=this.$.flt_end?.value||'';
+    const anyFlt=fltType||fltName||fltOwner||fltSwim||fltSub||fltNotes||fltStart||fltEnd;
+    const _fltMatch=it=>{
+      if(fltType&&it.type!==fltType)return false;
+      if(fltName&&!it.name.toLowerCase().includes(fltName))return false;
+      if(fltOwner&&!(it.owner||'').toLowerCase().includes(fltOwner))return false;
+      if(fltSwim&&it.swimlaneId!==fltSwim)return false;
+      if(fltSub&&(it.subSwimId||'')!==fltSub)return false;
+      if(fltNotes&&!(it.notes||'').toLowerCase().includes(fltNotes))return false;
+      if(fltStart&&(it.date||it.startDate||'')<fltStart)return false;
+      if(fltEnd&&(it.endDate||it.date||'')>fltEnd)return false;
+      return true;
+    };
     const gv=(it,k)=>{if(k==='startDate')return it.type==='milestone'?(it.date||''):(it.startDate||'');if(k==='deps')return(it.deps||[]).length;if(k==='duration')return it.duration||0;if(k==='owner')return it.owner||'';if(k==='notes')return it.notes||'';if(k==='pinned')return it.pinned?1:0;return it[k]||''};
     for(const sl of p.swimlanes){
       let slItems=p.items.filter(i=>i.swimlaneId===sl.id);
-      if(fltName||fltOwner||fltNotes||fltStart||fltEnd){
-        slItems=slItems.filter(it=>{
-          if(fltName&&!it.name.toLowerCase().includes(fltName))return false;
-          if(fltOwner&&!(it.owner||'').toLowerCase().includes(fltOwner))return false;
-          if(fltNotes&&!(it.notes||'').toLowerCase().includes(fltNotes))return false;
-          if(fltStart&&(it.date||it.startDate||'')<fltStart)return false;
-          if(fltEnd&&(it.endDate||it.date||'')>fltEnd)return false;
-          return true;
-        });
-      }
+      if(anyFlt)slItems=slItems.filter(_fltMatch);
       slItems.forEach(i=>visibleIds.push(i.id));
     }
     const allSel=visibleIds.length>0&&visibleIds.every(id=>this.sel.includes(id));
@@ -2279,16 +2312,7 @@ const App={
     const rows=[];
     for(const sl of p.swimlanes){
       let slItems=p.items.filter(i=>i.swimlaneId===sl.id);
-      if(fltName||fltOwner||fltNotes||fltStart||fltEnd){
-        slItems=slItems.filter(it=>{
-          if(fltName&&!it.name.toLowerCase().includes(fltName))return false;
-          if(fltOwner&&!(it.owner||'').toLowerCase().includes(fltOwner))return false;
-          if(fltNotes&&!(it.notes||'').toLowerCase().includes(fltNotes))return false;
-          if(fltStart&&(it.date||it.startDate||'')<fltStart)return false;
-          if(fltEnd&&(it.endDate||it.date||'')>fltEnd)return false;
-          return true;
-        });
-      }
+      if(anyFlt)slItems=slItems.filter(_fltMatch);
       if(sc)slItems.sort((a,b)=>{let va=gv(a,sc),vb=gv(b,sc);if(typeof va==='string')va=va.toLowerCase();if(typeof vb==='string')vb=vb.toLowerCase();return va<vb?(sd==='asc'?-1:1):va>vb?(sd==='asc'?1:-1):0});
       rows.push(`<tr class="dt-sw-hdr" data-sl-id="${sl.id}"><td colspan="${cols.length}"><span class="dt-sw-clr" style="background:${sl.color}"></span>${U.esc(sl.name)}</td></tr>`);
       const subSws=sl.subSwimlanes||[];

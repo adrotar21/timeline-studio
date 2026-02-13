@@ -240,7 +240,10 @@ body.theme-midnight #props-panel{box-shadow:-4px 0 20px rgba(0,0,0,.4)}
 .filter-input:focus{border-color:var(--acc);outline:none}
 .filter-input.has-value{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 8%,var(--bg2))}
 .filter-count{font-size:8px;background:var(--acc);color:#fff;border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;margin-left:3px;font-weight:700;vertical-align:middle}
+.filter-select{width:90px;cursor:pointer}
 .filter-date{width:115px}
+.data-btn.filter-active{background:var(--acc);color:#fff;border-color:var(--acc)}
+.data-btn.filter-active:hover{background:color-mix(in srgb,var(--acc) 85%,#000);border-color:color-mix(in srgb,var(--acc) 85%,#000)}
 #data-table-wrap{flex:1;overflow:auto}
 #data-table{width:100%;border-collapse:collapse;table-layout:fixed}
 #data-table thead{position:sticky;top:0;z-index:10}

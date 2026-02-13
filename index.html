@@ -151,11 +151,14 @@
       </div>
       <div id="data-filter-bar" class="hidden">
         <span class="filter-label">Filters:</span>
+        <select class="filter-input filter-select" id="flt-type" title="Filter by type"><option value="">Type…</option><option value="task">Task</option><option value="milestone">Milestone</option></select>
         <input type="text" class="filter-input" id="flt-name" placeholder="Name…">
         <input type="text" class="filter-input" id="flt-owner" placeholder="Owner…">
-        <input type="text" class="filter-input" id="flt-notes" placeholder="Notes…">
+        <select class="filter-input filter-select" id="flt-swim" title="Filter by swimlane"><option value="">Lane…</option></select>
+        <select class="filter-input filter-select" id="flt-sub" title="Filter by sub-swimlane"><option value="">Sub…</option></select>
         <input type="date" class="filter-input filter-date" id="flt-start" title="Start after…">
         <input type="date" class="filter-input filter-date" id="flt-end" title="End before…">
+        <input type="text" class="filter-input" id="flt-notes" placeholder="Notes…">
         <button class="data-btn" id="btn-flt-clear">✕ Clear</button>
       </div>
       <div id="data-table-wrap"><table id="data-table"><thead id="dt-head"></thead><tbody id="dt-body"></tbody></table></div>
