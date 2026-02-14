@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.26.3` — Status field F22 complete (data model, settings UI, properties pane, data table, timeline rendering, context menu, export, CSV). Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.26.4` — Comprehensive test coverage (1,675 tests), manual QA checklist, bug gap analysis. Live at `https://adrotar21.github.io/timeline-studio/`.
 - Version history tracked in `BACKLOG.md` under the Versioning table and via **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 
@@ -40,9 +40,16 @@ TimelineProject/
 ├── BACKLOG.md                      # Prioritized bugs/features with version history
 ├── dependency-prd.md               # Dependency engine PRD (Phase 1 + Phase 2)
 ├── screenshots/                    # README screenshots (5 PNGs)
-└── tests/
+└── tests/                         # 1,624 tests across 14 files
+    ├── helpers/                    # Shared assert lib, mock engine, builder factories
+    ├── core/                       # Scheduling engine, dependency type tests
+    ├── features/                   # Per-feature: status, shortcuts, swimlane, fit, data table, CSV, SVG
+    ├── release/                    # Migration compatibility, e2e integration flows
+    ├── regression/                 # Targeted bug regression tests
+    ├── visual/                     # Playwright-based screenshot regression (separate npm)
     ├── test_comprehensive.js       # 115 tests covering core engine
-    └── test_expanded.js            # 464 tests targeting real bug patterns + watermarks
+    ├── test_expanded.js            # 464 tests targeting real bug patterns + watermarks
+    └── run-all.js                  # Aggregate runner for all Node.js tests
 ```
 
 ## Tech Stack
@@ -156,12 +163,47 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 - Hidden swimlanes (`sl.collapsed === 'collapsed'`) contribute 0px in export — no rects, no visual trace
 
 ## Running Tests
-Tests are Node.js CLI scripts with no dependencies:
-```bash
-node tests/test_comprehensive.js
-node tests/test_expanded.js
+
+### Test Structure
+Tests live in `tests/` organized by category:
 ```
-Output is color-coded (green pass / red fail) with summary stats. Tests mock the engine functions from app.js internally. **Always run both test suites after making changes to `app.js`.**
+tests/
+├── helpers/               # Shared assert lib, mock engine, builder factories
+├── core/                  # Scheduling engine, dependency type tests
+├── features/              # Per-feature: status, shortcuts, swimlane, fit, data table, CSV, SVG export
+├── release/               # Migration compatibility, e2e integration flows
+├── regression/            # Targeted bug regression tests
+├── visual/                # Playwright-based screenshot regression (separate npm install)
+├── test_comprehensive.js  # Original 115 engine tests
+├── test_expanded.js       # Original 464 bug pattern tests
+└── run-all.js             # Aggregate runner for all Node.js tests
+```
+
+### Running Tests
+```bash
+# Run ALL tests (always do this after any app.js change)
+node tests/run-all.js
+
+# Run a specific feature suite (fast feedback during development)
+node tests/features/test_status.js
+node tests/features/test_shortcuts.js
+node tests/features/test_data_table.js
+# ... etc
+
+# Visual regression tests (before releases or after CSS/theme changes)
+cd tests/visual && npm install   # first time only
+npm test                          # compare against baselines
+npm run update                    # capture new baselines after intentional changes
+```
+
+### When to Run What
+- **Any `app.js` change** → `node tests/run-all.js` (all Node.js tests, ~5s)
+- **Targeted development** → run the relevant `tests/features/test_*.js` first for fast feedback, then full suite
+- **Before tagging a release** → full `run-all.js` + visual tests
+- **After CSS/theme changes** → update visual baselines and review diffs
+- **Original test files** (`test_comprehensive.js`, `test_expanded.js`) are included in `run-all.js` — run them separately only when debugging specific failures
+
+Output is color-coded (green pass / red fail) with summary stats. Tests mock engine functions from app.js internally.
 
 ## Key Features
 - Milestones and tasks on a timeline with swimlanes (including sub-swimlanes)
