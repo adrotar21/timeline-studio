@@ -1,0 +1,14 @@
+{
+  "private": true,
+  "name": "timeline-studio-visual-tests",
+  "description": "Visual regression tests for Timeline Studio",
+  "scripts": {
+    "test": "node visual-runner.js",
+    "update": "node visual-runner.js --update-baselines"
+  },
+  "devDependencies": {
+    "playwright": "^1.40.0",
+    "pixelmatch": "^5.3.0",
+    "pngjs": "^7.0.0"
+  }
+}
