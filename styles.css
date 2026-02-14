@@ -128,7 +128,7 @@ body.theme-midnight #props-panel{box-shadow:-4px 0 20px rgba(0,0,0,.4)}
 #tl-container{flex-direction:column;overflow:hidden;position:relative;background:#fff}
 #tl-scroll{display:flex;flex-direction:column;flex:1;overflow:hidden}
 #tl-hdr-wrap{display:flex;flex-shrink:0;z-index:20}
-#tl-hdr-corner{width:var(--sl-w);min-width:var(--sl-w);border-right:1px solid rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.1);z-index:21}
+#tl-hdr-corner{width:var(--sl-w);min-width:var(--sl-w);border-right:1px solid rgba(255,255,255,.1);z-index:21}
 #tl-hdr-scroll{flex:1;overflow:hidden}
 #tl-hdr{display:flex;flex-direction:column}
 .th-row{display:flex;white-space:nowrap}

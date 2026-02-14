@@ -1982,7 +1982,7 @@ const App={
     if(this._lassoMode)this.$.tl_body.style.cursor='crosshair';else this.$.tl_body.style.cursor='';
     const hc=th.hdr,hR=this.buildHdrRows(tl),rowH=22,totalHdrH=hR.length*rowH;
     this.$.tl_hdr_corner.style.height=totalHdrH+'px';this.$.tl_hdr_corner.style.background=hc;
-    let hh='';hR.forEach(row=>{hh+=`<div class="th-row" style="background:${hc}">`;row.forEach(cell=>{const w=cell.width!=null?cell.width:cell.span*tl.cw;hh+=`<div class="th-cell" style="width:${w}px;min-width:${w}px">${cell.label}</div>`});hh+=`</div>`});
+    let hh='';hR.forEach(row=>{hh+=`<div class="th-row" style="background:${hc};height:${rowH}px">`;row.forEach(cell=>{const w=cell.width!=null?cell.width:cell.span*tl.cw;hh+=`<div class="th-cell" style="width:${w}px;min-width:${w}px">${cell.label}</div>`});hh+=`</div>`});
     this.$.tl_hdr.style.width=tl.tw+'px';this.$.tl_hdr.innerHTML=hh;
     this.$.tl_hdr_scroll.scrollLeft=this.$.tl_body_scroll.scrollLeft;
 
