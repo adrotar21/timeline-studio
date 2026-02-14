@@ -85,7 +85,7 @@ const MOUSE_REFS=[
 const RESERVED_COMBOS=new Set(['Ctrl+v','Ctrl+c','Ctrl+x']);
 const BROWSER_RESERVED=new Set(['Ctrl+t','Ctrl+w','Ctrl+Tab','Ctrl+Shift+Tab','Ctrl+l','Ctrl+Shift+t','Ctrl+Shift+n','F5','Ctrl+F5','F12']);
 
-function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
+function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
 const App={
   proj:newProj(),sel:[],undoStack:[],redoStack:[],
@@ -209,7 +209,7 @@ const App={
      'project-name-text','unsaved-dot',
      'hide-label','ctx-link-dep',
      'help-body','np-template','np-name',
-     'data-filter-bar','flt-type','flt-name','flt-owner','flt-swim','flt-sub','flt-notes','flt-start','flt-end',
+     'data-filter-bar','flt-type','flt-name','flt-owner','flt-swim','flt-sub','flt-notes','flt-start','flt-end','flt-status',
      'as-term','as-results',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
     this.loadAuto();this.migrate();this._loadShortcuts();this._buildShortcutMap();
@@ -242,6 +242,12 @@ const App={
     if(p.tttEnabled==null)p.tttEnabled=false;if(p.tttMilestoneId==null)p.tttMilestoneId='';
     if(p.showFloat==null)p.showFloat=false;if(p.schedulingMode==null)p.schedulingMode='manual';
     if(p.labelWidth==null)p.labelWidth=160;
+    if(!Array.isArray(p.statusDefs))p.statusDefs=[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}];
+    if(!p.statusDisplay)p.statusDisplay={show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''};
+    /* Migrate colorOverride from mode dropdown to separate toggle */
+    if(p.statusDisplay.mode==='colorOverride'){p.statusDisplay.mode='emoji';p.statusDisplay.colorOverride=true}
+    if(p.statusDisplay.colorOverride==null)p.statusDisplay.colorOverride=false;
+    if(p.statusDisplay.blankColor==null)p.statusDisplay.blankColor='';
     p.swimlanes.forEach(sl=>{if(!sl.subSwimlanes)sl.subSwimlanes=[];if(!sl.height)sl.height=120;if(sl.collapsed===true)sl.collapsed='minimized';else if(!sl.collapsed||sl.collapsed===false)sl.collapsed='expanded';sl.subSwimlanes.forEach(ss=>{if(ss.height==null)ss.height=0;if(!ss.collapsed)ss.collapsed='expanded'})});
     p.items.forEach(it=>{
       if(!it.deps&&it.dependencies){it.deps=it.dependencies;delete it.dependencies}
@@ -270,6 +276,8 @@ const App={
       if(it.owner==null)it.owner='';
       if(it.showOwner==null)it.showOwner=false;
       if(it.notes==null)it.notes='';
+      if(it.status==null)it.status='';
+      if(it.statusDate==null)it.statusDate='';
     })
     // v1→v2 migration: endDates changed from exclusive (cal) to always-inclusive
     if(!p.version||p.version<2){
@@ -280,6 +288,11 @@ const App={
       });
       p.version=2
     }
+  },
+
+  _getStatusDef(statusId){
+    if(!statusId||statusId==='blank')return null;
+    return(this.proj.statusDefs||[]).find(sd=>sd.id===statusId)||null;
   },
 
   applyTheme(){const t=THEMES[this.proj.theme]||THEMES.default;document.body.className=t.cls},
@@ -914,6 +927,21 @@ const App={
         const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up)};
         document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
       })}}
+    // Status impact modal — draggable + buttons
+    {const siHdr=document.getElementById('status-impact-header');
+    if(siHdr){const mc=siHdr.closest('.modal-content');
+      siHdr.addEventListener('mousedown',e=>{
+        if(e.target.closest('button'))return;
+        const r=mc.getBoundingClientRect();
+        const ox=e.clientX-r.left,oy=e.clientY-r.top;
+        mc.style.position='fixed';mc.style.margin='0';mc.style.left=r.left+'px';mc.style.top=r.top+'px';mc.style.transform='none';
+        const mv=ev=>{mc.style.left=Math.max(0,Math.min(window.innerWidth-100,ev.clientX-ox))+'px';mc.style.top=Math.max(0,Math.min(window.innerHeight-40,ev.clientY-oy))+'px'};
+        const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up)};
+        document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+      })}}
+    on('btn-status-impact-apply',()=>this.applyStatusChanges());
+    on('btn-status-impact-cancel',()=>{document.getElementById('status-impact-modal').classList.add('hidden')});
+    on('btn-status-impact-close',()=>{document.getElementById('status-impact-modal').classList.add('hidden')});
     on('btn-add-ssw',()=>this.addSubSw());on('btn-dt-paste',()=>this.showPaste());on('btn-do-paste',()=>this.doPaste());
     this.$.paste_ta.oninput=()=>this.previewPaste();
     on('btn-dt-add',()=>this.addItem('milestone'));on('btn-dt-del',()=>this.deleteSel());on('btn-dt-dup',()=>this.dupSel());
@@ -937,7 +965,7 @@ const App={
     on('btn-as-select',()=>this.doAdvSearch(false));on('btn-as-add',()=>this.doAdvSearch(true));
     // Filter bar
     on('btn-dt-filter',()=>{const bar=this.$.data_filter_bar,fb=document.getElementById('btn-dt-filter');bar.classList.toggle('hidden');if(fb)fb.classList.toggle('filter-active',!bar.classList.contains('hidden'));if(!bar.classList.contains('hidden'))this._populateFilterDropdowns()});
-    const fltKeys=['flt_type','flt_name','flt_owner','flt_swim','flt_sub','flt_notes','flt_start','flt_end'];
+    const fltKeys=['flt_type','flt_name','flt_owner','flt_swim','flt_sub','flt_notes','flt_start','flt_end','flt_status'];
     const updateFltInd=()=>{let count=0;fltKeys.forEach(k=>{if(this.$[k]){const has=!!this.$[k].value;this.$[k].classList.toggle('has-value',has);if(has)count++}});const fb=document.getElementById('btn-dt-filter');if(fb){let badge=fb.querySelector('.filter-count');if(count>0){if(!badge){badge=document.createElement('span');badge.className='filter-count';fb.appendChild(badge)}badge.textContent=count}else if(badge)badge.remove()}};
     const fltDeb=U.deb(()=>{this.sched(false,true);updateFltInd()},200);
     const fltImm=()=>{this.sched(false,true);updateFltInd()};
@@ -1078,7 +1106,14 @@ const App={
   /* Measure label text widths for an item. Returns {labelW, edgeLW, edgeRW} in fixed pixels. */
   _itemLabelWidths(it){
     const p=this.proj,gfs=p.fontSize||11,fs=it.fontSize||gfs;
-    const nameW=this._mt(it.name||'',fs,'600');
+    /* Inline status prefix: emoji shows emoji char, others show "(shortName) " */
+    const sd=this._getStatusDef(it.status);
+    const sdCfg=p.statusDisplay||{};
+    const sdMode=sdCfg.mode||'emoji';
+    const useInline=sd&&sdCfg.show&&(sdCfg.badgePos||'inline')==='inline';
+    const inlineTxt=useInline?(sdMode==='emoji'?sd.emoji+' ':sdMode==='text'?sd.name+' ':'('+sd.shortName+') '):'';
+    const inlineExtra=inlineTxt?this._mt(inlineTxt,fs,'700'):0;
+    const nameW=this._mt(it.name||'',fs,'600')+inlineExtra;
     let secW=0;
     if(it.type==='task'){
       const parts=[];if(it.showOwner&&it.owner)parts.push(it.owner);
@@ -1227,13 +1262,13 @@ const App={
     const d=atDate||U.iso(new Date());
     const subSwId=atSubSwId||'';
     const subRow=typeof atSubRow==='number'?atSubRow:0;
-    const it={id:U.id(),type,name:type==='milestone'?'New Milestone':'New Task',swimlaneId:sl.id,subSwimId:subSwId,subRow,color:COLORS[this.proj.items.length%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:'',vLine:{enabled:false,style:'dashed',color:'#999999',direction:'both',extent:'swim'}};
+    const it={id:U.id(),type,name:type==='milestone'?'New Milestone':'New Task',swimlaneId:sl.id,subSwimId:subSwId,subRow,color:COLORS[this.proj.items.length%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:'',status:'',statusDate:'',vLine:{enabled:false,style:'dashed',color:'#999999',direction:'both',extent:'swim'}};
     if(type==='milestone')it.date=d;else{it.startDate=d;it.duration=14;it.durMode='work';it.endDate=this._calcEndDate(it)}
     this.proj.items.push(it);this.sel=[it.id];this.openPanel(it);
     if(this.proj.autoRange)this.autoRange();this.sched();this.autoSave()
   },
   deleteSel(){if(!this.sel.length)return;this.snap();const s=new Set(this.sel);this.proj.items.forEach(i=>i.deps=(i.deps||[]).filter(d=>!s.has(this.depId(d))));this.proj.items=this.proj.items.filter(i=>!s.has(i.id));this.sel=[];this.closePanel();this.sched();this.autoSave()},
-  dupSel(){if(!this.sel.length)return;this.snap();const ns=[];this.sel.forEach(id=>{const o=this.gi(id);if(!o)return;const c=U.deep(o);c.id=U.id();c.name+=' (copy)';c.subRow=(o.subRow||0)+1;c.deps=[];ns.push(c)});this.proj.items.push(...ns);this.sel=ns.map(i=>i.id);this.sched();this.autoSave()},
+  dupSel(){if(!this.sel.length)return;this.snap();const ns=[];this.sel.forEach(id=>{const o=this.gi(id);if(!o)return;const c=U.deep(o);c.id=U.id();c.name+=' (copy)';c.subRow=(o.subRow||0)+1;c.deps=[];if(c.status)c.statusDate=U.iso(new Date());ns.push(c)});this.proj.items.push(...ns);this.sel=ns.map(i=>i.id);this.sched();this.autoSave()},
   clearSelDeps(){if(!this.sel.length)return;this.snap();this.sel.forEach(id=>{const it=this.gi(id);if(it)it.deps=[]});this.sched();this.autoSave();this.toast('Selected deps cleared')},
 
   showCtx(e,iid){
@@ -1287,6 +1322,25 @@ const App={
     const isScheduled=this.proj.schedulingMode==='scheduled';
     const cp=document.getElementById('ctx-propagate'),ca=document.getElementById('ctx-sched-auto');
     if(cp)cp.classList.toggle('hidden',isScheduled);if(ca)ca.classList.toggle('hidden',!isScheduled);
+    /* Populate status submenu */
+    const ctxSub=document.getElementById('ctx-status-sub');
+    if(ctxSub){
+      const defs=this.proj.statusDefs||[];
+      ctxSub.innerHTML=defs.map(sd=>{
+        const label=sd.id==='blank'?'(None)':`${sd.emoji} ${sd.name}`;
+        return`<div class="ctx-item ctx-status-opt" data-status-id="${sd.id}">${label}</div>`
+      }).join('');
+      ctxSub.querySelectorAll('.ctx-status-opt').forEach(el=>{
+        el.addEventListener('click',ev=>{
+          ev.stopPropagation();
+          const sid=el.dataset.statusId;
+          this.snap();
+          this.sel.forEach(id=>{const i=this.gi(id);if(i){i.status=(sid==='blank'?'':sid);i.statusDate=i.status?U.iso(new Date()):''}});
+          this.$.ctx_menu.classList.add('hidden');
+          this.sched();this.autoSave();
+        })
+      })
+    }
     const m=this.$.ctx_menu;m.classList.remove('hidden');m.style.left=Math.min(e.clientX,window.innerWidth-210)+'px';m.style.top=Math.min(e.clientY,window.innerHeight-400)+'px'
   },
 
@@ -1501,6 +1555,140 @@ const App={
     }
     return null;
   },
+  /* ===== STATUS DEFINITION SETTINGS ===== */
+  renderStatusDefList(){
+    const list=document.getElementById('status-def-list');if(!list)return;
+    const defs=this._pendingStatusDefs||[];
+    let h='';
+    defs.forEach((sd,i)=>{
+      const isBlank=sd.id==='blank';
+      h+=`<div class="status-def-row${isBlank?' status-def-blank':''}" data-idx="${i}">`;
+      if(isBlank){
+        h+=`<div style="flex:1;padding:6px 10px;font-size:10px;color:var(--tx3);font-style:italic">(None / Blank) — default when no status is set</div>`;
+      }else{
+        h+=`<input type="color" class="sd-color" data-idx="${i}" value="${sd.color||'#6b7280'}" title="Status color" style="width:28px;height:24px;padding:0;border:1px solid var(--brd);border-radius:3px;cursor:pointer">`;
+        h+=`<input type="text" class="sd-emoji" data-idx="${i}" value="${U.esc(sd.emoji||'')}" title="Emoji (1-2 chars)" maxlength="2" style="width:32px;text-align:center;font-size:13px;padding:2px;border:1px solid var(--brd);border-radius:3px;background:var(--bg2);color:var(--tx1)">`;
+        h+=`<input type="text" class="sd-name" data-idx="${i}" value="${U.esc(sd.name||'')}" placeholder="Name" title="Status name" style="flex:1;min-width:80px;font-size:11px;padding:3px 6px;border:1px solid var(--brd);border-radius:3px;background:var(--bg2);color:var(--tx1)">`;
+        h+=`<input type="text" class="sd-short" data-idx="${i}" value="${U.esc(sd.shortName||'')}" placeholder="Srt" title="Short name (1-3 chars, required)" maxlength="3" style="width:36px;text-align:center;font-size:11px;font-weight:700;padding:3px;border:1px solid var(--brd);border-radius:3px;background:var(--bg2);color:var(--tx1)">`;
+        h+=`<input type="text" class="sd-desc" data-idx="${i}" value="${U.esc(sd.desc||'')}" placeholder="Description…" title="Status description" style="flex:1.5;min-width:100px;font-size:10px;padding:3px 6px;border:1px solid var(--brd);border-radius:3px;background:var(--bg2);color:var(--tx3)">`;
+        h+=`<div class="sd-actions">`;
+        if(i>1)h+=`<button class="sd-btn sd-up" data-idx="${i}" title="Move up">▲</button>`;else h+=`<span style="width:20px"></span>`;
+        if(i<defs.length-1)h+=`<button class="sd-btn sd-down" data-idx="${i}" title="Move down">▼</button>`;else h+=`<span style="width:20px"></span>`;
+        h+=`<button class="sd-btn sd-del" data-idx="${i}" title="Delete status">✕</button>`;
+        h+=`</div>`;
+      }
+      h+=`</div>`;
+    });
+    list.innerHTML=h;
+    this.bindStatusDefList();
+  },
+  bindStatusDefList(){
+    const list=document.getElementById('status-def-list');if(!list)return;
+    const defs=this._pendingStatusDefs;
+    list.querySelectorAll('.sd-color').forEach(el=>{el.oninput=()=>{defs[+el.dataset.idx].color=el.value}});
+    list.querySelectorAll('.sd-emoji').forEach(el=>{el.oninput=()=>{defs[+el.dataset.idx].emoji=el.value}});
+    list.querySelectorAll('.sd-name').forEach(el=>{el.oninput=()=>{defs[+el.dataset.idx].name=el.value}});
+    list.querySelectorAll('.sd-short').forEach(el=>{el.oninput=()=>{defs[+el.dataset.idx].shortName=el.value}});
+    list.querySelectorAll('.sd-desc').forEach(el=>{el.oninput=()=>{defs[+el.dataset.idx].desc=el.value}});
+    list.querySelectorAll('.sd-up').forEach(el=>{el.onclick=()=>{const i=+el.dataset.idx;if(i<2)return;[defs[i-1],defs[i]]=[defs[i],defs[i-1]];this.renderStatusDefList()}});
+    list.querySelectorAll('.sd-down').forEach(el=>{el.onclick=()=>{const i=+el.dataset.idx;if(i>=defs.length-1)return;[defs[i],defs[i+1]]=[defs[i+1],defs[i]];this.renderStatusDefList()}});
+    list.querySelectorAll('.sd-del').forEach(el=>{el.onclick=()=>{const i=+el.dataset.idx;if(i<1)return;defs.splice(i,1);this.renderStatusDefList()}});
+  },
+  showStatusImpact(deletedMap,modifiedList){
+    const modal=document.getElementById('status-impact-modal');if(!modal)return;
+    // Build summary
+    const totalDefs=this._pendingStatusDefs.length;
+    const delCount=deletedMap.size;
+    const modCount=modifiedList.length;
+    let sumH=`<div style="font-size:11px;color:var(--tx2)">${totalDefs} statuses defined`;
+    if(delCount)sumH+=` · <strong style="color:var(--danger)">${delCount} deleted</strong>`;
+    if(modCount)sumH+=` · ${modCount} modified`;
+    sumH+=`</div>`;
+    document.getElementById('status-impact-summary').innerHTML=sumH;
+    // Deleted section
+    const delEl=document.getElementById('status-impact-deleted');
+    if(delCount){
+      const remaining=this._pendingStatusDefs.filter(sd=>sd.id!=='blank');
+      let dH=`<div style="font-size:11px;font-weight:600;margin-bottom:6px;color:var(--tx2)">Deleted Statuses (items will lose their status)</div>`;
+      dH+=`<div style="border:1px solid var(--brd);border-radius:4px;overflow:hidden">`;
+      deletedMap.forEach((items,sd)=>{
+        dH+=`<div class="status-impact-row" data-del-id="${sd.id}" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--brd);font-size:11px">`;
+        dH+=`<span>${sd.emoji||''}</span>`;
+        dH+=`<span style="font-weight:600">"${U.esc(sd.name)}"</span>`;
+        dH+=`<span style="color:var(--tx3)">— ${items.length} item${items.length===1?'':'s'}</span>`;
+        dH+=`<span style="margin-left:auto;font-size:10px;color:var(--tx3)">Move to:</span>`;
+        dH+=`<select class="si-move-sel form-input" data-del-id="${sd.id}" style="width:auto;font-size:10px;padding:2px 4px">`;
+        dH+=`<option value="">(None)</option>`;
+        remaining.forEach(rs=>{dH+=`<option value="${rs.id}">${rs.emoji} ${U.esc(rs.name)}</option>`});
+        dH+=`</select>`;
+        dH+=`</div>`;
+      });
+      dH+=`</div>`;
+      // Bulk move
+      if(delCount>1){
+        dH+=`<div style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:10px;color:var(--tx3)">`;
+        dH+=`<span>Bulk: Move all deleted items to:</span>`;
+        dH+=`<select id="si-bulk-move" class="form-input" style="width:auto;font-size:10px;padding:2px 4px">`;
+        dH+=`<option value="">(None)</option>`;
+        remaining.forEach(rs=>{dH+=`<option value="${rs.id}">${rs.emoji} ${U.esc(rs.name)}</option>`});
+        dH+=`</select>`;
+        dH+=`</div>`;
+      }
+      delEl.innerHTML=dH;
+      // Bulk move wiring
+      const bulkSel=document.getElementById('si-bulk-move');
+      if(bulkSel){bulkSel.onchange=()=>{delEl.querySelectorAll('.si-move-sel').forEach(s=>{s.value=bulkSel.value})}}
+    }else{delEl.innerHTML=''}
+    // Modified section
+    const modEl=document.getElementById('status-impact-modified');
+    if(modCount){
+      let mH=`<div style="font-size:11px;font-weight:600;margin:12px 0 6px;color:var(--tx2)">Modified Statuses (auto-updated)</div>`;
+      mH+=`<div style="border:1px solid var(--brd);border-radius:4px;overflow:hidden;opacity:.6">`;
+      modifiedList.forEach(({sd,changes,count})=>{
+        mH+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--brd);font-size:11px;color:var(--tx3)">`;
+        mH+=`<span>${sd.emoji||''}</span>`;
+        mH+=`<span style="font-weight:600">"${U.esc(sd.name)}"</span>`;
+        mH+=`<span>— ${changes.join(', ')}</span>`;
+        mH+=`<span style="margin-left:auto">${count} item${count===1?'':'s'}</span>`;
+        mH+=`</div>`;
+      });
+      mH+=`</div>`;
+      modEl.innerHTML=mH;
+    }else{modEl.innerHTML=''}
+    // Store for apply
+    this._statusImpactDeleted=deletedMap;
+    // Show modal
+    modal.classList.remove('hidden');
+    const mc=modal.querySelector('.modal-content');if(mc){mc.style.position='';mc.style.margin='';mc.style.left='';mc.style.top='';mc.style.transform=''}
+  },
+  applyStatusChanges(){
+    // Reassign items per dropdown selections
+    const delEl=document.getElementById('status-impact-deleted');
+    if(this._statusImpactDeleted&&delEl){
+      this._statusImpactDeleted.forEach((items,sd)=>{
+        const sel=delEl.querySelector(`.si-move-sel[data-del-id="${sd.id}"]`);
+        const newId=sel?sel.value:'';
+        items.forEach(it=>{
+          it.status=newId;
+          it.statusDate=newId?U.iso(new Date()):'';
+        });
+      });
+    }
+    // Commit pending defs
+    this.proj.statusDefs=U.deep(this._pendingStatusDefs);
+    this.proj.statusDisplay={
+      show:document.getElementById('s-status-show')?.checked!==false,
+      mode:document.getElementById('s-status-mode')?.value||'emoji',
+      badgePos:document.getElementById('s-status-pos')?.value||'inline',
+      colorOverride:document.getElementById('s-status-color-override')?.checked||false,
+      blankColor:document.getElementById('s-status-blank-on')?.checked?document.getElementById('s-status-blank-color')?.value||'#6b7280':''
+    };
+    // Close impact modal, close settings
+    document.getElementById('status-impact-modal').classList.add('hidden');
+    document.getElementById('settings-modal').classList.add('hidden');
+    this.sched();this.autoSave();this.toast('Status settings applied');
+  },
+
   showSettings(){
     const p=this.proj;this.$.s_name.value=p.name;this.$.s_owner.value=p.owner||'';
     this.$.s_start.value=p.timelineStart;this.$.s_end.value=p.timelineEnd;
@@ -1561,6 +1749,27 @@ const App={
       })
     }
     }catch(err){console.error('[Timeline Studio] Card setup error:',err)}
+    // Status section
+    const sStatusShow=document.getElementById('s-status-show');
+    const statusOpts=document.getElementById('status-display-opts');
+    const sStatusMode=document.getElementById('s-status-mode');
+    const sStatusPos=document.getElementById('s-status-pos');
+    const sd=p.statusDisplay||{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''};
+    if(sStatusShow){sStatusShow.checked=sd.show;if(statusOpts)statusOpts.style.display=sd.show?'':'none';sStatusShow.onchange=function(){if(statusOpts)statusOpts.style.display=this.checked?'':'none'}}
+    if(sStatusMode)sStatusMode.value=sd.mode||'emoji';
+    if(sStatusPos)sStatusPos.value=sd.badgePos||'inline';
+    const sColorOverride=document.getElementById('s-status-color-override');
+    const sBlankGroup=document.getElementById('s-blank-color-group');
+    const sBlankOn=document.getElementById('s-status-blank-on');
+    const sBlankPicker=document.getElementById('s-blank-color-picker');
+    const sBlankColor=document.getElementById('s-status-blank-color');
+    if(sColorOverride){sColorOverride.checked=!!sd.colorOverride;if(sBlankGroup)sBlankGroup.style.display=sd.colorOverride?'':'none';sColorOverride.onchange=function(){if(sBlankGroup)sBlankGroup.style.display=this.checked?'':'none';if(!this.checked&&sBlankOn){sBlankOn.checked=false;if(sBlankPicker)sBlankPicker.style.display='none'}}}
+    if(sBlankOn){sBlankOn.checked=!!sd.blankColor;if(sBlankPicker)sBlankPicker.style.display=sd.blankColor?'flex':'none';sBlankOn.onchange=function(){if(sBlankPicker)sBlankPicker.style.display=this.checked?'flex':'none'}}
+    if(sBlankColor)sBlankColor.value=sd.blankColor||'#6b7280';
+    this._pendingStatusDefs=U.deep(p.statusDefs||[]);
+    this.renderStatusDefList();
+    document.getElementById('btn-status-add').onclick=()=>{this._pendingStatusDefs.push({id:U.id(),name:'New Status',desc:'',color:'#6b7280',shortName:'?',emoji:'❓'});this.renderStatusDefList()};
+    document.getElementById('btn-status-reset').onclick=()=>{if(!confirm('Reset all status definitions to defaults? This does not affect items until you Apply.'))return;this._pendingStatusDefs=U.deep(newProj().statusDefs);this.renderStatusDefList();this.toast('Status definitions reset to defaults')};
     // Shortcuts section
     this._pendingShortcuts=this._scOverrides?U.deep(this._scOverrides):{};
     this.renderScList();
@@ -1609,6 +1818,38 @@ const App={
     const dfEl=document.getElementById('s-default-folder');if(dfEl)p.defaultFolder=dfEl.value.trim();
     const tttChk=document.getElementById('s-ttt-enabled');if(tttChk)p.tttEnabled=tttChk.checked;
     const tttSel=document.getElementById('s-ttt-milestone');if(tttSel)p.tttMilestoneId=tttSel.value;
+    // Status definitions — validate short names
+    if(this._pendingStatusDefs){
+      const invalid=this._pendingStatusDefs.filter(sd=>sd.id!=='blank'&&!sd.shortName?.trim());
+      if(invalid.length){this.toast(`Short name required for: ${invalid.map(sd=>sd.name||'(unnamed)').join(', ')}`,'error');return}
+      // Check for deleted/modified statuses that affect items
+      const oldDefs=p.statusDefs||[];
+      const newDefs=this._pendingStatusDefs;
+      const newIds=new Set(newDefs.map(sd=>sd.id));
+      const deletedMap=new Map();const modifiedList=[];
+      oldDefs.forEach(od=>{
+        if(od.id==='blank')return;
+        if(!newIds.has(od.id)){
+          const affected=p.items.filter(it=>it.status===od.id);
+          if(affected.length)deletedMap.set(od,affected);
+        }else{
+          const nd=newDefs.find(sd=>sd.id===od.id);
+          if(nd){
+            const changes=[];
+            if(nd.name!==od.name)changes.push('name changed');
+            if(nd.color!==od.color)changes.push('color changed');
+            if(nd.shortName!==od.shortName)changes.push('short name changed');
+            if(nd.emoji!==od.emoji)changes.push('emoji changed');
+            if(nd.desc!==od.desc)changes.push('description changed');
+            if(changes.length){const count=p.items.filter(it=>it.status===od.id).length;if(count)modifiedList.push({sd:nd,changes,count})}
+          }
+        }
+      });
+      if(deletedMap.size){this.showStatusImpact(deletedMap,modifiedList);return}
+      // No deletions affecting items — commit silently
+      p.statusDefs=U.deep(newDefs);
+      p.statusDisplay={show:document.getElementById('s-status-show')?.checked!==false,mode:document.getElementById('s-status-mode')?.value||'emoji',badgePos:document.getElementById('s-status-pos')?.value||'inline',colorOverride:document.getElementById('s-status-color-override')?.checked||false,blankColor:document.getElementById('s-status-blank-on')?.checked?document.getElementById('s-status-blank-color')?.value||'#6b7280':''};
+    }
     // Save shortcut overrides
     if(this._pendingShortcuts&&Object.keys(this._pendingShortcuts).length){this._scOverrides=U.deep(this._pendingShortcuts);this._saveShortcuts();this._buildShortcutMap()}
     else{this._scOverrides=null;this._saveShortcuts();this._buildShortcutMap()}
@@ -1712,7 +1953,8 @@ const App={
     if(hasMilestones)h+=`<div class="pr"><label>Icon</label><div class="icon-grid">${ICONS.map(ic=>`<button class="ic-btn" data-ic="${ic.id}" title="${ic.l}"><svg width="14" height="14" viewBox="0 0 24 24" fill="${first.color}"><path d="${ic.p}"/></svg></button>`).join('')}</div></div>`;
     h+=`<div class="pr"><label><input type="checkbox" id="bp-hidden" ${items.every(i=>i.hidden)?'checked':''}> Hidden</label></div>
       <div class="pr"><label><input type="checkbox" id="bp-pin" ${items.every(i=>i.pinned)?'checked':''}> 📌 Pin Date</label>
-        <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">Pinned items are protected from Propagate and auto-scheduling.</div></div></div>`;
+        <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">Pinned items are protected from Propagate and auto-scheduling.</div></div>
+      <div class="pr"><label>Status</label><select id="bp-status"><option value="_keep">(Keep current)</option>${(this.proj.statusDefs||[]).map(sd=>`<option value="${sd.id}">${sd.id==='blank'?'(None)':(sd.emoji?sd.emoji+' ':'')+U.esc(sd.name)}</option>`).join('')}</select></div></div>`;
 
     h+=`<div class="ps"><div class="ps-t">Date Display</div>
       <div class="pr"><label>Format</label><select id="bp-df"><option value="">Global</option>${['MMM D, YYYY','MM/DD/YYYY','DD/MM/YYYY','YYYY-MM-DD','M/D','MMM D'].map(f=>`<option value="${f}">${f}</option>`).join('')}</select></div>
@@ -1734,6 +1976,7 @@ const App={
     q('bp-fs').onchange=function(){up(i=>i.fontSize=+this.value)};
     q('bp-hidden').onchange=function(){up(i=>i.hidden=this.checked)};
     q('bp-pin').onchange=function(){up(i=>i.pinned=this.checked)};
+    if(q('bp-status'))q('bp-status').onchange=function(){if(this.value==='_keep')return;const v=this.value;up(i=>{i.status=(v==='blank'?'':v);i.statusDate=i.status?U.iso(new Date()):''})};
     q('bp-df').onchange=function(){up(i=>i.dateFormat=this.value)};
     q('bp-owner').onchange=function(){if(this.value)up(i=>i.owner=this.value)};
     q('bp-sown').onchange=function(){up(i=>i.showOwner=this.checked)};
@@ -1753,15 +1996,23 @@ const App={
   doApply(){if(!this._applyItem)return;this.snap();const it=this._applyItem,sc=this._applyScope;
     const ck=id=>document.getElementById(id)?.checked;
     let tg;if(sc==='swimlane')tg=this.proj.items.filter(i=>i.swimlaneId===it.swimlaneId&&i.id!==it.id);else if(sc==='sub')tg=this.proj.items.filter(i=>i.swimlaneId===it.swimlaneId&&i.subSwimId===it.subSwimId&&i.id!==it.id);else tg=this.proj.items.filter(i=>i.id!==it.id);
-    tg.forEach(t=>{if(ck('ap-color'))t.color=it.color;if(ck('ap-icon'))t.iconType=it.iconType;if(ck('ap-lp'))t.labelPosition=it.labelPosition;if(ck('ap-sd')){t.showDate=it.showDate;t.showDuration=it.showDuration;t.showOwner=it.showOwner}if(ck('ap-tc'))t.textColor=it.textColor;if(ck('ap-df'))t.dateFormat=it.dateFormat;if(ck('ap-fs'))t.fontSize=it.fontSize;if(ck('ap-hid'))t.hidden=it.hidden;if(ck('ap-dl'))t.pinned=it.pinned});
+    tg.forEach(t=>{if(ck('ap-color'))t.color=it.color;if(ck('ap-icon'))t.iconType=it.iconType;if(ck('ap-lp'))t.labelPosition=it.labelPosition;if(ck('ap-sd')){t.showDate=it.showDate;t.showDuration=it.showDuration;t.showOwner=it.showOwner}if(ck('ap-tc'))t.textColor=it.textColor;if(ck('ap-df'))t.dateFormat=it.dateFormat;if(ck('ap-fs'))t.fontSize=it.fontSize;if(ck('ap-hid'))t.hidden=it.hidden;if(ck('ap-dl'))t.pinned=it.pinned;if(ck('ap-status')){t.status=it.status;t.statusDate=t.status?U.iso(new Date()):''}});
     document.getElementById('apply-modal').classList.add('hidden');this.sched();this.autoSave();this.toast('Applied!')},
 
   renderPanel(it){
     const p=this.proj,sl=this.gs(it.swimlaneId),subSws=sl?.subSwimlanes||[];
     const gfs=it.fontSize||p.fontSize||11;
+    const sDef=this._getStatusDef(it.status);
+    const sDefs=p.statusDefs||[];
     let h=`<div class="ps"><div class="ps-t">General</div>
       <div class="pr"><label>Name</label><input type="text" id="pp-nm" value="${U.esc(it.name)}"></div>
-      <div class="pr"><label>Owner</label><input type="text" id="pp-owner" value="${U.esc(it.owner||'')}" placeholder="Responsible person"></div>
+      <div class="pr"><label>Status</label><div style="display:flex;gap:4px;align-items:center"><select id="pp-status" style="flex:1">${sDefs.map(sd=>`<option value="${sd.id}" ${sd.id===(it.status||'blank')?'selected':''}>${sd.id==='blank'?'(None)':(sd.emoji?sd.emoji+' ':'')+U.esc(sd.name)}</option>`).join('')}</select><button id="pp-status-gear" class="pab" style="padding:2px 6px;font-size:12px" title="Configure statuses in Settings">⚙</button></div></div>`;
+    if(sDef){
+      h+=`<div class="pr pp-status-detail" style="margin-top:-4px;padding:2px 0 2px 4px"><span style="font-size:10px;color:var(--tx3);font-style:italic">${U.esc(sDef.desc||'')}</span>`;
+      if(it.statusDate)h+=`<span style="font-size:9px;color:var(--tx3);display:block;margin-top:1px">Updated: ${U.fmt(it.statusDate,p.dateFormat)}</span>`;
+      h+=`</div>`;
+    }
+    h+=`<div class="pr"><label>Owner</label><input type="text" id="pp-owner" value="${U.esc(it.owner||'')}" placeholder="Responsible person"></div>
       <div class="pr"><label>Notes</label><textarea id="pp-notes" rows="2" placeholder="Notes…">${U.esc(it.notes||'')}</textarea></div>
       <div class="pr"><label>Swimlane</label><select id="pp-sl">${p.swimlanes.map(s=>`<option value="${s.id}" ${s.id===it.swimlaneId?'selected':''}>${s.name}</option>`).join('')}</select></div>`;
     if(subSws.length)h+=`<div class="pr"><label>Sub-Swimlane</label><select id="pp-ssw"><option value="">(none)</option>${subSws.map(ss=>`<option value="${ss.id}" ${ss.id===it.subSwimId?'selected':''}>${ss.name}</option>`).join('')}</select></div>`;
@@ -1832,6 +2083,8 @@ const App={
   bindPanel(it){
     const up=fn=>{this.snap();fn();this.sched();this.autoSave()};const q=id=>document.getElementById(id);
     q('pp-nm').oninput=function(){it.name=this.value;App.sched();App.autoSave()};
+    q('pp-status')?.addEventListener('change',function(){up(()=>{const v=this.value;it.status=(v==='blank'?'':v);it.statusDate=it.status?U.iso(new Date()):''});App.renderPanel(it)});
+    q('pp-status-gear')?.addEventListener('click',()=>{const sm=document.getElementById('settings-modal');if(sm.classList.contains('hidden'))this.showSettings();setTimeout(()=>{const sc=document.getElementById('sect-status');if(sc)sc.scrollIntoView({behavior:'smooth',block:'start'})},100)});
     q('pp-owner').oninput=function(){it.owner=this.value;App.autoSave()};
     q('pp-notes').oninput=function(){it.notes=this.value;App.autoSave()};
     q('pp-sl').onchange=function(){up(()=>{it.swimlaneId=this.value;it.subSwimId=''});App.renderPanel(it)};
@@ -2156,9 +2409,20 @@ const App={
   },
 
   rI(it,tl,rH,yOff,violatedIds,th,critIds){
-    const isT=it.type==='task',sel=this.sel.includes(it.id),fmt=it.dateFormat||this.proj.dateFormat;
-    const fs=it.fontSize||this.proj.fontSize||11;
+    const p=this.proj,isT=it.type==='task',sel=this.sel.includes(it.id),fmt=it.dateFormat||p.dateFormat;
+    const fs=it.fontSize||p.fontSize||11;
     const tc=it.textColor||th.tlTx,etc=it.edgeTextColor||th.tlTx2;
+    /* Status badge setup */
+    const sd=this._getStatusDef(it.status);
+    const sdCfg=p.statusDisplay||{};
+    const sdShow=sdCfg.show;
+    const sdMode=sdCfg.mode||'emoji';
+    const sdPos=sdCfg.badgePos||'inline';
+    const sdColorOvr=sdCfg.colorOverride;
+    const useInline=sd&&sdShow&&sdPos==='inline';
+    /* Color override: status color if has status, blankColor if no status, else item color */
+    let renderColor=it.color;
+    if(sdShow&&sdColorOvr){if(sd)renderColor=sd.color;else if(sdCfg.blankColor)renderColor=sdCfg.blankColor}
     let x,w;if(isT){x=this.dX(it.startDate,tl);const x2=this.dXEnd(it.endDate,tl);w=Math.max(8,(x2||0)-(x||0))}else{x=this.dXMid(it.date,tl);w=16}
     if(x===null)return'';const y=yOff+6+(it.subRow||0)*rH,left=x-(isT?0:8);
     let cls='tl-item';if(sel)cls+=' selected';if(it.pinned)cls+=' item-pinned';if(violatedIds.has(it.id))cls+=' dep-error';if(it.hidden)cls+=' item-hidden';if(critIds&&critIds.has(it.id))cls+=' crit-path';
@@ -2166,16 +2430,27 @@ const App={
     if(isT){const parts=[];const hasOwner=it.showOwner&&it.owner;const hasDur=it.showDuration;const durTxt=hasDur?this._fmtDurLabel(it):'';if(hasOwner&&hasDur)parts.push(it.owner+' ('+durTxt+')');else if(hasOwner)parts.push(it.owner);else if(hasDur)parts.push(durTxt);dateStr=parts.join(' ')||''}else if(it.showDate!==false){const hasOwner=it.showOwner&&it.owner;dateStr=U.fmt(it.date,fmt);if(hasOwner)dateStr=it.owner+(dateStr?' · '+dateStr:'')}
     let h=`<div class="${cls}" data-iid="${it.id}" style="left:${left}px;top:${y}px;${isT?'width:'+w+'px':''}">`;
     if(isT){
-      h+=`<div class="tl-task-bar" style="background:${it.color};width:${w}px">`;
+      h+=`<div class="tl-task-bar" style="background:${renderColor};width:${w}px">`;
       if(it.progress>0){h+=`<div class="tl-task-prog" style="width:${it.progress}%"></div>`;if(w>30)h+=`<div class="tl-task-pct">${it.progress}%</div>`}
-      if(!this.proj.locked){h+=`<div class="tl-task-rs tl-task-rs-l" data-iid="${it.id}" data-side="left"></div><div class="tl-task-rs tl-task-rs-r" data-iid="${it.id}" data-side="right"></div>`}
+      if(!p.locked){h+=`<div class="tl-task-rs tl-task-rs-l" data-iid="${it.id}" data-side="left"></div><div class="tl-task-rs tl-task-rs-r" data-iid="${it.id}" data-side="right"></div>`}
       h+=`</div>`;
       if(it.showStartDate)h+=`<div class="tl-edge-label tl-edge-left" style="color:${etc};font-size:${Math.max(8,fs-1)}px">${U.fmt(it.startDate,fmt)}</div>`;
       if(it.showEndDate)h+=`<div class="tl-edge-label tl-edge-right" style="color:${etc};font-size:${Math.max(8,fs-1)}px">${U.fmt(it.endDate,fmt)}</div>`;
-    }else{const ic=ICONS.find(i=>i.id===it.iconType)||ICONS[0];h+=`<div class="tl-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="${it.color}" stroke="${it.color}" stroke-width="0.5"><path d="${ic.p}"/></svg></div>`}
+    }else{const ic=ICONS.find(i=>i.id===it.iconType)||ICONS[0];h+=`<div class="tl-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="${renderColor}" stroke="${renderColor}" stroke-width="0.5"><path d="${ic.p}"/></svg></div>`}
     if(it.pinned)h+=`<div class="tl-pin-badge">📌</div>`;
+    /* Status badge (non-inline positions only) */
+    if(sd&&sdShow&&sdPos!=='inline'){
+      if(sdMode==='emoji'){h+=`<div class="tl-status-badge tl-status-${sdPos}">${sd.emoji}</div>`}
+      else if(sdMode==='shortName'){h+=`<div class="tl-status-badge tl-status-sn tl-status-${sdPos}" style="background:${sd.color}">${U.esc(sd.shortName)}</div>`}
+      else if(sdMode==='text'){h+=`<div class="tl-status-badge tl-status-text tl-status-${sdPos}" style="color:${sd.color}">${U.esc(sd.name)}</div>`}
+    }
     const lp=it.labelPosition||'right';
-    h+=`<div class="tl-label tl-label-${lp}"><span class="tl-name" style="color:${tc};font-size:${fs}px">${U.esc(it.name)}</span>`;
+    if(useInline){
+      const inlineTxt=sdMode==='emoji'?sd.emoji:sdMode==='text'?U.esc(sd.name):`(${U.esc(sd.shortName)})`;
+      h+=`<div class="tl-label tl-label-${lp}"><span class="tl-name" style="font-size:${fs}px"><span style="color:${sd.color};font-weight:700">${inlineTxt}</span> <span style="color:${tc}">${U.esc(it.name)}</span></span>`;
+    }else{
+      h+=`<div class="tl-label tl-label-${lp}"><span class="tl-name" style="color:${tc};font-size:${fs}px">${U.esc(it.name)}</span>`;
+    }
     if(dateStr)h+=`<span class="tl-date" style="color:${tc};font-size:${Math.max(8,fs-1.5)}px">${dateStr}</span>`;
     h+=`</div></div>`;return h
   },
@@ -2372,15 +2647,31 @@ const App={
             const f=it.dateFormat||p.dateFormat,fmt=it.dateFormat||p.dateFormat,fs=it.fontSize||gfs,tc=it.textColor||th.tlTx,etc=it.edgeTextColor||th.tlTx2;
             const itemY=rowTop+subYOff+6+(it.subRow||0)*rH;
             svgItemYMap.set(it.id,itemY);
+            /* Export status setup */
+            const eSD=this._getStatusDef(it.status);
+            const eSDCfg=p.statusDisplay||{};
+            const eSDShow=eSDCfg.show;
+            const eSDMode=eSDCfg.mode||'emoji';
+            const eSDPos=eSDCfg.badgePos||'inline';
+            const eSDColorOvr=eSDCfg.colorOverride;
+            let eRenderColor=it.color;
+            if(eSDShow&&eSDColorOvr){if(eSD)eRenderColor=eSD.color;else if(eSDCfg.blankColor)eRenderColor=eSDCfg.blankColor}
+            const eUseInline=eSD&&eSDShow&&eSDPos==='inline';
         if(it.type==='task'){
           const ix=this.dX(it.startDate,tl),ix2=this.dXEnd(it.endDate,tl),w=Math.max(8,(ix2||0)-(ix||0)),iy=itemY,barH=22;
           const renderX=lw+ix-vpX;
           if(viewportOnly&&(renderX+w<lw-20||renderX>W+20)){continue}
           /* Task bar */
-          svg+=`<rect x="${renderX}" y="${iy}" width="${w}" height="${barH}" rx="4" fill="${it.color}" opacity="${0.85*itemOp}"/>`;
+          svg+=`<rect x="${renderX}" y="${iy}" width="${w}" height="${barH}" rx="4" fill="${eRenderColor}" opacity="${0.85*itemOp}"/>`;
           svgItemXMap.set(it.id,{left:renderX,right:renderX+w,midY:iy+barH/2});
           /* Progress fill */
-          if(it.progress>0){const pw=w*(it.progress/100);svg+=`<rect x="${renderX}" y="${iy}" width="${pw}" height="${barH}" rx="4" fill="${it.color}" opacity="${0.45*itemOp}"/>`;if(w>30)svg+=`<text x="${renderX+w/2}" y="${iy+barH/2+4}" fill="#fff" font-size="8" font-weight="700" text-anchor="middle" opacity="${0.9*itemOp}">${it.progress}%</text>`}
+          if(it.progress>0){const pw=w*(it.progress/100);svg+=`<rect x="${renderX}" y="${iy}" width="${pw}" height="${barH}" rx="4" fill="${eRenderColor}" opacity="${0.45*itemOp}"/>`;if(w>30)svg+=`<text x="${renderX+w/2}" y="${iy+barH/2+4}" fill="#fff" font-size="8" font-weight="700" text-anchor="middle" opacity="${0.9*itemOp}">${it.progress}%</text>`}
+          /* Status badge (non-inline) */
+          if(eSD&&eSDShow&&eSDPos!=='inline'){
+            if(eSDMode==='emoji'){const bx=eSDPos==='top-left'?renderX-4:renderX+w-4,by=eSDPos==='top-left'?iy-4:iy+barH+2;svg+=`<text x="${bx}" y="${by}" font-size="10" opacity="${itemOp}">${eSD.emoji}</text>`}
+            else if(eSDMode==='shortName'){const snW=this._mt(eSD.shortName,8,'700')+6,bx=eSDPos==='top-left'?renderX-4:renderX+w-snW+4,by=eSDPos==='top-left'?iy-10:iy+barH+2;svg+=`<rect x="${bx}" y="${by}" width="${snW}" height="12" rx="3" fill="${eSD.color}" opacity="${itemOp}"/><text x="${bx+snW/2}" y="${by+9}" fill="#fff" font-size="8" font-weight="700" text-anchor="middle" opacity="${itemOp}">${U.esc(eSD.shortName)}</text>`}
+            else if(eSDMode==='text'){const bx=eSDPos==='top-left'?renderX-4:renderX+w+4,by=eSDPos==='top-left'?iy-2:iy+barH+10;svg+=`<text x="${bx}" y="${by}" fill="${eSD.color}" font-size="8" font-weight="600" opacity="${itemOp}">${U.esc(eSD.name)}</text>`}
+          }
           /* Edge date labels */
           if(it.showStartDate)svg+=`<text x="${renderX-4}" y="${iy+barH/2+fs*0.3}" fill="${etc}" font-size="${Math.max(8,fs-1)}" text-anchor="end" opacity="${itemOp}">${U.fmt(it.startDate,fmt)}</text>`;
           if(it.showEndDate)svg+=`<text x="${renderX+w+4}" y="${iy+barH/2+fs*0.3}" fill="${etc}" font-size="${Math.max(8,fs-1)}" opacity="${itemOp}">${U.fmt(it.endDate,fmt)}</text>`;
@@ -2389,37 +2680,51 @@ const App={
           const midY=iy+barH/2+fs*0.35;
           let dateStr='';
           {const parts=[];const hasOwner=it.showOwner&&it.owner;const hasDur=it.showDuration;const durTxt=hasDur?this._fmtDurLabel(it):'';if(hasOwner&&hasDur)parts.push(it.owner+' ('+durTxt+')');else if(hasOwner)parts.push(it.owner);else if(hasDur)parts.push(durTxt);dateStr=parts.join(' ')||''}
+          /* Inline status prefix for export */
+          const eInlinePfx=eUseInline?(eSDMode==='emoji'?eSD.emoji+' ':eSDMode==='text'?U.esc(eSD.name)+' ':'('+U.esc(eSD.shortName)+') '):'';
           if(lp==='right'){
-            svg+=`<text x="${renderX+w+6}" y="${dateStr?midY-fs*0.35:midY}" fill="${tc}" font-size="${fs}" font-weight="600" opacity="${itemOp}">${U.esc(it.name)}</text>`;
+            if(eInlinePfx){svg+=`<text x="${renderX+w+6}" y="${dateStr?midY-fs*0.35:midY}" font-size="${fs}" font-weight="600" opacity="${itemOp}"><tspan fill="${eSD.color}" font-weight="700">${eInlinePfx}</tspan><tspan fill="${tc}">${U.esc(it.name)}</tspan></text>`}
+            else{svg+=`<text x="${renderX+w+6}" y="${dateStr?midY-fs*0.35:midY}" fill="${tc}" font-size="${fs}" font-weight="600" opacity="${itemOp}">${U.esc(it.name)}</text>`}
             if(dateStr)svg+=`<text x="${renderX+w+6}" y="${midY+fs*0.55}" fill="${tc}" font-size="${Math.max(8,fs-1.5)}" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`;
           }else if(lp==='left'){
-            svg+=`<text x="${renderX-6}" y="${dateStr?midY-fs*0.35:midY}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="end" opacity="${itemOp}">${U.esc(it.name)}</text>`;
+            if(eInlinePfx){svg+=`<text x="${renderX-6}" y="${dateStr?midY-fs*0.35:midY}" font-size="${fs}" font-weight="600" text-anchor="end" opacity="${itemOp}"><tspan fill="${eSD.color}" font-weight="700">${eInlinePfx}</tspan><tspan fill="${tc}">${U.esc(it.name)}</tspan></text>`}
+            else{svg+=`<text x="${renderX-6}" y="${dateStr?midY-fs*0.35:midY}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="end" opacity="${itemOp}">${U.esc(it.name)}</text>`}
             if(dateStr)svg+=`<text x="${renderX-6}" y="${midY+fs*0.55}" fill="${tc}" font-size="${Math.max(8,fs-1.5)}" text-anchor="end" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`;
           }else if(lp==='top'){
-            svg+=`<text x="${renderX+w/2}" y="${iy-4-(dateStr?fs:0)}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`;
+            if(eInlinePfx){svg+=`<text x="${renderX+w/2}" y="${iy-4-(dateStr?fs:0)}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}"><tspan fill="${eSD.color}" font-weight="700">${eInlinePfx}</tspan><tspan fill="${tc}">${U.esc(it.name)}</tspan></text>`}
+            else{svg+=`<text x="${renderX+w/2}" y="${iy-4-(dateStr?fs:0)}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`}
             if(dateStr)svg+=`<text x="${renderX+w/2}" y="${iy-4}" fill="${tc}" font-size="${Math.max(8,fs-1.5)}" text-anchor="middle" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`;
           }else if(lp==='bottom'){
-            svg+=`<text x="${renderX+w/2}" y="${iy+barH+fs+2}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`;
+            if(eInlinePfx){svg+=`<text x="${renderX+w/2}" y="${iy+barH+fs+2}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}"><tspan fill="${eSD.color}" font-weight="700">${eInlinePfx}</tspan><tspan fill="${tc}">${U.esc(it.name)}</tspan></text>`}
+            else{svg+=`<text x="${renderX+w/2}" y="${iy+barH+fs+2}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`}
             if(dateStr)svg+=`<text x="${renderX+w/2}" y="${iy+barH+fs*2+2}" fill="${tc}" font-size="${Math.max(8,fs-1.5)}" text-anchor="middle" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`;
           }else{
-            svg+=`<text x="${renderX+w/2}" y="${midY}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`;
+            if(eInlinePfx){svg+=`<text x="${renderX+w/2}" y="${midY}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}"><tspan fill="${eSD.color}" font-weight="700">${eInlinePfx}</tspan><tspan fill="${tc}">${U.esc(it.name)}</tspan></text>`}
+            else{svg+=`<text x="${renderX+w/2}" y="${midY}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`}
           }
         }else{
           /* Milestone */
           const ix=this.dXMid(it.date,tl),iy=itemY,iconH=16;const ic=ICONS.find(i=>i.id===it.iconType)||ICONS[0];
           const renderX=lw+ix-vpX;
           if(viewportOnly&&(renderX<lw-80||renderX>W+80)){continue}
-          svg+=`<g transform="translate(${renderX-8},${iy})" opacity="${itemOp}"><svg width="16" height="16" viewBox="0 0 24 24"><path d="${ic.p}" fill="${it.color}"/></svg></g>`;
+          svg+=`<g transform="translate(${renderX-8},${iy})" opacity="${itemOp}"><svg width="16" height="16" viewBox="0 0 24 24"><path d="${ic.p}" fill="${eRenderColor}"/></svg></g>`;
           svgItemXMap.set(it.id,{left:renderX-8,right:renderX+8,midY:iy+iconH/2});
+          /* Status badge (non-inline) for milestone */
+          if(eSD&&eSDShow&&eSDPos!=='inline'){
+            if(eSDMode==='emoji'){const bx=eSDPos==='top-left'?renderX-12:renderX+4,by=eSDPos==='top-left'?iy-4:iy+iconH+2;svg+=`<text x="${bx}" y="${by}" font-size="10" opacity="${itemOp}">${eSD.emoji}</text>`}
+            else if(eSDMode==='shortName'){const snW=this._mt(eSD.shortName,8,'700')+6,bx=eSDPos==='top-left'?renderX-12:renderX+4,by=eSDPos==='top-left'?iy-10:iy+iconH+2;svg+=`<rect x="${bx}" y="${by}" width="${snW}" height="12" rx="3" fill="${eSD.color}" opacity="${itemOp}"/><text x="${bx+snW/2}" y="${by+9}" fill="#fff" font-size="8" font-weight="700" text-anchor="middle" opacity="${itemOp}">${U.esc(eSD.shortName)}</text>`}
+            else if(eSDMode==='text'){const bx=eSDPos==='top-left'?renderX-12:renderX+12,by=eSDPos==='top-left'?iy-2:iy+iconH+10;svg+=`<text x="${bx}" y="${by}" fill="${eSD.color}" font-size="8" font-weight="600" opacity="${itemOp}">${U.esc(eSD.name)}</text>`}
+          }
           const lp=it.labelPosition||'right';
           const mMidY=iy+iconH/2+fs*0.35;
           let dateStr='';
           if(it.showDate!==false){const hasOwner=it.showOwner&&it.owner;dateStr=U.fmt(it.date,f);if(hasOwner)dateStr=it.owner+(dateStr?' · '+dateStr:'')}
-          if(lp==='right'){svg+=`<text x="${renderX+12}" y="${dateStr?iy+fs*0.8:mMidY}" fill="${tc}" font-size="${fs}" font-weight="600" opacity="${itemOp}">${U.esc(it.name)}</text>`;if(dateStr)svg+=`<text x="${renderX+12}" y="${iy+fs*0.8+fs}" fill="${tc}" font-size="${fs-1}" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`}
-          else if(lp==='left'){svg+=`<text x="${renderX-12}" y="${dateStr?iy+fs*0.8:mMidY}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="end" opacity="${itemOp}">${U.esc(it.name)}</text>`;if(dateStr)svg+=`<text x="${renderX-12}" y="${iy+fs*0.8+fs}" fill="${tc}" font-size="${fs-1}" text-anchor="end" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`}
-          else if(lp==='top'){svg+=`<text x="${renderX}" y="${iy-4-(dateStr?fs:0)}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`;if(dateStr)svg+=`<text x="${renderX}" y="${iy-4}" fill="${tc}" font-size="${fs-1}" text-anchor="middle" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`}
-          else if(lp==='bottom'){svg+=`<text x="${renderX}" y="${iy+iconH+fs+2}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`;if(dateStr)svg+=`<text x="${renderX}" y="${iy+iconH+fs*2+2}" fill="${tc}" font-size="${fs-1}" text-anchor="middle" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`}
-          else{svg+=`<text x="${renderX}" y="${mMidY}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`}
+          const eInlinePfx=eUseInline?(eSDMode==='emoji'?eSD.emoji+' ':eSDMode==='text'?U.esc(eSD.name)+' ':'('+U.esc(eSD.shortName)+') '):'';
+          if(lp==='right'){if(eInlinePfx){svg+=`<text x="${renderX+12}" y="${dateStr?iy+fs*0.8:mMidY}" font-size="${fs}" font-weight="600" opacity="${itemOp}"><tspan fill="${eSD.color}" font-weight="700">${eInlinePfx}</tspan><tspan fill="${tc}">${U.esc(it.name)}</tspan></text>`}else{svg+=`<text x="${renderX+12}" y="${dateStr?iy+fs*0.8:mMidY}" fill="${tc}" font-size="${fs}" font-weight="600" opacity="${itemOp}">${U.esc(it.name)}</text>`};if(dateStr)svg+=`<text x="${renderX+12}" y="${iy+fs*0.8+fs}" fill="${tc}" font-size="${fs-1}" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`}
+          else if(lp==='left'){if(eInlinePfx){svg+=`<text x="${renderX-12}" y="${dateStr?iy+fs*0.8:mMidY}" font-size="${fs}" font-weight="600" text-anchor="end" opacity="${itemOp}"><tspan fill="${eSD.color}" font-weight="700">${eInlinePfx}</tspan><tspan fill="${tc}">${U.esc(it.name)}</tspan></text>`}else{svg+=`<text x="${renderX-12}" y="${dateStr?iy+fs*0.8:mMidY}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="end" opacity="${itemOp}">${U.esc(it.name)}</text>`};if(dateStr)svg+=`<text x="${renderX-12}" y="${iy+fs*0.8+fs}" fill="${tc}" font-size="${fs-1}" text-anchor="end" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`}
+          else if(lp==='top'){if(eInlinePfx){svg+=`<text x="${renderX}" y="${iy-4-(dateStr?fs:0)}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}"><tspan fill="${eSD.color}" font-weight="700">${eInlinePfx}</tspan><tspan fill="${tc}">${U.esc(it.name)}</tspan></text>`}else{svg+=`<text x="${renderX}" y="${iy-4-(dateStr?fs:0)}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`};if(dateStr)svg+=`<text x="${renderX}" y="${iy-4}" fill="${tc}" font-size="${fs-1}" text-anchor="middle" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`}
+          else if(lp==='bottom'){if(eInlinePfx){svg+=`<text x="${renderX}" y="${iy+iconH+fs+2}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}"><tspan fill="${eSD.color}" font-weight="700">${eInlinePfx}</tspan><tspan fill="${tc}">${U.esc(it.name)}</tspan></text>`}else{svg+=`<text x="${renderX}" y="${iy+iconH+fs+2}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`};if(dateStr)svg+=`<text x="${renderX}" y="${iy+iconH+fs*2+2}" fill="${tc}" font-size="${fs-1}" text-anchor="middle" opacity="${0.6*itemOp}">${U.esc(dateStr)}</text>`}
+          else{if(eInlinePfx){svg+=`<text x="${renderX}" y="${mMidY}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}"><tspan fill="${eSD.color}" font-weight="700">${eInlinePfx}</tspan><tspan fill="${tc}">${U.esc(it.name)}</tspan></text>`}else{svg+=`<text x="${renderX}" y="${mMidY}" fill="${tc}" font-size="${fs}" font-weight="600" text-anchor="middle" opacity="${itemOp}">${U.esc(it.name)}</text>`}}
         }
         /* Collect vertical line data */
         if(it.vLine?.enabled){const vx=it.type==='task'?this.dX(it.startDate,tl):this.dXMid(it.date,tl);if(vx!==null)svgVLines.push({x:lw+vx-vpX,vLine:it.vLine,slY:rowTop,slH:h,subY:subYOff,subH:sub.h,iy:subYOff+6+(it.subRow||0)*rH})}
@@ -2548,10 +2853,11 @@ const App={
     const p=this.proj;
     if(this.$.flt_swim){const cur=this.$.flt_swim.value;let h='<option value="">Lane…</option>';p.swimlanes.forEach(sl=>{h+=`<option value="${sl.id}">${U.esc(sl.name)}</option>`});this.$.flt_swim.innerHTML=h;this.$.flt_swim.value=cur}
     if(this.$.flt_sub){const cur=this.$.flt_sub.value;let h='<option value="">Sub…</option>';const seen=new Set();p.swimlanes.forEach(sl=>{(sl.subSwimlanes||[]).forEach(ss=>{if(!seen.has(ss.id)){seen.add(ss.id);h+=`<option value="${ss.id}">${U.esc(ss.name)}</option>`}})});this.$.flt_sub.innerHTML=h;this.$.flt_sub.value=cur}
+    if(this.$.flt_status){const cur=this.$.flt_status.value;let h='<option value="">Status…</option><option value="_none">(No status)</option>';(p.statusDefs||[]).forEach(sd=>{if(sd.id==='blank')return;h+=`<option value="${sd.id}">${(sd.emoji?sd.emoji+' ':'')+U.esc(sd.name)}</option>`});this.$.flt_status.innerHTML=h;this.$.flt_status.value=cur}
   },
   renderDT(){
     const p=this.proj;
-    const cols=[{k:'_cb',l:'',w:52},{k:'name',l:'Name',w:160},{k:'owner',l:'Owner',w:90},{k:'type',l:'Type',w:55},{k:'startDate',l:'Start',w:100},{k:'endDate',l:'End',w:100},{k:'duration',l:'Dur',w:50},{k:'swimlaneId',l:'Lane',w:90},{k:'subSwimId',l:'Sub',w:75},{k:'color',l:'',w:28},{k:'subRow',l:'Row',w:34},{k:'deps',l:'Dep',w:32},{k:'progress',l:'%',w:36},{k:'pinned',l:'📌',w:28},{k:'hidden',l:'👁',w:28},{k:'notes',l:'Notes',w:120}];
+    const cols=[{k:'_cb',l:'',w:52},{k:'name',l:'Name',w:160},{k:'owner',l:'Owner',w:90},{k:'type',l:'Type',w:55},{k:'startDate',l:'Start',w:100},{k:'endDate',l:'End',w:100},{k:'duration',l:'Dur',w:50},{k:'status',l:'Status',w:55},{k:'swimlaneId',l:'Lane',w:90},{k:'subSwimId',l:'Sub',w:75},{k:'color',l:'',w:28},{k:'subRow',l:'Row',w:34},{k:'deps',l:'Dep',w:32},{k:'progress',l:'%',w:36},{k:'pinned',l:'📌',w:28},{k:'hidden',l:'👁',w:28},{k:'notes',l:'Notes',w:120}];
     const sc=this._sortCol,sd=this._sortDir;
     /* Build visible item ids first so header checkbox can reflect state */
     const visibleIds=[];
@@ -2563,7 +2869,8 @@ const App={
     const fltNotes=(this.$.flt_notes?.value||'').toLowerCase();
     const fltStart=this.$.flt_start?.value||'';
     const fltEnd=this.$.flt_end?.value||'';
-    const anyFlt=fltType||fltName||fltOwner||fltSwim||fltSub||fltNotes||fltStart||fltEnd;
+    const fltStatus=this.$.flt_status?.value||'';
+    const anyFlt=fltType||fltName||fltOwner||fltSwim||fltSub||fltNotes||fltStart||fltEnd||fltStatus;
     const _fltMatch=it=>{
       if(fltType&&it.type!==fltType)return false;
       if(fltName&&!it.name.toLowerCase().includes(fltName))return false;
@@ -2573,9 +2880,11 @@ const App={
       if(fltNotes&&!(it.notes||'').toLowerCase().includes(fltNotes))return false;
       if(fltStart&&(it.date||it.startDate||'')<fltStart)return false;
       if(fltEnd&&(it.endDate||it.date||'')>fltEnd)return false;
+      if(fltStatus){if(fltStatus==='_none'){if(it.status)return false}else{if(it.status!==fltStatus)return false}}
       return true;
     };
-    const gv=(it,k)=>{if(k==='startDate')return it.type==='milestone'?(it.date||''):(it.startDate||'');if(k==='deps')return(it.deps||[]).length;if(k==='duration')return it.duration||0;if(k==='owner')return it.owner||'';if(k==='notes')return it.notes||'';if(k==='pinned')return it.pinned?1:0;return it[k]||''};
+    const statusOrder=new Map((p.statusDefs||[]).map((sd,i)=>[sd.id,i]));
+    const gv=(it,k)=>{if(k==='startDate')return it.type==='milestone'?(it.date||''):(it.startDate||'');if(k==='deps')return(it.deps||[]).length;if(k==='duration')return it.duration||0;if(k==='owner')return it.owner||'';if(k==='notes')return it.notes||'';if(k==='pinned')return it.pinned?1:0;if(k==='status')return statusOrder.get(it.status||'blank')??999;return it[k]||''};
     for(const sl of p.swimlanes){
       let slItems=p.items.filter(i=>i.swimlaneId===sl.id);
       if(anyFlt)slItems=slItems.filter(_fltMatch);
@@ -2606,6 +2915,7 @@ const App={
           <td><input class="dt-in ${cLC}" type="date" data-f="startDate" value="${it.type==='milestone'?(it.date||''):(it.startDate||'')}" data-id="${it.id}" ${isCalc?'readonly':''}></td>
           <td><input class="dt-in ${cLC}" type="date" data-f="endDate" value="${it.endDate||''}" data-id="${it.id}" ${it.type==='milestone'||isCalc?'disabled':''}></td>
           <td><input class="dt-in" type="number" data-f="duration" value="${it.duration||''}" data-id="${it.id}" min="1" style="width:44px" ${it.type==='milestone'?'disabled':''}></td>
+          <td>${(()=>{const sd=this._getStatusDef(it.status);return sd?`<span class="dt-status-badge" style="background:${sd.color};color:#fff;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;white-space:nowrap">${U.esc(sd.shortName)}</span>`:`<span style="color:var(--tx3);font-size:10px">—</span>`})()}</td>
           <td><select class="dt-sel" data-f="swimlaneId" data-id="${it.id}">${p.swimlanes.map(s=>`<option value="${s.id}" ${s.id===it.swimlaneId?'selected':''}>${s.name}</option>`).join('')}</select></td>
           <td><select class="dt-sel" data-f="subSwimId" data-id="${it.id}"><option value="">—</option>${subSws.map(ss=>`<option value="${ss.id}" ${ss.id===it.subSwimId?'selected':''}>${ss.name}</option>`).join('')}</select></td>
           <td><input type="color" class="dt-clr" value="${it.color}" data-f="color" data-id="${it.id}"></td>
@@ -2730,6 +3040,7 @@ const App={
     const searchOwner=document.getElementById('as-owner')?.checked;
     const searchNotes=document.getElementById('as-notes')?.checked;
     const searchDates=document.getElementById('as-dates')?.checked;
+    const searchStatus=document.getElementById('as-status')?.checked;
     if(!term){this.toast('Enter a search term','error');return}
     let matcher;
     try{matcher=useRegex?new RegExp(term,'i'):{test:s=>s.toLowerCase().includes(term.toLowerCase())}}catch(e){this.toast('Invalid regex','error');return}
@@ -2739,6 +3050,7 @@ const App={
       if(searchName&&matcher.test(it.name))found=true;
       if(searchOwner&&matcher.test(it.owner||''))found=true;
       if(searchNotes&&matcher.test(it.notes||''))found=true;
+      if(searchStatus){const sd=this._getStatusDef(it.status);if(sd&&matcher.test(sd.name))found=true}
       if(searchDates){
         if(matcher.test(it.date||'')||matcher.test(it.startDate||'')||matcher.test(it.endDate||''))found=true;
       }
@@ -2762,16 +3074,16 @@ const App={
   async exportPNG(){this.toast('Generating PNG…');const svg=this.buildExportSVG();const img=new Image();const blob=new Blob([svg],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);const dpr=Math.max(3,window.devicePixelRatio||3);img.onload=()=>{const c=document.createElement('canvas');c.width=img.naturalWidth*dpr;c.height=img.naturalHeight*dpr;const ctx=c.getContext('2d');ctx.scale(dpr,dpr);ctx.drawImage(img,0,0);c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.png';a.click();URL.revokeObjectURL(a.href);this.toast('PNG exported!')},'image/png')};img.src=url},
 
   exportDataCSV(){
-    const p=this.proj,rows=[['Name','Owner','Type','Start','End','Duration','Swimlane','Row','Color','Progress','Pinned','Hidden','Notes','Predecessors']];
+    const p=this.proj,rows=[['Name','Owner','Type','Start','End','Duration','Swimlane','Row','Color','Progress','Pinned','Hidden','Notes','Predecessors','Status','StatusDate']];
     for(const sl of p.swimlanes){for(const it of p.items.filter(i=>i.swimlaneId===sl.id)){
-      rows.push([it.name,it.owner||'',it.type,it.type==='milestone'?it.date:it.startDate,it.endDate||'',it.duration||'',sl.name,it.subRow||0,it.color,it.progress||0,it.pinned?'Y':'N',it.hidden?'Y':'N',it.notes||'',this._fmtPreds(it)])}}
+      const sd=this._getStatusDef(it.status);rows.push([it.name,it.owner||'',it.type,it.type==='milestone'?it.date:it.startDate,it.endDate||'',it.duration||'',sl.name,it.subRow||0,it.color,it.progress||0,it.pinned?'Y':'N',it.hidden?'Y':'N',it.notes||'',this._fmtPreds(it),sd?sd.name:'',it.statusDate||''])}}
     const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
     const b=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.csv';a.click();URL.revokeObjectURL(a.href);this.toast('CSV exported!')
   },
 
   _deSelectedCols:null,
   showDataExport(){
-    const allCols=['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Color','Progress','Pinned','Hidden','Notes','Predecessors','LabelPos','FontSize','TextColor','DateFormat','ShowDate'];
+    const allCols=['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Color','Progress','Pinned','Hidden','Notes','Predecessors','Status','StatusDate','LabelPos','FontSize','TextColor','DateFormat','ShowDate'];
     this._deSelectedCols=new Set(allCols);
     const cc=document.getElementById('de-custom-cols');
     cc.innerHTML=allCols.map(c=>`<label class="apply-chk" style="min-width:120px"><input type="checkbox" checked data-dc="${c}"> ${c}</label>`).join('');
@@ -2782,9 +3094,9 @@ const App={
   },
   doDataExport(target){
     const p=this.proj,mode=document.getElementById('de-mode').value;
-    const allCols=['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Color','Progress','Pinned','Hidden','Notes','Predecessors','LabelPos','FontSize','TextColor','DateFormat','ShowDate'];
+    const allCols=['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Color','Progress','Pinned','Hidden','Notes','Predecessors','Status','StatusDate','LabelPos','FontSize','TextColor','DateFormat','ShowDate'];
     const cols=mode==='all'?allCols:[...this._deSelectedCols];
-    const getVal=(it,col)=>{const sl=this.gs(it.swimlaneId);switch(col){case'Name':return it.name;case'Owner':return it.owner||'';case'Type':return it.type;case'Start':return it.type==='milestone'?it.date:it.startDate;case'End':return it.endDate||'';case'Duration':return it.duration||'';case'Swimlane':return sl?.name||'';case'SubSwim':const ss=sl?.subSwimlanes?.find(s=>s.id===it.subSwimId);return ss?.name||'';case'Row':return it.subRow||0;case'Color':return it.color;case'Progress':return it.progress||0;case'Pinned':return it.pinned?'Y':'N';case'Hidden':return it.hidden?'Y':'N';case'Notes':return it.notes||'';case'Predecessors':return this._fmtPreds(it);case'LabelPos':return it.labelPosition;case'FontSize':return it.fontSize||0;case'TextColor':return it.textColor||'';case'DateFormat':return it.dateFormat||'';case'ShowDate':return it.showDate!==false?'Y':'N';default:return''}};
+    const getVal=(it,col)=>{const sl=this.gs(it.swimlaneId);switch(col){case'Name':return it.name;case'Owner':return it.owner||'';case'Type':return it.type;case'Start':return it.type==='milestone'?it.date:it.startDate;case'End':return it.endDate||'';case'Duration':return it.duration||'';case'Swimlane':return sl?.name||'';case'SubSwim':const ss=sl?.subSwimlanes?.find(s=>s.id===it.subSwimId);return ss?.name||'';case'Row':return it.subRow||0;case'Color':return it.color;case'Progress':return it.progress||0;case'Pinned':return it.pinned?'Y':'N';case'Hidden':return it.hidden?'Y':'N';case'Notes':return it.notes||'';case'Predecessors':return this._fmtPreds(it);case'Status':const sd=this._getStatusDef(it.status);return sd?sd.name:'';case'StatusDate':return it.statusDate||'';case'LabelPos':return it.labelPosition;case'FontSize':return it.fontSize||0;case'TextColor':return it.textColor||'';case'DateFormat':return it.dateFormat||'';case'ShowDate':return it.showDate!==false?'Y':'N';default:return''}};
     const rows=[cols];p.items.forEach(it=>rows.push(cols.map(c=>getVal(it,c))));
     const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join('\t')).join('\n');
     document.getElementById('data-export-modal').classList.add('hidden');
