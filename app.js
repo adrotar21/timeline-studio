@@ -1,4 +1,4 @@
-/* Timeline Studio v0.28.3 — Status badge clipping fix (B25): top-left badge offset adjusted from -8px to -2px in CSS, matching +6px shift applied to all SVG export badge offsets (task + milestone) for emoji, shortName, and text modes. */
+/* Timeline Studio v0.29.0 — Item-anchored zoom (F31): zoom anchors to selection centroid or viewport center, keeping the anchor visually fixed. Fit to selection (F32): fitToSelection() filters iterative solver to selected items, Ctrl+Shift+G shortcut, context-sensitive Fit button. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -51,6 +51,7 @@ const SHORTCUT_ACTIONS=[
   {id:'nudgeDown',cat:'Edit',label:'Nudge Down',defaults:['ArrowDown'],ctx:'sel',special:'nudge',hidden:true},
   // Tier 2 — Customizable: View
   {id:'fitToContent',cat:'View',label:'Fit to Content',defaults:['Ctrl+Shift+f','Alt+1'],ctx:'tl'},
+  {id:'fitToSelection',cat:'View',label:'Fit to Selection',defaults:['Ctrl+Shift+g'],ctx:'sel'},
   {id:'goToday',cat:'View',label:'Scroll to Today',defaults:[],ctx:'tl'},
   {id:'zoomIn',cat:'View',label:'Zoom In (5%)',defaults:['=','Shift+='],ctx:'tl'},
   {id:'zoomOut',cat:'View',label:'Zoom Out (5%)',defaults:['-'],ctx:'tl'},
@@ -152,10 +153,11 @@ const App={
     delete(){if(this.sel.length)this.deleteSel()},
     selectAll(){const items=this.proj.hideMode?this.proj.items.filter(i=>!i.hidden):this.proj.items;this.sel=items.map(i=>i.id);if(this.sel.length>1)this.openBulkPanel();this.sched();this.toast(`Selected ${this.sel.length} item${this.sel.length===1?'':'s'}`)},
     fitToContent(){this.fitToContent()},
+    fitToSelection(){this.fitToSelection()},
     goToday(){this.goToday()},
     zoomIn(){this.doZoom(5)},
     zoomOut(){this.doZoom(-5)},
-    zoom100(){this.proj.zoom=100;this.sched()},
+    zoom100(){this.doZoomTo(100)},
     fullscreen(){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>this.toast('Fullscreen not supported','error'))},
     expandAll(){this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')},
     collapseAll(){this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')},
@@ -897,8 +899,8 @@ const App={
     on('btn-today',()=>{this.$.view_dropdown.classList.add('hidden');this.goToday()});
     on('btn-fullscreen',()=>{this.$.view_dropdown.classList.add('hidden');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>this.toast('Fullscreen not supported','error'))});
     on('btn-show-float',()=>{this.$.view_dropdown.classList.add('hidden');this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')});
-    on('btn-zoom100',()=>{this.proj.zoom=100;this.sched()});
-    on('btn-fit',()=>this.fitToContent());
+    on('btn-zoom100',()=>this.doZoomTo(100));
+    on('btn-fit',()=>this.sel.length?this.fitToSelection():this.fitToContent());
     on('btn-expand-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')});
     on('btn-collapse-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')});
     on('btn-zi',()=>this.doZoom(5));on('btn-zo',()=>this.doZoom(-5));
@@ -1084,7 +1086,38 @@ const App={
     else{mc.classList.add('split-view');tc.classList.add('view-active');dc.classList.add('view-active')}
     this.sched()
   },
-  doZoom(d){this.proj.zoom=U.clamp((this.proj.zoom||100)+d,30,300);this.sched()},
+  _selCentroidDate(){
+    if(!this.sel.length)return null;
+    const items=this.sel.map(id=>this.gi(id)).filter(Boolean);
+    if(!items.length)return null;
+    let earliest=null,latest=null;
+    for(const it of items){
+      const s=it.type==='task'?it.startDate:it.date;
+      const e=it.type==='task'?it.endDate:it.date;
+      if(s&&(!earliest||s<earliest))earliest=s;
+      if(e&&(!latest||e>latest))latest=e;
+    }
+    if(!earliest||!latest)return null;
+    return U.addDays(earliest,Math.round(U.days(earliest,latest)/2));
+  },
+  doZoom(d){
+    const bs=this.$.tl_body_scroll;
+    const oldZ=this.proj.zoom||100;
+    const newZ=U.clamp(oldZ+d,30,300);
+    if(newZ===oldZ)return;
+    const panelW=this.panelOpen?290:0;
+    const vpW=bs.clientWidth-panelW;
+    const tl=this.met();
+    const cDate=this._selCentroidDate();
+    let anchorPx,anchorScreenX;
+    if(cDate){anchorPx=this.dX(cDate,tl);if(anchorPx!=null)anchorScreenX=U.clamp(anchorPx-bs.scrollLeft,0,vpW)}
+    if(anchorPx==null){anchorScreenX=vpW/2;anchorPx=bs.scrollLeft+anchorScreenX}
+    const anchorDate=this.xD(anchorPx,tl);
+    this.proj.zoom=newZ;
+    this.sched();
+    requestAnimationFrame(()=>{const newTl=this.met();const newPx=this.dX(anchorDate,newTl);if(newPx!=null)bs.scrollLeft=Math.max(0,newPx-anchorScreenX)});
+  },
+  doZoomTo(t){this.doZoom(t-(this.proj.zoom||100))},
   closeAllDD(){['file_dropdown','add_dropdown','view_dropdown','tools_dropdown'].forEach(k=>{if(this.$[k])this.$[k].classList.add('hidden')})},
   posDD(dd){
     if(!dd)return;
@@ -1248,6 +1281,61 @@ const App={
       bs.scrollLeft=Math.max(0,minAbs-20);/* 20px left padding */
     });
     this.toast('Fit to content');
+  },
+  fitToSelection(){
+    if(!this.sel.length){this.fitToContent();return}
+    const selItems=this.sel.map(id=>this.gi(id)).filter(Boolean);
+    if(!selItems.length){this.fitToContent();return}
+    const bs=this.$.tl_body_scroll;if(!bs)return;
+    const panelW=this.panelOpen?290:0;
+    const vpW=bs.clientWidth-panelW;
+    const p=this.proj;
+    const fitItems=p.hideMode?selItems.filter(i=>!i.hidden):selItems;
+    if(!fitItems.length){this.fitToContent();return}
+    const savedZoom=p.zoom||100;
+    p.zoom=100;
+    const tl1=this.met();
+    const itemGeom=[];
+    for(const it of fitItems){
+      const lp=it.labelPosition||'right';
+      const{labelW,edgeLW,edgeRW}=this._itemLabelWidths(it);
+      let bL,bR,tL=0,tR=0;
+      if(it.type==='task'){
+        const x1=this.dX(it.startDate,tl1),x2=this.dXEnd(it.endDate,tl1);
+        if(x1===null||x2===null)continue;
+        bL=x1;bR=x2;
+        if(lp==='right'){tR=6+labelW}
+        else if(lp==='left'){tL=6+labelW}
+        else if(lp==='top'||lp==='bottom'){const half=labelW/2,barHalf=(x2-x1)/2;if(half>barHalf){tL=half-barHalf;tR=half-barHalf}}
+        if(edgeLW)tL=Math.max(tL,edgeLW);
+        if(edgeRW)tR=Math.max(tR,edgeRW);
+      }else{
+        const x=this.dXMid(it.date,tl1);
+        if(x===null)continue;
+        bL=x-8;bR=x+8;
+        if(lp==='right'){tR=12+labelW}
+        else if(lp==='left'){tL=12+labelW}
+        else if(lp==='top'||lp==='bottom'||lp==='center'){const half=labelW/2;if(half>8){tL=half-8;tR=half-8}}
+      }
+      itemGeom.push({bL,bR,tL,tR});
+    }
+    if(!itemGeom.length){p.zoom=savedZoom;this.sched();return}
+    const pad=40;let z=1;
+    for(let iter=0;iter<4;iter++){
+      let minAbs=Infinity,maxAbs=-Infinity;
+      for(const g of itemGeom){minAbs=Math.min(minAbs,z*g.bL-g.tL);maxAbs=Math.max(maxAbs,z*g.bR+g.tR)}
+      z=z*(vpW/(maxAbs-minAbs+pad));
+    }
+    const newZoom=U.clamp(Math.round(z*100),10,300);
+    p.zoom=newZoom;
+    this.sched();
+    requestAnimationFrame(()=>{
+      const zF=newZoom/100;
+      let minAbs=Infinity;
+      for(const g of itemGeom)minAbs=Math.min(minAbs,zF*g.bL-g.tL);
+      bs.scrollLeft=Math.max(0,minAbs-20);
+    });
+    this.toast(`Fit to selection (${fitItems.length} item${fitItems.length===1?'':'s'})`);
   },
   goToday(){const tl=this.met();const x=this.dX(U.iso(new Date()),tl);if(x!==null){const panelW=this.panelOpen?290:0;this.$.tl_body_scroll.scrollLeft=x-(this.$.tl_body_scroll.clientWidth-panelW)/2}},
   showModal(id){document.getElementById(id).classList.remove('hidden')},
