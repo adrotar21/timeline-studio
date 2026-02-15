@@ -6,6 +6,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.27.1** | 2026-02-14 | Backlog update: B24 (Shift+click range select in Data View), B25 (status badges clipped at edges), B26 (properties panel overlaps right-side items + scroll range limits), F28 (bulk drag-and-drop group move), F29 (right-click drag to pan), F30 (mini-map navigation overlay). |
 | **0.27.0** | 2026-02-14 | Drag-and-drop overhaul: items follow mouse during drag (DOM orphaning fix), ghost snap preview (dashed outline at landing position), sub-swimlane band highlighting, Shift+drag horizontal lock, Escape to cancel drag (with undo pop), date feedback system (cursor delta badge with tiered units, header column span highlight, bottom status strip with original→target dates), selection ring fix (sched() on click-without-drag). Properties panel suppressed during drag. Cross-swimlane + sub-swimlane drop detection with divider offset correction. Help modal section 4 rewritten. |
 | **0.26.4** | 2026-02-14 | Comprehensive test coverage: 1,675 tests across 14 files (up from 579 across 2). Shared test helpers (assert, mock-engine, builders), aggregate runner (`run-all.js`), 12 new test files organized by category (core, features, release, regression). Playwright visual regression framework. Bug gap analysis (B1–B22 coverage audit) with targeted gap-filling tests (B7 grid lines, B12 lock-nudge, export completeness). Manual QA checklist (`tests/MANUAL_QA.md`) with quick smoke test (10-15 min) and comprehensive feature sweep (45-60 min). CLAUDE.md updated with test structure and run guidance. |
 | **0.26.3** | 2026-02-13 | Status field F22 Phase 4 — Export + CSV: status badges in SVG/PNG export (emoji, shortName pill, text, color override, inline prefix via `<tspan>`), Status + StatusDate columns in simple and advanced CSV export, Showcase.tlproj updated with sample statuses. |
@@ -72,6 +73,19 @@
 | F26 | **Status import & field linking** | **[Plan — V3+ future]** Enable re-importing updated data (e.g. from Excel paste or CSV) and linking imported columns to item fields — especially Status — so users can quickly pull in bulk status updates without manually editing each item. **Ties into F22:** Leverages the 2-deep status history (prev status 1 & 2) to compute deltas on import (e.g. "changed from On Track to At Risk since last import"). Could surface import-diff summaries, highlight changed items, and optionally auto-apply or prompt for confirmation. **Open questions:** Column mapping UI for linking import fields to item properties. Conflict resolution when imported data disagrees with manual edits. Whether to support scheduled/watched file re-import. | L | :blue_circle: P3+ | Plan |
 | F25 | **Item links/URLs** | **[Plan — needs refinement/discussion]** Allow tasks and milestones to store one or more hyperlinks. **Data model:** Each item gets a `links` array of objects, each with: URL, Display Name (optional — falls back to URL), and optionally a Link Type or category (e.g. "JIRA", "Confluence", "SharePoint", "Other"). **Properties pane UI:** A links section in the item properties pane — add/remove/edit links, each rendered as a clickable hyperlink that opens in a new tab. Compact display (icon + short name) with expand/edit on click. **Configuration:** Project-level settings for default link types/categories (so users can predefine "JIRA", "Wiki", etc. with URL templates like `https://jira.company.com/browse/{key}`). **Timeline display:** Optional — small link icon badge on items that have links (similar to pin badge). Click or hover to reveal link list. **Data table:** Links column showing count or first link, with expand to see all. **Export:** Links are metadata-only in PNG export (no clickable links in images). SVG export could include `<a>` elements for clickable links. CSV export includes links as a delimited string. **Open questions:** Maximum number of links per item? Should links support drag-and-drop URL paste? Integration with paste-import from Excel (link column)? | M | :blue_circle: P3 | Plan |
 | F27 | **Multi-instance file sync** | **[Research complete — V3+ future, implement after beta]** Real-time sync between multiple Timeline Studio instances viewing the same project file. Six-layer architecture: (1) StorageEvent for instant same-browser tab sync, (2) File System Access API polling for cross-browser/cross-instance sync, (3) Visual indicators for file handle state and active sessions, (4) `_lastSavedBy` metadata for conflict detection, (5) View-Only mode for safe read-only access, (6) Opt-in auto-save-to-disk for automatic propagation. **Risk:** Auto-save-to-disk on OneDrive/SharePoint-synced files creates conflict files when multiple users edit simultaneously — this is an inherent OneDrive limitation, not solvable without a server. Feature deferred to post-beta to avoid disrupting early users. **See:** Appendix B for full research, use-case walkthroughs, and implementation plan. | L | :blue_circle: P3+ | Research |
+| F28 | **Bulk drag-and-drop to new swimlane** | Multi-select group move: when dragging multiple selected items to a new swimlane, maintain relative positioning between items on drop. Preview target swimlane expanding to accommodate incoming items. Two-tier ghost preview — darker ghost for primary dragged item, lighter ghosts for other selected items showing snap positions. Follow-up to v0.27.0 drag overhaul. | L | :orange_circle: P1 | Open |
+| F29 | **Right-click drag to pan timeline** | Right-click + drag on timeline background pans the viewport (like hand/grab tool in Figma/Photoshop). If right-click starts on an item, suppress context menu and pan instead. Enables scrolling beyond current content bounds, mitigating B26 scroll range limits. Context menu fires on right-click release only if no drag occurred. | M | :orange_circle: P1 | Open |
+| F30 | **Mini-map navigation overlay** | Detect when timeline is very large and show a mini-map overlay for navigating around. Zoomed-out bird's-eye view with a draggable viewport rectangle for panning. Deferred to V2+. | L | :blue_circle: P3 | Open |
+
+---
+
+## Open Bugs
+
+| # | Title | Description | Size | Priority | Status |
+|---|-------|-------------|------|----------|--------|
+| B24 | **Shift+click range select in Data View** | Shift+clicking a row in the data table should select all rows between the last selected row and the clicked row (standard spreadsheet range select). Currently only selects the clicked row. Must respect current sort/filter order (visible list), not underlying data array order. | M | :orange_circle: P1 | Open |
+| B25 | **Status badges clipped at timeline edges** | Status badges at the top or bottom of a swimlane can get clipped by the swimlane boundary (`overflow:hidden`). Very minor — may be acceptable given `overflow:hidden` is required for collapsed swimlanes. Evaluate tradeoffs before fixing. | S | :blue_circle: P3 | Open |
+| B26 | **Properties panel overlaps right-side items + scroll range limits** | Two related issues: (1) Items on the right side of the timeline can't be easily edited because the properties panel overlay covers them — may need to shift viewport or offset items to account for panel width. (2) After Fit to Content, the horizontal scrollbar doesn't allow scrolling further left or right beyond the content range — the scroll buttons should allow inching beyond the fit range for breathing room. F29 (right-click pan) partially mitigates issue 2. | M | :orange_circle: P1 | Open |
 
 ---
 
@@ -81,6 +95,10 @@
 _All P0 items resolved in v0.14.0._
 
 ### :orange_circle: P1 — High Priority for V1
+- **B24** — Shift+click range select in Data View (M)
+- **B26** — Properties panel overlaps right-side items + scroll range limits (M)
+- **F28** — Bulk drag-and-drop to new swimlane (L)
+- **F29** — Right-click drag to pan timeline (M)
 - **F22** — Status field for tasks/milestones (XL) — **Done (v0.26.0–v0.26.3)**
 
 ### :yellow_circle: P2 — Nice to Have for V1
@@ -90,6 +108,7 @@ _All P0 items resolved in v0.14.0._
 - **F19** — Swimlane header font size (S)
 
 ### :blue_circle: P3 — Backlog for V2+
+- **B25** — Status badges clipped at timeline edges (S) — may be acceptable as-is
 - **F6** — Modal/kiosk window mode (S) — **Blocked**: requires HTTPS/localhost, not possible from `file://`
 - **F7** — Multi-project tabs (XL)
 - **F21** — SharePoint hosting guide (XS)
@@ -97,6 +116,7 @@ _All P0 items resolved in v0.14.0._
 - **F25** — Item links/URLs (M) — **Plan**
 - **F26** — Status import & field linking (L) — **Plan, V3+**
 - **F27** — Multi-instance file sync (L) — **Research complete, V3+** (see Appendix B)
+- **F30** — Mini-map navigation overlay (L)
 
 ---
 
