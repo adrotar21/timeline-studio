@@ -6,6 +6,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.28.1** | 2026-02-14 | Panel-aware viewport (B26): scroll headroom (+290px body width when panel open, `box-sizing:border-box` workaround), smooth auto-scroll items clear of panel on select (Google Maps-style `scrollTo({behavior:'smooth'})`), bulk selection scroll support, `fitToContent()` and `goToday()` subtract panel width from viewport, fit zoom minimum lowered to 10% for wide timelines. `autoRange()` ordering fix (range expands before `sched()`, self-schedules on change). Negative duration guard (B27): changing start past end keeps duration and moves end forward, and vice versa. Panel date changes trigger auto-scroll to follow edited item. |
 | **0.28.0** | 2026-02-14 | Pan mode (F29): middle-mouse drag for instant pan, toggle-based Pan Mode in Tools menu (✋) with bindable keyboard shortcut, 2D scrolling (horizontal + vertical), mutual exclusion with Lasso Mode, Escape to exit, cursor feedback (grab/grabbing). Capture-phase middle-click prevention for smooth scrolling. Help modal updated with pan documentation. |
 | **0.27.1** | 2026-02-14 | Backlog update: B24 (Shift+click range select in Data View), B25 (status badges clipped at edges), B26 (properties panel overlaps right-side items + scroll range limits), F28 (bulk drag-and-drop group move), F29 (right-click drag to pan), F30 (mini-map navigation overlay). |
 | **0.27.0** | 2026-02-14 | Drag-and-drop overhaul: items follow mouse during drag (DOM orphaning fix), ghost snap preview (dashed outline at landing position), sub-swimlane band highlighting, Shift+drag horizontal lock, Escape to cancel drag (with undo pop), date feedback system (cursor delta badge with tiered units, header column span highlight, bottom status strip with original→target dates), selection ring fix (sched() on click-without-drag). Properties panel suppressed during drag. Cross-swimlane + sub-swimlane drop detection with divider offset correction. Help modal section 4 rewritten. |
@@ -86,7 +87,8 @@
 |---|-------|-------------|------|----------|--------|
 | B24 | **Shift+click range select in Data View** | Shift+clicking a row in the data table should select all rows between the last selected row and the clicked row (standard spreadsheet range select). Currently only selects the clicked row. Must respect current sort/filter order (visible list), not underlying data array order. | M | :orange_circle: P1 | Open |
 | B25 | **Status badges clipped at timeline edges** | Status badges at the top or bottom of a swimlane can get clipped by the swimlane boundary (`overflow:hidden`). Very minor — may be acceptable given `overflow:hidden` is required for collapsed swimlanes. Evaluate tradeoffs before fixing. | S | :blue_circle: P3 | Open |
-| B26 | **Properties panel overlaps right-side items + scroll range limits** | Two related issues: (1) Items on the right side of the timeline can't be easily edited because the properties panel overlay covers them — may need to shift viewport or offset items to account for panel width. (2) After Fit to Content, the horizontal scrollbar doesn't allow scrolling further left or right beyond the content range — the scroll buttons should allow inching beyond the fit range for breathing room. F29 (right-click pan) partially mitigates issue 2. | M | :orange_circle: P1 | Open |
+| B26 | **Properties panel overlaps right-side items + scroll range limits** | **[Done — v0.28.1]** Two related issues: (1) Items on the right side of the timeline can't be easily edited because the properties panel overlay covers them — may need to shift viewport or offset items to account for panel width. (2) After Fit to Content, the horizontal scrollbar doesn't allow scrolling further left or right beyond the content range — the scroll buttons should allow inching beyond the fit range for breathing room. Fixed via scroll headroom (+290px body width), smooth auto-scroll on select, panel-aware fit/goToday, and lowered fit zoom minimum (10%). | M | :orange_circle: P1 | Done |
+| B27 | **Negative duration when start moved past end** | **[Done — v0.28.1]** Changing a task's start date to after its end date (or end before start) in the properties panel produced a negative duration and corrupted rendering. Fixed: when start passes end, keep duration and compute new end; when end passes start, keep duration and compute new start. Also fixed `autoRange()` ordering (range expands before render) so items always appear within the grid. | S | :orange_circle: P1 | Done |
 
 ---
 
@@ -97,7 +99,8 @@ _All P0 items resolved in v0.14.0._
 
 ### :orange_circle: P1 — High Priority for V1
 - **B24** — Shift+click range select in Data View (M)
-- **B26** — Properties panel overlaps right-side items + scroll range limits (M)
+- **B26** — Properties panel overlaps right-side items + scroll range limits (M) — **Done (v0.28.1)**
+- **B27** — Negative duration when start moved past end (S) — **Done (v0.28.1)**
 - **F28** — Bulk drag-and-drop to new swimlane (L)
 - **F29** — Pan mode (M) — **Done (v0.28.0)**
 - **F22** — Status field for tasks/milestones (XL) — **Done (v0.26.0–v0.26.3)**

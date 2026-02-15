@@ -1,4 +1,4 @@
-/* Timeline Studio v0.28.0 — Pan mode: middle-mouse drag + toggle-based pan, mutual exclusion with lasso, bindable shortcut */
+/* Timeline Studio v0.28.1 — Panel-aware viewport: scroll headroom, auto-scroll items clear of panel, fit/goToday offset, autoRange ordering fix, negative duration guard */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -1186,7 +1186,8 @@ const App={
   },
   fitToContent(){
     const bs=this.$.tl_body_scroll;if(!bs)return;
-    const vpW=bs.clientWidth;
+    const panelW=this.panelOpen?290:0;
+    const vpW=bs.clientWidth-panelW;
     const p=this.proj;
     const collapsedSlIds=new Set(p.swimlanes.filter(sl=>sl.collapsed!=='expanded').map(sl=>sl.id));
     const collapsedSubIds=new Set();
@@ -1236,7 +1237,7 @@ const App={
       const needed=maxAbs-minAbs+pad;
       z=z*(vpW/needed);/* scale z to fit */
     }
-    const newZoom=U.clamp(Math.round(z*100),30,300);
+    const newZoom=U.clamp(Math.round(z*100),10,300);
     p.zoom=newZoom;
     this.sched();
     /* Compute scroll position at final zoom */
@@ -1248,7 +1249,7 @@ const App={
     });
     this.toast('Fit to content');
   },
-  goToday(){const tl=this.met();const x=this.dX(U.iso(new Date()),tl);if(x!==null)this.$.tl_body_scroll.scrollLeft=x-this.$.tl_body_scroll.clientWidth/2},
+  goToday(){const tl=this.met();const x=this.dX(U.iso(new Date()),tl);if(x!==null){const panelW=this.panelOpen?290:0;this.$.tl_body_scroll.scrollLeft=x-(this.$.tl_body_scroll.clientWidth-panelW)/2}},
   showModal(id){document.getElementById(id).classList.remove('hidden')},
   gi(id){return this.proj.items.find(i=>i.id===id)},
   gs(id){return this.proj.swimlanes.find(s=>s.id===id)},
@@ -1891,7 +1892,10 @@ const App={
     const dates=[];this.proj.items.forEach(i=>{if(i.date)dates.push(new Date(i.date+'T12:00:00'));if(i.startDate)dates.push(new Date(i.startDate+'T12:00:00'));if(i.endDate)dates.push(new Date(i.endDate+'T12:00:00'))});
     if(!dates.length)return;const mn=new Date(Math.min(...dates)),mx=new Date(Math.max(...dates));
     mn.setMonth(mn.getMonth()-1);mn.setDate(1);mx.setMonth(mx.getMonth()+2);mx.setDate(1);
-    this.proj.timelineStart=U.iso(mn);this.proj.timelineEnd=U.iso(mx)
+    const newS=U.iso(mn),newE=U.iso(mx);
+    const changed=newS!==this.proj.timelineStart||newE!==this.proj.timelineEnd;
+    this.proj.timelineStart=newS;this.proj.timelineEnd=newE;
+    if(changed)this.sched();
   },
 
   showPaste(){this.$.paste_sw.innerHTML=this.proj.swimlanes.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');this.$.paste_ta.value='';this.$.paste_prev.textContent='';this.showModal('paste-modal');this.$.paste_ta.focus()},
@@ -1949,9 +1953,51 @@ const App={
   },
 
   /* ===== PANEL ===== */
-  openPanel(it){this.editItem=it;this.panelOpen=true;this.$.props_panel.classList.remove('panel-hidden');this.$.panel_title.textContent=it.type==='milestone'?'Milestone':'Task';this.renderPanel(it)},
-  openBulkPanel(){this.panelOpen=true;this.$.props_panel.classList.remove('panel-hidden');this.$.panel_title.textContent=`Bulk Edit (${this.sel.length})`;this.renderBulkPanel()},
-  closePanel(){if(this.panelPinned)return;this.panelOpen=false;this.editItem=null;this.$.props_panel.classList.add('panel-hidden')},
+  /* Smooth-scroll so selected item(s) are fully visible in the clear zone (left of panel).
+     Matches Google Maps' auto-pan: gentle animated scroll, not an instant snap.
+     Accepts a single item or uses this.sel for bulk selections. */
+  _scrollItemClear(it){
+    requestAnimationFrame(()=>{
+      const bs=this.$.tl_body_scroll;if(!bs)return;
+      const tl=this.met();
+      const items=it?[it]:this.sel.map(id=>this.gi(id)).filter(Boolean);
+      if(!items.length)return;
+      let minL=Infinity,maxR=-Infinity;
+      for(const item of items){
+        const{labelW,edgeLW,edgeRW}=this._itemLabelWidths(item);
+        const lp=item.labelPosition||'right';
+        let iL,iR;
+        if(item.type==='task'){
+          const x1=this.dX(item.startDate,tl),x2=this.dXEnd(item.endDate,tl);
+          if(x1===null||x2===null)continue;
+          iL=x1;iR=x2;
+          if(lp==='right')iR+=6+labelW;
+          else if(lp==='left')iL-=6+labelW;
+          if(edgeLW)iL-=edgeLW;
+          if(edgeRW)iR+=edgeRW;
+        }else{
+          const x=this.dXMid(item.date,tl);if(x===null)continue;
+          iL=x-8;iR=x+8;
+          if(lp==='right')iR+=12+labelW;
+          else if(lp==='left')iL-=12+labelW;
+        }
+        minL=Math.min(minL,iL);maxR=Math.max(maxR,iR);
+      }
+      if(minL===Infinity)return;
+      const clearRight=bs.scrollLeft+bs.clientWidth-290-20;/* 20px margin */
+      const clearLeft=bs.scrollLeft+20;
+      if(maxR>clearRight){
+        bs.scrollTo({left:bs.scrollLeft+(maxR-clearRight),behavior:'smooth'});
+      }else if(minL<clearLeft){
+        bs.scrollTo({left:Math.max(0,bs.scrollLeft-(clearLeft-minL)),behavior:'smooth'});
+      }
+    });
+  },
+  openPanel(it){this.editItem=it;this.panelOpen=true;this._applyPanelPad();this.$.props_panel.classList.remove('panel-hidden');this.$.panel_title.textContent=it.type==='milestone'?'Milestone':'Task';this.renderPanel(it);this._scrollItemClear(it)},
+  openBulkPanel(){this.panelOpen=true;this._applyPanelPad();this.$.props_panel.classList.remove('panel-hidden');this.$.panel_title.textContent=`Bulk Edit (${this.sel.length})`;this.renderBulkPanel();this._scrollItemClear()},
+  closePanel(){if(this.panelPinned)return;this.panelOpen=false;this.editItem=null;this._clearPanelPad();this.$.props_panel.classList.add('panel-hidden')},
+  _applyPanelPad(){this.$.tl_body.style.width=(this._tlTW||0)+290+'px'},
+  _clearPanelPad(){this.$.tl_body.style.width=(this._tlTW||0)+'px'},
 
   renderBulkPanel(){
     const items=this.sel.map(id=>this.gi(id)).filter(Boolean);if(!items.length)return;
@@ -2103,17 +2149,27 @@ const App={
     q('pp-notes').oninput=function(){it.notes=this.value;App.autoSave()};
     q('pp-sl').onchange=function(){up(()=>{it.swimlaneId=this.value;it.subSwimId=''});App.renderPanel(it)};
     q('pp-ssw')?.addEventListener('change',function(){up(()=>it.subSwimId=this.value)});
-    q('pp-date')?.addEventListener('change',function(){up(()=>it.date=this.value);if(App.proj.autoRange)App.autoRange()});
+    q('pp-date')?.addEventListener('change',function(){if(App.proj.autoRange){App.snap();it.date=this.value;App.autoRange();App.sched();App.autoSave();if(App.panelOpen)App._scrollItemClear(it)}else{up(()=>it.date=this.value)}});
     if(it.type==='task'){
       const recalc=(changed)=>{
         const isWork=App.proj.scheduleAroundNonWorking&&(it.durMode||'cal')==='work';
         if(changed==='start'){
           if(it.endDate){
-            it.duration=isWork?App._countWorkingDays(it.startDate,U.addDays(it.endDate,1)):(U.days(it.startDate,it.endDate)+1);
+            if(U.days(it.startDate,it.endDate)<0){
+              /* Start moved past end — keep duration, compute new end */
+              it.endDate=App._calcEndDate(it);q('pp-end').value=it.endDate;
+            }else{
+              it.duration=isWork?App._countWorkingDays(it.startDate,U.addDays(it.endDate,1)):(U.days(it.startDate,it.endDate)+1);
+            }
             q('pp-dur').value=it.duration}
         }else if(changed==='end'){
           if(it.startDate){
-            it.duration=isWork?App._countWorkingDays(it.startDate,U.addDays(it.endDate,1)):(U.days(it.startDate,it.endDate)+1);
+            if(U.days(it.startDate,it.endDate)<0){
+              /* End moved before start — keep duration, compute new start */
+              it.startDate=U.addDays(it.endDate,-(it.duration||1)+1);q('pp-start').value=it.startDate;
+            }else{
+              it.duration=isWork?App._countWorkingDays(it.startDate,U.addDays(it.endDate,1)):(U.days(it.startDate,it.endDate)+1);
+            }
             q('pp-dur').value=it.duration}
         }else if(changed==='duration'){
           if(it.startDate){it.endDate=App._calcEndDate(it);q('pp-end').value=it.endDate}
@@ -2124,7 +2180,8 @@ const App={
           cdw.style.display=isWork?'':'none';
           if(isWork)cdf.value=(U.days(it.startDate,it.endDate)+1)+'d';
         }
-        App.sched();App.autoSave();if(App.proj.autoRange)App.autoRange()
+        if(App.proj.autoRange)App.autoRange();App.sched();App.autoSave();
+        if(App.panelOpen)App._scrollItemClear(it)
       };
       q('pp-start').onchange=function(){up(()=>{it.startDate=this.value;recalc('start')})};
       q('pp-end').onchange=function(){up(()=>{it.endDate=this.value;recalc('end')})};
@@ -2393,7 +2450,7 @@ const App={
       else if(v.direction==='up'){bot=vl.slY+vl.iy+16}
       bodyH+=`<div style="position:absolute;left:${vl.x}px;top:${top}px;height:${bot-top}px;${dash};pointer-events:none;z-index:2;opacity:0.6"></div>`}
     bodyH+=`<svg id="dep-svg" style="width:${tl.tw}px;height:100%"></svg>`;
-    this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this.$.tl_body.style.width=tl.tw+'px';
+    this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this._tlTW=tl.tw;this.$.tl_body.style.width=(this.panelOpen?tl.tw+290:tl.tw)+'px';
     /* Empty-state hint for new users */
     if(p.items.length===0){const _hc=th.tlTx,_hc2=th.tlTx2;this.$.tl_body.innerHTML+=`<div class="tl-empty-hint" style="color:${_hc}"><div style="font-size:28px;margin-bottom:8px">📋</div><div>Click <strong>+ Task</strong> or <strong>+ Milestone</strong> in the toolbar to add your first item.</div><div style="margin-top:6px;font-size:11px;color:${_hc2}">Or choose a template from <strong style="color:${_hc}">New</strong> (📄).<br>Right-click the timeline to add at a specific date.</div></div>`}
 
