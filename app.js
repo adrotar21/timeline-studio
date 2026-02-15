@@ -1,4 +1,4 @@
-/* Timeline Studio v0.29.0 — Item-anchored zoom (F31): zoom anchors to selection centroid or viewport center, keeping the anchor visually fixed. Fit to selection (F32): fitToSelection() filters iterative solver to selected items, Ctrl+Shift+G shortcut, context-sensitive Fit button. */
+/* Timeline Studio v0.29.1 — Auto-fit swimlane heights (F33): `autoFitHeights()` shrinks swimlane/sub-swimlane heights to tightly fit content, Auto Fit ↕ button in View dropdown, registered in SHORTCUT_ACTIONS for custom keybinding. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -60,6 +60,7 @@ const SHORTCUT_ACTIONS=[
   {id:'expandAll',cat:'View',label:'Expand All Swimlanes',defaults:[],ctx:'tl'},
   {id:'collapseAll',cat:'View',label:'Collapse All Swimlanes',defaults:[],ctx:'tl'},
   {id:'showFloat',cat:'View',label:'Toggle Float Labels',defaults:[],ctx:'tl'},
+  {id:'autoFitHeights',cat:'View',label:'Auto Fit Heights',defaults:[],ctx:'tl'},
   // Tier 2 — Customizable: Tools
   {id:'propagate',cat:'Tools',label:'Propagate to Successors',defaults:['Ctrl+Shift+p'],ctx:'sel-manual'},
   {id:'toggleLock',cat:'Tools',label:'Toggle Lock',defaults:[],global:true},
@@ -162,6 +163,7 @@ const App={
     expandAll(){this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')},
     collapseAll(){this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')},
     showFloat(){this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')},
+    autoFitHeights(){this.autoFitHeights()},
     propagate(){if(this.sel.length&&this.proj.schedulingMode!=='scheduled')this.propagateFrom(this.sel)},
     toggleLock(){this.proj.locked=!this.proj.locked;this.proj.lockH=this.proj.locked;this.proj.lockV=this.proj.locked;this.sched();this.autoSave();this.toast(this.proj.locked?'Locked':'Unlocked')},
     toggleHide(){this.proj.hideMode=!this.proj.hideMode;this.sched();this.toast(this.proj.hideMode?'Hiding hidden':'Showing all')},
@@ -903,6 +905,7 @@ const App={
     on('btn-fit',()=>this.sel.length?this.fitToSelection():this.fitToContent());
     on('btn-expand-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')});
     on('btn-collapse-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')});
+    on('btn-autofit-heights',()=>{this.$.view_dropdown.classList.add('hidden');this.autoFitHeights()});
     on('btn-zi',()=>this.doZoom(5));on('btn-zo',()=>this.doZoom(-5));
     this.$.zoom_lbl.addEventListener('wheel',e=>{e.preventDefault();this.doZoom(e.deltaY<0?5:-5)},{passive:false});
     /* Ctrl+Scroll zoom on timeline body: Ctrl=±5%, Ctrl+Shift=±1% */
@@ -3491,6 +3494,34 @@ const App={
       }
     }
     this.sched();this.autoSave();this.toast('Auto-arranged!')
+  },
+
+  autoFitHeights(){
+    this.snap();
+    const p=this.proj,rH=38;
+    let changed=0;
+    for(const sl of p.swimlanes){
+      if(sl.collapsed!=='expanded')continue;
+      const slItems=p.items.filter(i=>i.swimlaneId===sl.id);
+      const hasSubs=sl.subSwimlanes?.length>0;
+      if(hasSubs){
+        for(const ss of sl.subSwimlanes){
+          if(ss.collapsed==='minimized')continue;
+          const ssItems=slItems.filter(i=>i.subSwimId===ss.id||(!i.subSwimId&&ss===sl.subSwimlanes[0]));
+          const vis=ssItems.filter(i=>!(p.hideMode&&i.hidden));
+          const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);
+          const contentH=Math.max(50,(mr+1)*rH+10);
+          if(ss.height!==contentH){ss.height=contentH;changed++}
+        }
+      }else{
+        const vis=slItems.filter(i=>!(p.hideMode&&i.hidden));
+        const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);
+        const contentH=Math.max(50,(mr+1)*rH+10);
+        if(sl.height!==contentH){sl.height=contentH;changed++}
+      }
+    }
+    this.sched();this.autoSave();
+    this.toast(changed?`Heights auto-fitted (${changed} lane${changed===1?'':'s'})`:'Heights already optimal');
   },
 
   /* Pan — middle-mouse or pan-mode+left-drag scrolls the viewport */
