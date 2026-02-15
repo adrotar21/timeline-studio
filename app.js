@@ -1,4 +1,4 @@
-/* Timeline Studio v0.29.1 — Auto-fit swimlane heights (F33): `autoFitHeights()` shrinks swimlane/sub-swimlane heights to tightly fit content, Auto Fit ↕ button in View dropdown, registered in SHORTCUT_ACTIONS for custom keybinding. */
+/* Timeline Studio v0.29.2 — Shift+drag -1 day offset fix (B28): `parseInt()` → `parseFloat()` in drag system prevents fractional pixel truncation from causing date round-trip errors during shift+drag (horizontal lock). */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -2659,7 +2659,7 @@ const App={
   onTlCtx(e){const iEl=e.target.closest('.tl-item');if(iEl)this.showCtx(e,iEl.dataset.iid);else{e.preventDefault();this.sel=[];this.showCtx(e,null)}},
 
   startDrag(e,it,el){const tl=this.met(),sx=e.clientX,sy=e.clientY;
-    const dragItems=this.sel.map(id=>{const itemEl=this.$.tl_body.querySelector(`[data-iid="${id}"]`);const item=this.gi(id);if(!itemEl||!item)return null;return{id,el:itemEl,item,oL:parseInt(itemEl.style.left),oT:parseInt(itemEl.style.top)}}).filter(Boolean);
+    const dragItems=this.sel.map(id=>{const itemEl=this.$.tl_body.querySelector(`[data-iid="${id}"]`);const item=this.gi(id);if(!itemEl||!item)return null;return{id,el:itemEl,item,oL:parseFloat(itemEl.style.left),oT:parseFloat(itemEl.style.top)}}).filter(Boolean);
     if(!dragItems.length)return;
     const origDate=it.type==='task'?it.startDate:it.date;
     let dr=false,hlEl=null,hlRow=null,ghostEl=null,ghostRow=null,tipEl=null,stripEl=null,prevHdrStart=-1,prevHdrEnd=-1;
@@ -2675,7 +2675,7 @@ const App={
           if(hlRow!==found||!hlEl){if(hlEl)hlEl.remove();hlEl=document.createElement('div');hlEl.className='drag-band-hl';found.appendChild(hlEl);hlRow=found}
           hlEl.style.top=bandTop+'px';hlEl.style.height=bandH+'px';
           const primaryD=dragItems.find(d=>d.id===it.id);
-          if(primaryD){const isT=it.type==='task',curL=parseInt(primaryD.el.style.left),nx=curL+(isT?0:8),snapDate=this.xD(nx,tl);
+          if(primaryD){const isT=it.type==='task',curL=parseFloat(primaryD.el.style.left),nx=curL+(isT?0:8),snapDate=this.xD(nx,tl);
             const ghostX=isT?this.dX(snapDate,tl):this.dXMid(snapDate,tl)-8;
             const newEnd=isT?this._calcEndDate({startDate:snapDate,duration:it.duration,durMode:it.durMode}):null;
             const ghostW=isT?Math.max(8,(this.dXEnd(newEnd,tl)||0)-(this.dX(snapDate,tl)||0)):16;
@@ -2685,7 +2685,7 @@ const App={
         else if(hlEl){hlEl.remove();hlEl=null;hlRow=null;if(ghostEl){ghostEl.remove();ghostEl=null;ghostRow=null}}}
       /* --- Drag date feedback (works regardless of lockV) --- */
       {const primaryD=dragItems.find(d=>d.id===it.id);
-        if(primaryD){const isT=it.type==='task',curL=parseInt(primaryD.el.style.left),nx=curL+(isT?0:8),snapDate=this.xD(nx,tl);
+        if(primaryD){const isT=it.type==='task',curL=parseFloat(primaryD.el.style.left),nx=curL+(isT?0:8),snapDate=this.xD(nx,tl);
           const newEnd=isT?this._calcEndDate({startDate:snapDate,duration:it.duration,durMode:it.durMode}):null;
           const delta=U.days(origDate,snapDate);
           // Delta badge at cursor
@@ -2712,7 +2712,7 @@ const App={
     const _cleanFeedback=()=>{if(tipEl){tipEl.remove();tipEl=null}if(stripEl){stripEl.remove();stripEl=null}const hdrRows=this.$.tl_hdr.querySelectorAll('.th-row');const lastRow=hdrRows[hdrRows.length-1];if(lastRow){for(const c of lastRow.children)c.classList.remove('drag-target')}prevHdrStart=prevHdrEnd=-1};
     const up=ev=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('keydown',esc);dragItems.forEach(d=>d.el.classList.remove('dragging'));if(hlEl){hlEl.remove();hlEl=null;hlRow=null}if(ghostEl){ghostEl.remove();ghostEl=null;ghostRow=null}_cleanFeedback();if(!dr){this.sched();return}if(dr){
       dragItems.forEach(d=>{
-        const nL=parseInt(d.el.style.left),nx=nL+(d.item.type==='milestone'?8:0),nd=this.xD(nx,tl);
+        const nL=parseFloat(d.el.style.left),nx=nL+(d.item.type==='milestone'?8:0),nd=this.xD(nx,tl);
         if(!this.proj.lockH){if(d.item.type==='milestone')d.item.date=nd;else{d.item.startDate=nd;d.item.endDate=this._calcEndDate(d.item)}}
       });
       if(!this.proj.lockV){

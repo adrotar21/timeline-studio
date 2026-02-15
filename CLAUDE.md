@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.29.1` — Auto-fit swimlane heights (F33): `autoFitHeights()` shrinks swimlane/sub-swimlane heights to tightly fit content, Auto Fit ↕ button in View dropdown (Swimlanes section), registered in `SHORTCUT_ACTIONS` for custom keybinding. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.29.2` — Shift+drag -1 day offset fix (B28): `parseInt()` → `parseFloat()` in drag system prevents fractional pixel truncation from causing date round-trip errors during shift+drag horizontal lock. Live at `https://adrotar21.github.io/timeline-studio/`.
 - Version history tracked in `BACKLOG.md` under the Versioning table and via **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 
