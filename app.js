@@ -1,4 +1,4 @@
-/* Timeline Studio v0.28.1 — Panel-aware viewport: scroll headroom, auto-scroll items clear of panel, fit/goToday offset, autoRange ordering fix, negative duration guard */
+/* Timeline Studio v0.28.2 — Data table row selection (B24): shift+click range select on checkboxes and row backgrounds, ctrl+click toggle, plain click single-select. Mousedown-based shift detection, addEventListener stacking fix in bindDT(). */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -3076,6 +3076,25 @@ const App={
     this.$.dt_body.innerHTML=rows.join('');this.bindDT()
   },
 
+  _dtSelect(id,shift,ctrl){
+    const prev=this.sel.slice();
+    if(shift&&this._lastShiftSel){
+      const allIds=[...this.$.dt_body.querySelectorAll('tr[data-iid]')].map(r=>r.dataset.iid);
+      const i1=allIds.indexOf(this._lastShiftSel),i2=allIds.indexOf(id);
+      if(i1>=0&&i2>=0){const lo=Math.min(i1,i2),hi=Math.max(i1,i2);this.sel=allIds.slice(lo,hi+1)}
+    }else if(ctrl){
+      const idx=this.sel.indexOf(id);if(idx>=0)this.sel.splice(idx,1);else this.sel.push(id);
+      this._lastShiftSel=id;
+    }else{
+      if(this.sel.length===1&&this.sel[0]===id){this._lastShiftSel=id;return}
+      this.sel=[id];this._lastShiftSel=id;
+    }
+    if(this.sel.length===1){const it=this.gi(this.sel[0]);if(it)this.openPanel(it)}
+    else if(this.sel.length>1)this.openBulkPanel();
+    else if(!this.panelPinned)this.closePanel();
+    this.sched();
+  },
+
   bindDT(){
     const tb=this.$.dt_body;
     /* Select All / Deselect All */
@@ -3106,13 +3125,6 @@ const App={
     tb.onchange=e=>{const t=e.target,id=t.dataset?.id,f=t.dataset?.f;
       if(t.classList.contains('dt-cb')){
         const rid=t.dataset.id;
-        if(e.shiftKey&&this._lastShiftSel){
-          const allIds=[...this.$.dt_body.querySelectorAll('tr[data-iid]')].map(r=>r.dataset.iid);
-          const i1=allIds.indexOf(this._lastShiftSel),i2=allIds.indexOf(rid);
-          if(i1>=0&&i2>=0){const lo=Math.min(i1,i2),hi=Math.max(i1,i2);
-            for(let i=lo;i<=hi;i++)if(!this.sel.includes(allIds[i]))this.sel.push(allIds[i]);
-            this.sched();return}
-        }
         if(t.checked){if(!this.sel.includes(rid))this.sel.push(rid)}else this.sel=this.sel.filter(x=>x!==rid);
         this._lastShiftSel=rid;
         if(this.sel.length===1){const it=this.gi(this.sel[0]);if(it)this.openPanel(it)}else if(this.sel.length>1)this.openBulkPanel();
@@ -3152,7 +3164,7 @@ const App={
       else if(f==='notes'){it.notes=e.target.value;this.autoSave()}
     };
     // Right-click context menu on data table rows
-    tb.addEventListener('contextmenu',e=>{
+    tb.oncontextmenu=e=>{
       const row=e.target.closest('tr[data-iid]');if(!row)return;e.preventDefault();
       const id=row.dataset.iid;if(!this.sel.includes(id))this.sel=[id];
       const it=this.gi(id);if(!it)return;
@@ -3165,12 +3177,20 @@ const App={
         this.sched();this.autoSave()};
       const hide=()=>{menu.classList.add('hidden');document.removeEventListener('click',hide)};
       setTimeout(()=>document.addEventListener('click',hide),0);
-    });
-    tb.addEventListener('click',e=>{
+    };
+    tb.onclick=e=>{
       if(e.target.closest('.dt-sw-hdr')&&e.detail===2){const sl=this.gs(e.target.closest('.dt-sw-hdr').dataset.slId);if(sl)this.showSwM(sl)}
-    });
-    this.$.dt_head.addEventListener('click',e=>{const th=e.target.closest('th[data-sortable]');if(!th)return;const col=th.dataset.col;if(this._sortCol===col)this._sortDir=this._sortDir==='asc'?'desc':'asc';else{this._sortCol=col;this._sortDir='asc'}this.sched(false,true)});
-    this.$.dt_head.addEventListener('mousedown',e=>{const rh=e.target.closest('.th-rs');if(!rh)return;e.preventDefault();const th=rh.parentElement,sx=e.clientX,sw=th.getBoundingClientRect().width;const mv=ev=>{const nw=Math.max(25,sw+ev.clientX-sx);th.style.width=nw+'px';th.style.minWidth=nw+'px';const ci=th.cellIndex;if(ci>=0){this.$.dt_body.querySelectorAll('tr').forEach(row=>{const td=row.cells[ci];if(td){td.style.width=nw+'px';td.style.minWidth=nw+'px'}})}};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up)};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)})
+    };
+    tb.onmousedown=e=>{
+      const row=e.target.closest('tr[data-iid]');if(!row)return;
+      // Shift+click on selection checkbox → range select (shiftKey reliable on mousedown)
+      const cb=e.target.closest('.dt-cb');
+      if(cb&&e.shiftKey&&this._lastShiftSel){e.preventDefault();this._dtSelect(cb.dataset.id,true,false);return}
+      if(e.target.closest('.dt-cb,.dt-pin,.dt-hid'))return;
+      this._dtSelect(row.dataset.iid,e.shiftKey,e.ctrlKey||e.metaKey);
+    };
+    this.$.dt_head.onclick=e=>{const th=e.target.closest('th[data-sortable]');if(!th)return;const col=th.dataset.col;if(this._sortCol===col)this._sortDir=this._sortDir==='asc'?'desc':'asc';else{this._sortCol=col;this._sortDir='asc'}this.sched(false,true)};
+    this.$.dt_head.onmousedown=e=>{const rh=e.target.closest('.th-rs');if(!rh)return;e.preventDefault();const th=rh.parentElement,sx=e.clientX,sw=th.getBoundingClientRect().width;const mv=ev=>{const nw=Math.max(25,sw+ev.clientX-sx);th.style.width=nw+'px';th.style.minWidth=nw+'px';const ci=th.cellIndex;if(ci>=0){this.$.dt_body.querySelectorAll('tr').forEach(row=>{const td=row.cells[ci];if(td){td.style.width=nw+'px';td.style.minWidth=nw+'px'}})}};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up)};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}
   },
 
   doSearch(){const term=this.$.data_search.value.trim().toLowerCase();this._searchTerm=term;this._searchMatches=[];this._searchIdx=-1;if(term){this.proj.items.forEach(i=>{if(i.name.toLowerCase().includes(term)||(i.owner||'').toLowerCase().includes(term)||(i.notes||'').toLowerCase().includes(term))this._searchMatches.push(i.id)});if(this._searchMatches.length)this._searchIdx=0}this.$.data_search_ct.textContent=this._searchMatches.length?`${this._searchIdx+1}/${this._searchMatches.length}`:'';this.sched(false,true);if(this._searchMatches.length)this.scrollToSM()},

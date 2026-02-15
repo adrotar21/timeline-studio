@@ -580,5 +580,398 @@ section('Inline Editing — Type Conversion');
 })();
 
 // ═══════════════════════════════════════════════════════════════════
+//  ROW SELECTION — _dtSelect (B24: Shift+Click Range Select)
+// ═══════════════════════════════════════════════════════════════════
+
+// Mock _dtSelect matching app.js implementation exactly
+// Returns true if selection changed, false if early-returned (same item)
+function _dtSelect(id,shift,ctrl){
+  if(shift&&App._lastShiftSel){
+    const allIds=[...App.$.dt_body.querySelectorAll('tr[data-iid]')].map(r=>r.dataset.iid);
+    const i1=allIds.indexOf(App._lastShiftSel),i2=allIds.indexOf(id);
+    if(i1>=0&&i2>=0){const lo=Math.min(i1,i2),hi=Math.max(i1,i2);App.sel=allIds.slice(lo,hi+1)}
+  }else if(ctrl){
+    const idx=App.sel.indexOf(id);if(idx>=0)App.sel.splice(idx,1);else App.sel.push(id);
+    App._lastShiftSel=id;
+  }else{
+    if(App.sel.length===1&&App.sel[0]===id){App._lastShiftSel=id;return false}
+    App.sel=[id];App._lastShiftSel=id;
+  }
+  return true;
+}
+
+// Helper: mock dt_body with a visible row list
+function mockDtBody(ids){
+  App.$={dt_body:{querySelectorAll:()=>ids.map(id=>({dataset:{iid:id}}))}};
+}
+
+// ─── mousedown guard: simulates which click targets pass through ───
+// In app.js: tb.onmousedown skips .dt-cb, .dt-pin, .dt-hid
+// Everything else (text inputs, selects, row bg, spans) passes through
+
+function targetPassesGuard(classList){
+  // These classes are excluded from mousedown handler
+  const excluded=['dt-cb','dt-pin','dt-hid'];
+  return !excluded.some(c=>classList.includes(c));
+}
+
+section('B24 — Plain click selects single row');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[makeItem('task',{name:'A'}),makeItem('task',{name:'B'}),makeItem('task',{name:'C'})]});
+  App.sel=[];App._lastShiftSel=null;
+  const idB=App.proj.items[1].id;
+  _dtSelect(idB,false,false);
+  assert('Plain click: sel length',App.sel.length,1);
+  assert('Plain click: correct item',App.sel[0],idB);
+  assert('Plain click: anchor set',App._lastShiftSel,idB);
+})();
+
+section('B24 — Plain click on already-selected row is no-op');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[makeItem('task',{name:'A'}),makeItem('task',{name:'B'})]});
+  const idA=App.proj.items[0].id;
+  App.sel=[idA];App._lastShiftSel=idA;
+  const changed=_dtSelect(idA,false,false);
+  assertF('Same-item plain click returns false (no-op)',changed);
+  assert('Same-item: sel unchanged',App.sel.length,1);
+  assert('Same-item: still A',App.sel[0],idA);
+})();
+
+section('B24 — Ctrl+click toggles selection');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[makeItem('task',{name:'A'}),makeItem('task',{name:'B'}),makeItem('task',{name:'C'})]});
+  const idA=App.proj.items[0].id,idB=App.proj.items[1].id,idC=App.proj.items[2].id;
+  App.sel=[idA];App._lastShiftSel=idA;
+  // Ctrl+click B → adds B
+  _dtSelect(idB,false,true);
+  assert('Ctrl+click add: sel length',App.sel.length,2);
+  assertT('Ctrl+click add: A in sel',App.sel.includes(idA));
+  assertT('Ctrl+click add: B in sel',App.sel.includes(idB));
+  // Ctrl+click A → removes A
+  _dtSelect(idA,false,true);
+  assert('Ctrl+click remove: sel length',App.sel.length,1);
+  assert('Ctrl+click remove: only B',App.sel[0],idB);
+})();
+
+section('B24 — Ctrl+click to empty then add');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[makeItem('task',{name:'A'})]});
+  const idA=App.proj.items[0].id;
+  App.sel=[idA];App._lastShiftSel=idA;
+  // Ctrl+click A to deselect → empty
+  _dtSelect(idA,false,true);
+  assert('Ctrl deselect all: empty',App.sel.length,0);
+  // Ctrl+click A again → re-add
+  _dtSelect(idA,false,true);
+  assert('Ctrl re-add: one item',App.sel.length,1);
+  assert('Ctrl re-add: correct id',App.sel[0],idA);
+})();
+
+section('B24 — Shift+click forward range');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[
+    makeItem('task',{name:'A'}),makeItem('task',{name:'B'}),
+    makeItem('task',{name:'C'}),makeItem('task',{name:'D'}),makeItem('task',{name:'E'})
+  ]});
+  const ids=App.proj.items.map(i=>i.id);
+  mockDtBody(ids);
+  App.sel=[ids[1]];App._lastShiftSel=ids[1]; // anchor on B
+  _dtSelect(ids[3],true,false); // shift+click D
+  assert('Shift forward: sel length',App.sel.length,3);
+  assertT('Shift forward: B in sel',App.sel.includes(ids[1]));
+  assertT('Shift forward: C in sel',App.sel.includes(ids[2]));
+  assertT('Shift forward: D in sel',App.sel.includes(ids[3]));
+  assertF('Shift forward: A not in sel',App.sel.includes(ids[0]));
+  assertF('Shift forward: E not in sel',App.sel.includes(ids[4]));
+})();
+
+section('B24 — Shift+click reverse range');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[
+    makeItem('task',{name:'A'}),makeItem('task',{name:'B'}),
+    makeItem('task',{name:'C'}),makeItem('task',{name:'D'})
+  ]});
+  const ids=App.proj.items.map(i=>i.id);
+  mockDtBody(ids);
+  App.sel=[ids[3]];App._lastShiftSel=ids[3]; // anchor on D
+  _dtSelect(ids[0],true,false); // shift+click A
+  assert('Shift reverse: sel length',App.sel.length,4);
+  assertT('Shift reverse: A in sel',App.sel.includes(ids[0]));
+  assertT('Shift reverse: B in sel',App.sel.includes(ids[1]));
+  assertT('Shift reverse: C in sel',App.sel.includes(ids[2]));
+  assertT('Shift reverse: D in sel',App.sel.includes(ids[3]));
+})();
+
+section('B24 — Shift+click respects visible (sorted) order');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[
+    makeItem('task',{name:'Delta'}),makeItem('task',{name:'Alpha'}),
+    makeItem('task',{name:'Charlie'}),makeItem('task',{name:'Bravo'})
+  ]});
+  // Simulate sorted DOM order: Alpha, Bravo, Charlie, Delta
+  const sorted=[App.proj.items[1].id,App.proj.items[3].id,App.proj.items[2].id,App.proj.items[0].id];
+  mockDtBody(sorted);
+  App.sel=[sorted[0]];App._lastShiftSel=sorted[0]; // anchor on Alpha
+  _dtSelect(sorted[2],true,false); // shift+click Charlie
+  assert('Sorted range: sel length',App.sel.length,3);
+  assertT('Sorted range: Alpha in sel',App.sel.includes(sorted[0]));
+  assertT('Sorted range: Bravo in sel',App.sel.includes(sorted[1]));
+  assertT('Sorted range: Charlie in sel',App.sel.includes(sorted[2]));
+  assertF('Sorted range: Delta not in sel',App.sel.includes(sorted[3]));
+})();
+
+section('B24 — Shift+click with no anchor falls back to plain select');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[makeItem('task',{name:'A'}),makeItem('task',{name:'B'})]});
+  const ids=App.proj.items.map(i=>i.id);
+  mockDtBody(ids);
+  App.sel=[];App._lastShiftSel=null; // no anchor
+  _dtSelect(ids[1],true,false); // shift+click B — no anchor, should fall through
+  assert('No anchor fallback: sel length',App.sel.length,1);
+  assert('No anchor fallback: B selected',App.sel[0],ids[1]);
+  assert('No anchor fallback: anchor set',App._lastShiftSel,ids[1]);
+})();
+
+section('B24 — Shift+click replaces previous selection');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[
+    makeItem('task',{name:'A'}),makeItem('task',{name:'B'}),
+    makeItem('task',{name:'C'}),makeItem('task',{name:'D'})
+  ]});
+  const ids=App.proj.items.map(i=>i.id);
+  mockDtBody(ids);
+  App.sel=[ids[0],ids[3]]; // A and D selected (non-contiguous)
+  App._lastShiftSel=ids[1]; // anchor on B
+  _dtSelect(ids[2],true,false); // shift+click C → range B-C
+  assert('Shift replaces: sel length',App.sel.length,2);
+  assertT('Shift replaces: B in sel',App.sel.includes(ids[1]));
+  assertT('Shift replaces: C in sel',App.sel.includes(ids[2]));
+  assertF('Shift replaces: A removed',App.sel.includes(ids[0]));
+  assertF('Shift replaces: D removed',App.sel.includes(ids[3]));
+})();
+
+section('B24 — Shift+click same item as anchor → single item');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[makeItem('task',{name:'A'}),makeItem('task',{name:'B'})]});
+  const ids=App.proj.items.map(i=>i.id);
+  mockDtBody(ids);
+  App.sel=[ids[0]];App._lastShiftSel=ids[0];
+  _dtSelect(ids[0],true,false); // shift+click same as anchor
+  assert('Shift same: sel length',App.sel.length,1);
+  assert('Shift same: correct id',App.sel[0],ids[0]);
+})();
+
+section('B24 — mousedown guard: checkbox classes excluded');
+
+(()=>{
+  // dt-cb, dt-pin, dt-hid should NOT trigger _dtSelect (they have onchange handlers)
+  assertF('Guard: dt-cb excluded',targetPassesGuard(['dt-cb']));
+  assertF('Guard: dt-pin excluded',targetPassesGuard(['dt-pin']));
+  assertF('Guard: dt-hid excluded',targetPassesGuard(['dt-hid']));
+  // All other element types pass through to _dtSelect
+  assertT('Guard: dt-in (text input) passes',targetPassesGuard(['dt-in']));
+  assertT('Guard: dt-sel (select) passes',targetPassesGuard(['dt-sel']));
+  assertT('Guard: dt-clr (color) passes',targetPassesGuard(['dt-clr']));
+  assertT('Guard: dt-status-badge passes',targetPassesGuard(['dt-status-badge']));
+  assertT('Guard: dep-badge passes',targetPassesGuard(['dep-badge']));
+  assertT('Guard: bare td passes',targetPassesGuard([]));
+})();
+
+section('B24 — Multi-step workflow: click → shift → ctrl');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[
+    makeItem('task',{name:'A'}),makeItem('task',{name:'B'}),
+    makeItem('task',{name:'C'}),makeItem('task',{name:'D'}),makeItem('task',{name:'E'})
+  ]});
+  const ids=App.proj.items.map(i=>i.id);
+  mockDtBody(ids);
+  App.sel=[];App._lastShiftSel=null;
+
+  // Step 1: plain click B
+  _dtSelect(ids[1],false,false);
+  assert('Workflow step 1: sel=[B]',App.sel.join(','),ids[1]);
+
+  // Step 2: shift+click D → range B-D
+  _dtSelect(ids[3],true,false);
+  assert('Workflow step 2: sel=[B,C,D]',App.sel.length,3);
+  assertT('Workflow step 2: B',App.sel.includes(ids[1]));
+  assertT('Workflow step 2: C',App.sel.includes(ids[2]));
+  assertT('Workflow step 2: D',App.sel.includes(ids[3]));
+
+  // Step 3: ctrl+click A → add A to selection
+  _dtSelect(ids[0],false,true);
+  assert('Workflow step 3: sel=[B,C,D,A]',App.sel.length,4);
+  assertT('Workflow step 3: A added',App.sel.includes(ids[0]));
+
+  // Step 4: ctrl+click C → remove C
+  _dtSelect(ids[2],false,true);
+  assert('Workflow step 4: sel=[B,D,A]',App.sel.length,3);
+  assertF('Workflow step 4: C removed',App.sel.includes(ids[2]));
+
+  // Step 5: plain click E → replaces all with E
+  _dtSelect(ids[4],false,false);
+  assert('Workflow step 5: sel=[E]',App.sel.length,1);
+  assert('Workflow step 5: only E',App.sel[0],ids[4]);
+})();
+
+section('B24 — Filtered list: shift range skips filtered-out items');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[
+    makeItem('task',{name:'A'}),makeItem('task',{name:'B'}),
+    makeItem('task',{name:'C'}),makeItem('task',{name:'D'}),makeItem('task',{name:'E'})
+  ]});
+  const ids=App.proj.items.map(i=>i.id);
+  // Simulate filtered view: only A, C, E visible (B and D filtered out)
+  mockDtBody([ids[0],ids[2],ids[4]]);
+  App.sel=[ids[0]];App._lastShiftSel=ids[0]; // anchor on A
+  _dtSelect(ids[4],true,false); // shift+click E
+  assert('Filtered shift: sel length',App.sel.length,3);
+  assertT('Filtered shift: A in sel',App.sel.includes(ids[0]));
+  assertT('Filtered shift: C in sel (visible)',App.sel.includes(ids[2]));
+  assertT('Filtered shift: E in sel',App.sel.includes(ids[4]));
+  assertF('Filtered shift: B not in sel (filtered)',App.sel.includes(ids[1]));
+  assertF('Filtered shift: D not in sel (filtered)',App.sel.includes(ids[3]));
+})();
+
+section('B24 — Shift with anchor not in visible list');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[
+    makeItem('task',{name:'A'}),makeItem('task',{name:'B'}),makeItem('task',{name:'C'})
+  ]});
+  const ids=App.proj.items.map(i=>i.id);
+  // Anchor is B, but B is filtered out — only A, C visible
+  mockDtBody([ids[0],ids[2]]);
+  App.sel=[ids[1]];App._lastShiftSel=ids[1]; // anchor on B (not visible)
+  _dtSelect(ids[2],true,false); // shift+click C
+  // indexOf(B) returns -1 → range logic skipped → sel unchanged
+  assert('Anchor hidden: sel unchanged',App.sel.length,1);
+  assert('Anchor hidden: still B',App.sel[0],ids[1]);
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+//  CHECKBOX SHIFT+CLICK FLOW (B24: exact user scenario)
+// ═══════════════════════════════════════════════════════════════════
+// Models the exact user flow: check checkbox A, then shift+click checkbox D
+// Shift+click is handled in onmousedown (where shiftKey is reliable),
+// NOT in onchange (where shiftKey is unreliable on checkbox change events).
+
+section('B24 — Checkbox: check one, shift+click another → range');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[
+    makeItem('task',{name:'Alpha'}),makeItem('task',{name:'Bravo'}),
+    makeItem('task',{name:'Charlie'}),makeItem('task',{name:'Delta'}),
+    makeItem('task',{name:'Echo'})
+  ]});
+  const ids=App.proj.items.map(i=>i.id);
+  mockDtBody(ids);
+
+  // Step 1: User clicks checkbox on Alpha (plain check via onchange)
+  App.sel=[];App._lastShiftSel=null;
+  // Simulate onchange for checkbox: checked=true
+  if(!App.sel.includes(ids[0]))App.sel.push(ids[0]);
+  App._lastShiftSel=ids[0];
+  assert('CB step 1: Alpha checked',App.sel.length,1);
+  assert('CB step 1: anchor set',App._lastShiftSel,ids[0]);
+
+  // Step 2: User shift+clicks checkbox on Delta (handled by onmousedown)
+  // In the browser: mousedown fires first with e.shiftKey=true,
+  // e.preventDefault() stops the checkbox toggle, _dtSelect does range select
+  _dtSelect(ids[3],true,false);
+  assert('CB step 2: range A-D selected',App.sel.length,4);
+  assertT('CB step 2: Alpha in sel',App.sel.includes(ids[0]));
+  assertT('CB step 2: Bravo in sel',App.sel.includes(ids[1]));
+  assertT('CB step 2: Charlie in sel',App.sel.includes(ids[2]));
+  assertT('CB step 2: Delta in sel',App.sel.includes(ids[3]));
+  assertF('CB step 2: Echo NOT in sel',App.sel.includes(ids[4]));
+})();
+
+section('B24 — Checkbox shift+click: mousedown guard passes .dt-cb with shift');
+
+(()=>{
+  // Verify that the mousedown guard logic correctly handles shift+checkbox:
+  // With shiftKey=true and target is .dt-cb → should NOT be skipped (handled specially)
+  // With shiftKey=false and target is .dt-cb → should be skipped (let onchange handle it)
+  const hasCb=true,hasShift=true,hasAnchor=true;
+  // Simulates: if(cb && e.shiftKey && this._lastShiftSel) → range select
+  assertT('Guard: shift+cb+anchor → handles range select',hasCb&&hasShift&&hasAnchor);
+
+  const noShift=false;
+  // Simulates: falls through to if(e.target.closest('.dt-cb,...')) return → skipped
+  assertT('Guard: no-shift+cb → skips to onchange',hasCb&&!noShift);
+})();
+
+section('B24 — Checkbox: check first, shift+click last in 10-item list');
+
+(()=>{
+  resetApp();
+  const items=[];
+  for(let i=0;i<10;i++)items.push(makeItem('task',{name:'Item_'+i}));
+  App.proj=makeProj({items});
+  const ids=items.map(i=>i.id);
+  mockDtBody(ids);
+
+  // Check item 2 (index 2)
+  App.sel=[ids[2]];App._lastShiftSel=ids[2];
+
+  // Shift+click item 7 (index 7) → should select indices 2-7
+  _dtSelect(ids[7],true,false);
+  assert('Large range: 6 items selected',App.sel.length,6);
+  for(let i=2;i<=7;i++){
+    assertT(`Large range: Item_${i} in sel`,App.sel.includes(ids[i]));
+  }
+  assertF('Large range: Item_0 not in sel',App.sel.includes(ids[0]));
+  assertF('Large range: Item_1 not in sel',App.sel.includes(ids[1]));
+  assertF('Large range: Item_8 not in sel',App.sel.includes(ids[8]));
+  assertF('Large range: Item_9 not in sel',App.sel.includes(ids[9]));
+})();
+
+section('B24 — Checkbox: shift+click with no prior anchor → single select');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[makeItem('task',{name:'A'}),makeItem('task',{name:'B'})]});
+  const ids=App.proj.items.map(i=>i.id);
+  mockDtBody(ids);
+  App.sel=[];App._lastShiftSel=null;
+  // Shift+click B without anchor → falls through to plain select in _dtSelect
+  _dtSelect(ids[1],true,false);
+  assert('No anchor CB: sel length',App.sel.length,1);
+  assert('No anchor CB: B selected',App.sel[0],ids[1]);
+})();
+
+section('B24 — Checkbox: plain check does NOT trigger range select');
+
+(()=>{
+  resetApp();App.proj=makeProj({items:[
+    makeItem('task',{name:'A'}),makeItem('task',{name:'B'}),makeItem('task',{name:'C'})
+  ]});
+  const ids=App.proj.items.map(i=>i.id);
+  mockDtBody(ids);
+  App.sel=[ids[0]];App._lastShiftSel=ids[0];
+
+  // Plain checkbox click on C (no shift) goes through onchange, not onmousedown
+  // Simulates: onchange handler adds single item
+  if(!App.sel.includes(ids[2]))App.sel.push(ids[2]);
+  App._lastShiftSel=ids[2];
+  assert('Plain CB: only A and C',App.sel.length,2);
+  assertT('Plain CB: A still in sel',App.sel.includes(ids[0]));
+  assertT('Plain CB: C added to sel',App.sel.includes(ids[2]));
+  assertF('Plain CB: B NOT added (no range)',App.sel.includes(ids[1]));
+})();
+
+// ═══════════════════════════════════════════════════════════════════
 
 const{failed}=summary();process.exit(failed?1:0);

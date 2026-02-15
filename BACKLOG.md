@@ -8,6 +8,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.28.2** | 2026-02-15 | Data table row selection (B24): shift+click range select on checkboxes and row backgrounds, ctrl+click toggle, plain click single-select. `_dtSelect()` shared helper, mousedown-based shift detection (shiftKey unreliable on change events), `addEventListener` stacking fix in `bindDT()` (converted to property assignment), same-item early-return prevents input focus loss. 176 data table tests (up from 60). |
 | **0.28.1** | 2026-02-14 | Panel-aware viewport (B26): scroll headroom (+290px body width when panel open, `box-sizing:border-box` workaround), smooth auto-scroll items clear of panel on select (Google Maps-style `scrollTo({behavior:'smooth'})`), bulk selection scroll support, `fitToContent()` and `goToday()` subtract panel width from viewport, fit zoom minimum lowered to 10% for wide timelines. `autoRange()` ordering fix (range expands before `sched()`, self-schedules on change). Negative duration guard (B27): changing start past end keeps duration and moves end forward, and vice versa. Panel date changes trigger auto-scroll to follow edited item. |
 | **0.28.0** | 2026-02-14 | Pan mode (F29): middle-mouse drag for instant pan, toggle-based Pan Mode in Tools menu (✋) with bindable keyboard shortcut, 2D scrolling (horizontal + vertical), mutual exclusion with Lasso Mode, Escape to exit, cursor feedback (grab/grabbing). Capture-phase middle-click prevention for smooth scrolling. Help modal updated with pan documentation. |
 | **0.27.1** | 2026-02-14 | Backlog update: B24 (Shift+click range select in Data View), B25 (status badges clipped at edges), B26 (properties panel overlaps right-side items + scroll range limits), F28 (bulk drag-and-drop group move), F29 (right-click drag to pan), F30 (mini-map navigation overlay). |
@@ -78,7 +79,6 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
-| B24 | **Shift+click range select in Data View** | Shift+clicking a row in the data table should select all rows between the last selected row and the clicked row (standard spreadsheet range select). Currently only selects the clicked row. Must respect current sort/filter order (visible list), not underlying data array order. | M | :orange_circle: P1 | :white_circle: Open |
 | B25 | **Status badges clipped at timeline edges** | Status badges at the top or bottom of a swimlane can get clipped by the swimlane boundary (`overflow:hidden`). Very minor — may be acceptable given `overflow:hidden` is required for collapsed swimlanes. Evaluate tradeoffs before fixing. | S | :large_blue_circle: P3 | :white_circle: Open |
 
 ---
@@ -115,7 +115,6 @@
 _All P0 items resolved in v0.14.0._
 
 ### :orange_circle: P1 — High Priority for V1
-- **B24** — Shift+click range select in Data View (M)
 - **F28** — Bulk drag-and-drop to new swimlane (L)
 - **F31** — Item-anchored zoom (M)
 - **F32** — Fit to selected items (M)
@@ -158,6 +157,7 @@ _All P0 items resolved in v0.14.0._
 
 | # | Title | Size | Version | Notes |
 |---|-------|------|---------|-------|
+| B24 | **Shift+click range select in Data View** | M | 0.28.2 | Shift+click on checkboxes and row backgrounds now range-selects all visible rows between anchor and target. `_dtSelect()` shared helper handles plain click (single-select), Ctrl+click (toggle), Shift+click (range). Key fix: shift detection moved from `onchange` (where `shiftKey` is unreliable on checkboxes) to `onmousedown`. Also fixed `addEventListener` stacking in `bindDT()` (converted to property assignment) and added same-item early-return to prevent input focus loss during editing. 176 data table tests. |
 | B26 | **Properties panel overlaps right-side items + scroll range limits** | M | 0.28.1 | Two related issues fixed: (1) Items on the right side covered by properties panel — solved via scroll headroom (+290px body width), smooth auto-scroll on select. (2) Scroll range too tight after fit — lowered fit zoom minimum (10%), panel-aware fit/goToday. |
 | B27 | **Negative duration when start moved past end** | S | 0.28.1 | Changing start past end (or end before start) in properties panel produced negative duration. Fixed: keep duration and compute new end/start. Also fixed `autoRange()` ordering. |
 | F29 | **Pan mode** | M | 0.28.0 | Middle-mouse drag for instant pan + toggle-based Pan Mode (Tools → ✋) with bindable keyboard shortcut. 2D scrolling with grab/grabbing cursor feedback. Pan and Lasso modes mutually exclusive. Capture-phase `preventDefault` on scroll container prevents native middle-click auto-scroll. |

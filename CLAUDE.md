@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.28.1` — Panel-aware viewport (B26): scroll headroom, auto-scroll items clear of panel, fit/goToday panel offset, autoRange ordering fix, negative duration guard (B27), fit zoom min lowered to 10%. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.28.2` — Data table row selection (B24): shift+click range select on checkboxes and row backgrounds, ctrl+click toggle, plain click single-select. Mousedown-based shift detection, addEventListener stacking fix in bindDT(). Live at `https://adrotar21.github.io/timeline-studio/`.
 - Version history tracked in `BACKLOG.md` under the Versioning table and via **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 
