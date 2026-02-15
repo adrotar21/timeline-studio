@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.27.0` — Drag-and-drop overhaul: ghost preview, date feedback (delta badge, header highlight, status strip), Shift lock, Escape cancel, selection fix. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.28.0` — Pan mode: middle-mouse drag + toggle-based pan (Tools → ✋), bindable shortcut, mutual exclusion with lasso, 2D scrolling, capture-phase middle-click prevention. Live at `https://adrotar21.github.io/timeline-studio/`.
 - Version history tracked in `BACKLOG.md` under the Versioning table and via **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 

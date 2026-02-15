@@ -1,4 +1,4 @@
-/* Timeline Studio v0.27.0 — Drag-and-drop overhaul: visual feedback, ghost preview, date awareness, selection fix */
+/* Timeline Studio v0.28.0 — Pan mode: middle-mouse drag + toggle-based pan, mutual exclusion with lasso, bindable shortcut */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -65,6 +65,7 @@ const SHORTCUT_ACTIONS=[
   {id:'toggleHide',cat:'Tools',label:'Toggle Hide Mode',defaults:[],global:true},
   {id:'toggleCritPath',cat:'Tools',label:'Toggle Critical Path',defaults:[],ctx:'tl'},
   {id:'toggleLasso',cat:'Tools',label:'Toggle Lasso Mode',defaults:[],ctx:'tl'},
+  {id:'togglePan',cat:'Tools',label:'Toggle Pan Mode',defaults:[],ctx:'tl'},
   // Tier 2 — Customizable: Items
   {id:'addMilestone',cat:'Items',label:'Add Milestone',defaults:[],ctx:'tl'},
   {id:'addTask',cat:'Items',label:'Add Task',defaults:[],ctx:'tl'},
@@ -81,6 +82,7 @@ const MOUSE_REFS=[
   {combo:'Ctrl+Shift+Scroll',desc:'Fine zoom ±1%'},
   {combo:'Double-click',desc:'Edit item / swimlane'},
   {combo:'Right-click',desc:'Context menu'},
+  {combo:'Middle-drag',desc:'Pan / scroll timeline'},
 ];
 const RESERVED_COMBOS=new Set(['Ctrl+v','Ctrl+c','Ctrl+x']);
 const BROWSER_RESERVED=new Set(['Ctrl+t','Ctrl+w','Ctrl+Tab','Ctrl+Shift+Tab','Ctrl+l','Ctrl+Shift+t','Ctrl+Shift+n','F5','Ctrl+F5','F12']);
@@ -94,7 +96,7 @@ const App={
   _sortCol:null,_sortDir:'asc',
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
   _fileHandle:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
-  _lassoMode:false,_collapsedSl:new Set(),_pendingFit:false,
+  _lassoMode:false,_panMode:false,_panning:false,_collapsedSl:new Set(),_pendingFit:false,
   _scMap:{},_scOverrides:null,_scRecording:null,_nudgeSnapped:false,_nudgeSnapTimer:null,_scMsgTimer:null,
 
   /* Keyboard Shortcut Engine */
@@ -162,7 +164,8 @@ const App={
     toggleLock(){this.proj.locked=!this.proj.locked;this.proj.lockH=this.proj.locked;this.proj.lockV=this.proj.locked;this.sched();this.autoSave();this.toast(this.proj.locked?'Locked':'Unlocked')},
     toggleHide(){this.proj.hideMode=!this.proj.hideMode;this.sched();this.toast(this.proj.hideMode?'Hiding hidden':'Showing all')},
     toggleCritPath(){this.toggleCritPath()},
-    toggleLasso(){this._lassoMode=!this._lassoMode;document.getElementById('btn-lasso')?.classList.toggle('active',this._lassoMode);this.$.tl_body.classList.toggle('lasso-mode',this._lassoMode);this.toast(this._lassoMode?'Lasso mode ON — click and drag':'Lasso mode OFF')},
+    toggleLasso(){this._lassoMode=!this._lassoMode;if(this._lassoMode&&this._panMode){this._panMode=false;document.getElementById('btn-pan')?.classList.remove('active')}document.getElementById('btn-lasso')?.classList.toggle('active',this._lassoMode);this.$.tl_body.classList.toggle('lasso-mode',this._lassoMode);this.toast(this._lassoMode?'Lasso mode ON — click and drag':'Lasso mode OFF')},
+    togglePan(){this._panMode=!this._panMode;if(this._panMode&&this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}document.getElementById('btn-pan')?.classList.toggle('active',this._panMode);this.sched();this.toast(this._panMode?'Pan mode ON — click and drag to scroll':'Pan mode OFF')},
     addMilestone(){this.addItem('milestone')},
     addTask(){this.addItem('task')},
     addSwimlane(){this.showSwM()},
@@ -174,6 +177,7 @@ const App={
     this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');
     document.querySelectorAll('.modal:not(.hidden)').forEach(m=>m.classList.add('hidden'));
     if(this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}
+    if(this._panMode){this._panMode=false;document.getElementById('btn-pan')?.classList.remove('active')}
     this.sched();
   },
   _handleNudgeKey(actionId,ctrl){
@@ -912,7 +916,8 @@ const App={
     on('btn-crit-path',()=>{this.$.tools_dropdown.classList.add('hidden');this.toggleCritPath()});
     on('btn-propagate-sel',()=>{this.$.tools_dropdown.classList.add('hidden');if(!this.sel.length){this.toast('Select items first','error');return}if(this.proj.schedulingMode==='scheduled'){this.toast('In Auto-Scheduled mode, dates update automatically','info');return}this.propagateFrom(this.sel)});
     on('btn-toggle-sched',()=>{this.$.tools_dropdown.classList.add('hidden');this.toggleSchedulingMode()});
-    on('btn-lasso',()=>{this.$.tools_dropdown.classList.add('hidden');this._lassoMode=!this._lassoMode;document.getElementById('btn-lasso')?.classList.toggle('active',this._lassoMode);this.$.tl_body.classList.toggle('lasso-mode',this._lassoMode);this.toast(this._lassoMode?'Lasso mode ON — click and drag':'Lasso mode OFF')});
+    on('btn-lasso',()=>{this.$.tools_dropdown.classList.add('hidden');this._scDispatch.toggleLasso.call(this)});
+    on('btn-pan',()=>{this.$.tools_dropdown.classList.add('hidden');this._scDispatch.togglePan.call(this)});
     // Screenshot items
     on('btn-snap-vp',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(true)});
     on('btn-snap-full',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(false)});
@@ -1027,6 +1032,7 @@ const App={
     document.addEventListener('paste',e=>{if(this.view==='data'||this.view==='split'){const t=document.activeElement;if(t&&['INPUT','TEXTAREA','SELECT'].includes(t.tagName))return;const txt=e.clipboardData.getData('text/plain');if(txt.includes('\t')||txt.includes('\n')){e.preventDefault();this.showPaste();setTimeout(()=>{this.$.paste_ta.value=txt;this.previewPaste()},80)}}});
     window.addEventListener('beforeunload',e=>{if(this._unsaved){e.preventDefault();e.returnValue=''}});
     this.$.tl_body.addEventListener('mousedown',e=>this.onTlMD(e));
+    this.$.tl_body_scroll.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault()},true);
     this.$.tl_body.addEventListener('contextmenu',e=>this.onTlCtx(e));
     this.$.tl_body.addEventListener('dblclick',e=>{const iEl=e.target.closest('.tl-item');if(iEl){const it=this.gi(iEl.dataset.iid);if(it)this.openPanel(it)}});
     this.$.tl_sl_labels.addEventListener('dblclick',e=>{const lbl=e.target.closest('.sl-lbl');if(lbl){const sl=this.gs(lbl.dataset.slId);if(sl)this.showSwM(sl)}});
@@ -2240,7 +2246,7 @@ const App={
     const tl=this.met(),p=this.proj,th=this.getTheme(),rH=38;
     document.documentElement.style.setProperty('--sl-w',(p.labelWidth||160)+'px');
     this.$.tl_container.style.background=th.bg;
-    if(this._lassoMode)this.$.tl_body.style.cursor='crosshair';else this.$.tl_body.style.cursor='';
+    if(this._panMode)this.$.tl_body.style.cursor='grab';else if(this._lassoMode)this.$.tl_body.style.cursor='crosshair';else this.$.tl_body.style.cursor='';
     const hc=th.hdr,hR=this.buildHdrRows(tl),rowH=22,totalHdrH=hR.length*rowH;
     this.$.tl_hdr_corner.style.height=totalHdrH+'px';this.$.tl_hdr_corner.style.background=hc;
     let hh='';hR.forEach(row=>{hh+=`<div class="th-row" style="background:${hc};height:${rowH}px">`;row.forEach(cell=>{const w=cell.width!=null?cell.width:cell.span*tl.cw;hh+=`<div class="th-cell" style="width:${w}px;min-width:${w}px">${cell.label}</div>`});hh+=`</div>`});
@@ -2493,6 +2499,9 @@ const App={
     }}svg.innerHTML=L.join('')},
 
   onTlMD(e){
+    if(e.button===1){e.preventDefault();this.startPan(e);return}
+    if(e.button===0&&this._panMode){this.startPan(e);return}
+    if(e.button!==0)return;
     this.closeAllDD();this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');
     if((e.altKey||this._lassoMode||(e.ctrlKey&&!e.target.closest('.tl-item')))&&!this.proj.locked){e.preventDefault();e.stopPropagation();this.startLasso(e);return}
     const rh=e.target.closest('.tl-task-rs');if(rh&&!this.proj.locked){this.startTR(e,rh);return}const iEl=e.target.closest('.tl-item');if(iEl){const id=iEl.dataset.iid;if(e.ctrlKey||e.metaKey){const idx=this.sel.indexOf(id);if(idx>=0)this.sel.splice(idx,1);else this.sel.push(id)}else if(!this.sel.includes(id))this.sel=[id];
@@ -3233,7 +3242,7 @@ const App={
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">7. Scheduling Mode</strong><p>Open <strong>Settings → Scheduling</strong> to switch between <strong>Manual</strong> (default — you control dates, Propagate on demand) and <strong>Auto-Scheduled</strong> (dates auto-calculate from dependencies). In Auto mode, successor dates are calculated fields shown in blue. <strong>📌 Pin Date</strong> overrides auto-scheduling for individual items. A preview shows what will change before switching modes.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">8. Views</strong><p>Switch between <strong>Timeline</strong>, <strong>Data</strong> (spreadsheet with filters), and <strong>Split</strong> views. Use the <strong>Filter Bar</strong> to narrow items by name, owner, notes, or dates.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">9. Swimlanes</strong><p>Click <strong>+ Lane</strong> to add. <strong>Double-click</strong> a lane label to edit its name, color, and sub-swimlanes. <strong>Collapse</strong> lanes with the ▼ button (3-state: expanded → minimized → hidden). Drag the resize handle between lane labels and the timeline grid to adjust label column width.</p></div>
-    <div style="margin-bottom:16px"><strong style="color:var(--acc)">10. Selection Tools</strong><p><strong>Ctrl+click</strong> for multi-select. <strong>Alt+drag</strong> or use <strong>Lasso Mode</strong> (toolbar) for area selection. <strong>Ctrl+A</strong> selects all items. <strong>Advanced Search</strong> with regex for complex queries.</p></div>
+    <div style="margin-bottom:16px"><strong style="color:var(--acc)">10. Selection & Navigation</strong><p><strong>Ctrl+click</strong> for multi-select. <strong>Alt+drag</strong> or use <strong>Lasso Mode</strong> (toolbar) for area selection. <strong>Ctrl+A</strong> selects all items. <strong>Advanced Search</strong> with regex for complex queries.</p><p><strong>Pan Mode</strong> (Tools → ✋ Pan Mode) lets you click and drag to scroll the timeline in any direction — like the hand tool in Figma or Photoshop. You can also <strong>middle-mouse drag</strong> to pan at any time without toggling. Pan and Lasso modes are mutually exclusive. Press <strong>Escape</strong> to exit Pan Mode. Bind a key to <em>Toggle Pan Mode</em> in Settings → Shortcuts for quick access.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">11. Export & Share</strong><p>Use 📷 for screenshots (full or viewport). Export as SVG, PNG, CSV, or JSON from <strong>Settings → Export</strong>. <strong>Fit to Content</strong> auto-zooms to show everything. Enable the <strong>Watermark</strong> in Settings to add a "Last Updated" date stamp to your timeline — it appears on-screen and is included in all exports and screenshots. You can choose the position and optionally include the project owner.</p></div>
     <h3 style="color:var(--tx1);margin:16px 0 12px;font-size:14px">⌨ Keyboard Shortcuts</h3>
     ${this._buildHelpShortcutTable()}
@@ -3242,6 +3251,7 @@ const App={
     <ul style="padding-left:18px;margin:0">
     <li>Use <strong>Auto-Arrange</strong> (right-click → context menu) to automatically space overlapping items</li>
     <li>Toggle <strong>Lasso Mode</strong> in the toolbar, or hold <strong>Alt</strong> and drag to lasso-select</li>
+    <li>Use <strong>Pan Mode</strong> (Tools → ✋) or <strong>middle-mouse drag</strong> to scroll the timeline by grabbing and dragging</li>
     <li>Enable <strong>Weekend Shading</strong> and <strong>Holiday Shading</strong> in Settings to visualize non-working time. Import holidays by pasting from Excel (Name + Date columns).</li>
     <li>Use <strong>Fit to Content</strong> to auto-zoom to show all items</li>
     <li>Toggle <strong>Critical Path</strong> to highlight zero-float items in your dependency network</li>
@@ -3316,6 +3326,23 @@ const App={
       }
     }
     this.sched();this.autoSave();this.toast('Auto-arranged!')
+  },
+
+  /* Pan — middle-mouse or pan-mode+left-drag scrolls the viewport */
+  startPan(e){
+    e.preventDefault();
+    const bs=this.$.tl_body_scroll;
+    const sx=e.clientX,sy=e.clientY;
+    const sl=bs.scrollLeft,st=bs.scrollTop;
+    this._panning=true;
+    this.$.tl_body.style.cursor='grabbing';
+    const mv=ev=>{ev.preventDefault();bs.scrollLeft=sl-(ev.clientX-sx);bs.scrollTop=st-(ev.clientY-sy)};
+    const up=()=>{
+      document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);window.removeEventListener('blur',up);
+      this._panning=false;
+      this.$.tl_body.style.cursor=this._panMode?'grab':this._lassoMode?'crosshair':'';
+    };
+    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);window.addEventListener('blur',up);
   },
 
   /* Lasso Selection — uses fixed-position overlay + getBoundingClientRect for hit testing */
