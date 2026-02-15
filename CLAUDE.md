@@ -223,6 +223,8 @@ Output is color-coded (green pass / red fail) with summary stats. Tests mock eng
 ## Known Issues & Backlog
 See `BACKLOG.md` for the prioritized and sized bug/feature backlog with version history.
 
+**Backlog management rule:** On each edit to `BACKLOG.md`, all **Done** items must be moved from the Open tables to the **Appendix: Completed Items** table. Open tables should only contain active work (Open, Plan, Blocked, Published & Testing).
+
 ## Common Patterns
 - Event handlers are wired in `bind()` method
 - `snap()` before mutations to capture undo state
