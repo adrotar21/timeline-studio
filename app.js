@@ -1,4 +1,4 @@
-/* Timeline Studio v0.25.0 — Configurable keyboard shortcuts, shortcut manager polish, zoom key bindings */
+/* Timeline Studio v0.27.0 — Drag-and-drop overhaul: visual feedback, ghost preview, date awareness, selection fix */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -514,6 +514,14 @@ const App={
       return 'W:'+fv(workDays,fmt)+' C:'+fv(calDays,fmt)
     }
     return fv(calDays,fmt)
+  },
+  /* Format drag delta with tiered units: +3d, +14d · 2w 0d, +65d · ~2.1mo, +195d · ~2.1q */
+  _fmtDragDelta(n){
+    const sign=n>=0?'+':'-',a=Math.abs(n),primary=sign+a+'d';
+    if(a<14)return primary;
+    if(a<60){const w=Math.floor(a/7),r=a%7;return primary+' · '+sign+w+'w'+(r?' '+r+'d':'')}
+    if(a<180){const mo=(a/30.44).toFixed(1);return primary+' · '+sign+'~'+mo+'mo'}
+    const q=(a/91.3).toFixed(1);return primary+' · '+sign+'~'+q+'q'
   },
   /* Format predecessors for CSV export — e.g. "Task A (FS+2d), Task B (SS)" */
   _fmtPreds(it){
@@ -1291,7 +1299,7 @@ const App={
             // Collect sub-swimlane divider positions from DOM
             const dividers=[];
             r.querySelectorAll('.sub-sw-div').forEach(d=>{
-              const t=parseFloat(d.style.top)||0;dividers.push(t)
+              const t=parseFloat(d.style.top)||0;dividers.push(d.classList.contains('sub-rh')?t+3:t)
             });
             // Build sub-swimlane bands: [{ssId, yStart, yEnd}]
             const bands=[];let prevY=0;
@@ -2489,48 +2497,119 @@ const App={
     if((e.altKey||this._lassoMode||(e.ctrlKey&&!e.target.closest('.tl-item')))&&!this.proj.locked){e.preventDefault();e.stopPropagation();this.startLasso(e);return}
     const rh=e.target.closest('.tl-task-rs');if(rh&&!this.proj.locked){this.startTR(e,rh);return}const iEl=e.target.closest('.tl-item');if(iEl){const id=iEl.dataset.iid;if(e.ctrlKey||e.metaKey){const idx=this.sel.indexOf(id);if(idx>=0)this.sel.splice(idx,1);else this.sel.push(id)}else if(!this.sel.includes(id))this.sel=[id];
     if(this.sel.length===1){const it=this.gi(this.sel[0]);if(it)this.openPanel(it)}else if(this.sel.length>1)this.openBulkPanel();
-    const it=this.gi(id);if(it&&!this.proj.locked)this.startDrag(e,it,iEl);this.sched();return}
+    const it=this.gi(id);if(it&&!this.proj.locked){this.startDrag(e,it,iEl);return}this.sched();return}
     if(!e.target.closest('.sl-rh')&&!e.ctrlKey&&!e.metaKey){this.sel=[];if(!this.panelPinned)this.closePanel();this.sched()}},
   onTlCtx(e){const iEl=e.target.closest('.tl-item');if(iEl)this.showCtx(e,iEl.dataset.iid);else{e.preventDefault();this.sel=[];this.showCtx(e,null)}},
 
   startDrag(e,it,el){const tl=this.met(),sx=e.clientX,sy=e.clientY;
-    // Gather all selected item elements and their original positions
     const dragItems=this.sel.map(id=>{const itemEl=this.$.tl_body.querySelector(`[data-iid="${id}"]`);const item=this.gi(id);if(!itemEl||!item)return null;return{id,el:itemEl,item,oL:parseInt(itemEl.style.left),oT:parseInt(itemEl.style.top)}}).filter(Boolean);
     if(!dragItems.length)return;
-    let dr=false;
-    const mv=ev=>{const dx=ev.clientX-sx,dy=ev.clientY-sy;if(!dr&&(Math.abs(dx)>3||Math.abs(dy)>3)){dr=true;dragItems.forEach(d=>d.el.classList.add('dragging'));this.snap()}if(dr){dragItems.forEach(d=>{if(!this.proj.lockH)d.el.style.left=(d.oL+dx)+'px';if(!this.proj.lockV)d.el.style.top=(d.oT+dy)+'px'})}};
-    const up=ev=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);dragItems.forEach(d=>d.el.classList.remove('dragging'));if(dr){
-      dragItems.forEach(d=>{
-        const nL=parseInt(d.el.style.left),nT=parseInt(d.el.style.top),nx=nL+(d.item.type==='milestone'?8:0),nd=this.xD(nx,tl);
-        if(!this.proj.lockH){if(d.item.type==='milestone')d.item.date=nd;else{d.item.startDate=nd;d.item.endDate=this._calcEndDate(d.item)}}
-        if(!this.proj.lockV){
-          // Determine target swimlane from the primary dragged item's final position
-          if(d.id===it.id){document.querySelectorAll('.sw-row').forEach(slEl=>{const r=slEl.getBoundingClientRect();if(ev.clientY>=r.top&&ev.clientY<=r.bottom&&slEl.dataset.slId){dragItems.forEach(dd=>dd.item.swimlaneId=slEl.dataset.slId)}})}
-          d.item.subRow=Math.max(0,Math.round((nT-6)/38));
+    const origDate=it.type==='task'?it.startDate:it.date;
+    let dr=false,hlEl=null,hlRow=null,ghostEl=null,ghostRow=null,tipEl=null,stripEl=null,prevHdrStart=-1,prevHdrEnd=-1;
+    const mv=ev=>{const dx=ev.clientX-sx,dy=ev.clientY-sy;if(!dr&&(Math.abs(dx)>3||Math.abs(dy)>3)){dr=true;dragItems.forEach(d=>d.el.classList.add('dragging'));this.snap();if(!this.panelPinned)this.closePanel()}if(dr){const shiftHeld=ev.shiftKey;dragItems.forEach(d=>{if(!this.proj.lockH&&!shiftHeld)d.el.style.left=(d.oL+dx)+'px';if(!this.proj.lockV)d.el.style.top=(d.oT+dy)+'px';d.el.style.cursor=shiftHeld?'ns-resize':'grabbing'});
+      if(!this.proj.lockV){let found=null;document.querySelectorAll('.sw-row').forEach(r=>{const rect=r.getBoundingClientRect();if(ev.clientY>=rect.top&&ev.clientY<=rect.bottom&&r.dataset.slId&&!r.classList.contains('sl-hidden-indicator'))found=r});
+        if(found){const sl=this.gs(found.dataset.slId),rect=found.getBoundingClientRect(),yInSw=ev.clientY-rect.top;
+          const subs=sl&&sl.collapsed==='expanded'?sl.subSwimlanes||[]:[];
+          let bandTop=0,bandH=rect.height;
+          if(subs.length>0){const dividers=[];found.querySelectorAll('.sub-sw-div').forEach(d=>{const t=parseFloat(d.style.top)||0;dividers.push(d.classList.contains('sub-rh')?t+3:t)});
+            const bands=[];let prevY=0;for(let si=0;si<subs.length;si++){const yEnd=si<dividers.length?dividers[si]:rect.height;bands.push({yStart:prevY,yEnd});prevY=yEnd}
+            if(bands.length&&prevY<rect.height)bands[bands.length-1].yEnd=rect.height;
+            for(const b of bands){if(yInSw>=b.yStart&&yInSw<b.yEnd){bandTop=b.yStart;bandH=b.yEnd-b.yStart;break}}}
+          if(hlRow!==found||!hlEl){if(hlEl)hlEl.remove();hlEl=document.createElement('div');hlEl.className='drag-band-hl';found.appendChild(hlEl);hlRow=found}
+          hlEl.style.top=bandTop+'px';hlEl.style.height=bandH+'px';
+          const primaryD=dragItems.find(d=>d.id===it.id);
+          if(primaryD){const isT=it.type==='task',curL=parseInt(primaryD.el.style.left),nx=curL+(isT?0:8),snapDate=this.xD(nx,tl);
+            const ghostX=isT?this.dX(snapDate,tl):this.dXMid(snapDate,tl)-8;
+            const newEnd=isT?this._calcEndDate({startDate:snapDate,duration:it.duration,durMode:it.durMode}):null;
+            const ghostW=isT?Math.max(8,(this.dXEnd(newEnd,tl)||0)-(this.dX(snapDate,tl)||0)):16;
+            const yInBand=yInSw-bandTop,snapRow=Math.max(0,Math.floor((yInBand-6)/38)),ghostY=bandTop+6+snapRow*38;
+            if(ghostRow!==found||!ghostEl){if(ghostEl)ghostEl.remove();ghostEl=document.createElement('div');ghostEl.className='drag-ghost';found.appendChild(ghostEl);ghostRow=found}
+            ghostEl.style.left=ghostX+'px';ghostEl.style.top=ghostY+'px';ghostEl.style.width=ghostW+'px';ghostEl.style.height=(isT?'22':'16')+'px'}}
+        else if(hlEl){hlEl.remove();hlEl=null;hlRow=null;if(ghostEl){ghostEl.remove();ghostEl=null;ghostRow=null}}}
+      /* --- Drag date feedback (works regardless of lockV) --- */
+      {const primaryD=dragItems.find(d=>d.id===it.id);
+        if(primaryD){const isT=it.type==='task',curL=parseInt(primaryD.el.style.left),nx=curL+(isT?0:8),snapDate=this.xD(nx,tl);
+          const newEnd=isT?this._calcEndDate({startDate:snapDate,duration:it.duration,durMode:it.durMode}):null;
+          const delta=U.days(origDate,snapDate);
+          // Delta badge at cursor
+          if(!tipEl){tipEl=document.createElement('div');tipEl.className='drag-delta-tip';document.body.appendChild(tipEl)}
+          tipEl.textContent=this._fmtDragDelta(delta);
+          tipEl.style.left=(ev.clientX+16)+'px';tipEl.style.top=(ev.clientY-28)+'px';
+          // Bottom status strip
+          if(!stripEl){stripEl=document.createElement('div');stripEl.className='drag-date-strip';document.body.appendChild(stripEl)}
+          if(isT){stripEl.textContent='Start: '+U.fmt(origDate,'MMM D')+' → '+U.fmt(snapDate,'MMM D')+'    End: '+U.fmt(it.endDate,'MMM D')+' → '+U.fmt(newEnd,'MMM D')}
+          else{stripEl.textContent='Date: '+U.fmt(origDate,'MMM D')+' → '+U.fmt(snapDate,'MMM D')}
+          // Header column highlight
+          if(!shiftHeld){
+            let sc=-1,ec=-1;
+            for(let ci=0;ci<tl.cols.length;ci++){if(sc<0&&snapDate>=tl.cols[ci].start&&snapDate<=tl.cols[ci].end)sc=ci;if(isT&&newEnd&&newEnd>=tl.cols[ci].start&&newEnd<=tl.cols[ci].end)ec=ci}
+            if(ec<0)ec=sc;
+            if(sc!==prevHdrStart||ec!==prevHdrEnd){
+              const hdrRows=this.$.tl_hdr.querySelectorAll('.th-row');const lastRow=hdrRows[hdrRows.length-1];
+              if(lastRow){const cells=lastRow.children;for(let ci=0;ci<cells.length;ci++)cells[ci].classList.toggle('drag-target',ci>=sc&&ci<=ec)}
+              prevHdrStart=sc;prevHdrEnd=ec}
+          }
         }
+      }
+    }};
+    const _cleanFeedback=()=>{if(tipEl){tipEl.remove();tipEl=null}if(stripEl){stripEl.remove();stripEl=null}const hdrRows=this.$.tl_hdr.querySelectorAll('.th-row');const lastRow=hdrRows[hdrRows.length-1];if(lastRow){for(const c of lastRow.children)c.classList.remove('drag-target')}prevHdrStart=prevHdrEnd=-1};
+    const up=ev=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('keydown',esc);dragItems.forEach(d=>d.el.classList.remove('dragging'));if(hlEl){hlEl.remove();hlEl=null;hlRow=null}if(ghostEl){ghostEl.remove();ghostEl=null;ghostRow=null}_cleanFeedback();if(!dr){this.sched();return}if(dr){
+      dragItems.forEach(d=>{
+        const nL=parseInt(d.el.style.left),nx=nL+(d.item.type==='milestone'?8:0),nd=this.xD(nx,tl);
+        if(!this.proj.lockH){if(d.item.type==='milestone')d.item.date=nd;else{d.item.startDate=nd;d.item.endDate=this._calcEndDate(d.item)}}
       });
+      if(!this.proj.lockV){
+        let targetSlId=null,targetRect=null,targetRow=null;
+        document.querySelectorAll('.sw-row').forEach(slEl=>{const r=slEl.getBoundingClientRect();if(ev.clientY>=r.top&&ev.clientY<=r.bottom&&slEl.dataset.slId){targetSlId=slEl.dataset.slId;targetRect=r;targetRow=slEl}});
+        if(targetSlId){
+          dragItems.forEach(dd=>dd.item.swimlaneId=targetSlId);
+          const sl=this.gs(targetSlId);
+          const yInSw=ev.clientY-targetRect.top;
+          const rH=38;
+          const subs=sl&&sl.collapsed==='expanded'?sl.subSwimlanes||[]:[];
+          if(subs.length>0){
+            // Sub-swimlane band detection (same logic as showCtx)
+            const dividers=[];
+            targetRow.querySelectorAll('.sub-sw-div').forEach(d=>{const t=parseFloat(d.style.top)||0;dividers.push(d.classList.contains('sub-rh')?t+3:t)});
+            const bands=[];let prevY=0;
+            for(let si=0;si<subs.length;si++){const yEnd=si<dividers.length?dividers[si]:targetRect.height;bands.push({ssId:subs[si].id,yStart:prevY,yEnd});prevY=yEnd}
+            if(bands.length&&prevY<targetRect.height)bands[bands.length-1].yEnd=targetRect.height;
+            let dropSubSw='',dropSubRow=0;
+            for(const band of bands){if(yInSw>=band.yStart&&yInSw<band.yEnd){dropSubSw=band.ssId;dropSubRow=Math.max(0,Math.floor((yInSw-band.yStart-6)/rH));break}}
+            if(!dropSubSw&&bands.length){dropSubSw=bands[0].ssId;dropSubRow=0}
+            const primarySubRow=dropSubRow;
+            dragItems.forEach(dd=>{dd.item.subSwimId=dropSubSw;if(dd.id===it.id)dd.item.subRow=primarySubRow;else dd.item.subRow=Math.max(0,primarySubRow+((dd.item.subRow||0)-(it.subRow||0)))});
+          }else{
+            const baseRow=Math.max(0,Math.floor((yInSw-6)/rH));
+            dragItems.forEach(dd=>{dd.item.subSwimId='';if(dd.id===it.id)dd.item.subRow=baseRow;else dd.item.subRow=Math.max(0,baseRow+((dd.item.subRow||0)-(it.subRow||0)))});
+          }
+        }
+      }
       if(this.proj.autoRange)this.autoRange();
-      // Scheduled mode: snap back items that were dragged earlier than their calculated position
       if(this.proj.schedulingMode==='scheduled'){
         dragItems.forEach(d=>{
-          if(!d.item.deps?.length||d.item.pinned)return; // root or pinned — keep
+          if(!d.item.deps?.length||d.item.pinned)return;
           const earliest=this._computeEarliestStart(d.item);
           if(!earliest)return;
           const curStart=d.item.type==='task'?d.item.startDate:d.item.date;
           if(curStart<earliest){
-            // Dragged earlier than allowed — snap back
             if(d.item.type==='task'){d.item.startDate=earliest;d.item.endDate=this._calcEndDate(d.item)}
             else d.item.date=earliest;
             this.toast('Snapped to calculated position','info')
           }else if(curStart>earliest){
-            // Dragged later — implicitly pin
             d.item.pinned=true;
             this.toast('Item pinned at new date','info')
           }
         });
       }
-      this.sched();this.autoSave();this.refreshPanel()}};
-    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)},
+      this.sched();this.autoSave();
+      if(this.sel.length===1){const selIt=this.gi(this.sel[0]);if(selIt)this.openPanel(selIt)}else if(this.sel.length>1)this.openBulkPanel()}};
+    const esc=ev2=>{if(ev2.key==='Escape'&&dr){ev2.preventDefault();
+      dragItems.forEach(d=>{d.el.style.left=d.oL+'px';d.el.style.top=d.oT+'px';d.el.classList.remove('dragging')});
+      if(hlEl){hlEl.remove();hlEl=null;hlRow=null}if(ghostEl){ghostEl.remove();ghostEl=null;ghostRow=null}_cleanFeedback();
+      document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('keydown',esc);
+      if(this.undoStack.length)this.undoStack.pop();dr=false}};
+    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);document.addEventListener('keydown',esc)},
 
   startTR(e,rh){e.stopPropagation();e.preventDefault();const iid=rh.dataset.iid,side=rh.dataset.side,it=this.gi(iid);if(!it)return;
     // Block resize for work-mode tasks — calendar math would corrupt working-day duration
@@ -3148,7 +3227,7 @@ const App={
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">1. Create Your Timeline</strong><p>Start with a blank project or choose a template from <strong>New</strong> (📄). Your timeline has <em>swimlanes</em> (horizontal sections) and <em>items</em> (milestones & tasks).</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">2. Add Items</strong><p>Click <strong>+ Mile</strong> or <strong>+ Task</strong> in the toolbar. Items appear in the selected swimlane. Right-click the timeline for "Add Here" at a specific date. To bulk-add items, switch to <strong>Data View</strong> and click <strong>📋 Paste</strong> — paste tab-separated rows from Excel (<code>Name [Tab] Date</code> for milestones, or <code>Name [Tab] Start [Tab] End</code> for tasks) and they'll be imported into your chosen swimlane.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">3. Edit Properties</strong><p>Click any item to open the <strong>Properties Panel</strong>. Change dates, colors, icons, owner, notes, and more. Pin the panel 📌 to keep it open.</p></div>
-    <div style="margin-bottom:16px"><strong style="color:var(--acc)">4. Drag & Arrange</strong><p><strong>Drag items</strong> left/right to change dates, or up/down to change rows. Arrow keys for precise nudging; hold <strong>Ctrl</strong> to move faster. The <strong>Lock</strong> toggle (Tools menu) prevents all item movement — both dragging and arrow-key nudging — until unlocked.</p></div>
+    <div style="margin-bottom:16px"><strong style="color:var(--acc)">4. Drag & Arrange</strong><p><strong>Drag items</strong> left/right to change dates, or up/down to move between rows and sub-swimlanes. A <strong>dashed ghost outline</strong> shows exactly where the item will snap to on the grid. While dragging, a <strong>delta badge</strong> follows your cursor showing how far you've moved (<code>+3d</code>, <code>+14d · 2w 0d</code>), the <strong>header highlights</strong> the target date columns, and a <strong>status strip</strong> at the bottom shows original and target dates.</p><p>Hold <strong>Shift</strong> while dragging to <strong>lock horizontal movement</strong> (move vertically only). Press <strong>Escape</strong> to <strong>cancel a drag</strong> and restore the original position. Use <strong>Ctrl+click</strong> to multi-select items, then drag them as a group. <strong>Arrow keys</strong> nudge selected items precisely; hold <strong>Ctrl</strong> for faster movement (7 days). The <strong>Lock</strong> toggle (Tools menu) prevents all item movement until unlocked.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">5. Task Timing</strong><p>Tasks have <strong>Start/End/Duration</strong>. Changing Start or End recalculates Duration; changing Duration updates End. Use <strong>📌 Pin Date</strong> to protect items from Propagate.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">6. Dependencies</strong><p><strong>Ctrl+click</strong> to multi-select, then right-click → <strong>Link Dependency</strong>. Each link has a <strong>type</strong> (FS, SS, FF) and optional <strong>lag</strong> (days). Right-click → <strong>Propagate to Successors</strong> to push date changes downstream. Violated links show as dashed red arrows. Enable <strong>Critical Path</strong> to highlight zero-float items. Use <strong>View → Show Float</strong> to see scheduling flexibility.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">7. Scheduling Mode</strong><p>Open <strong>Settings → Scheduling</strong> to switch between <strong>Manual</strong> (default — you control dates, Propagate on demand) and <strong>Auto-Scheduled</strong> (dates auto-calculate from dependencies). In Auto mode, successor dates are calculated fields shown in blue. <strong>📌 Pin Date</strong> overrides auto-scheduling for individual items. A preview shows what will change before switching modes.</p></div>

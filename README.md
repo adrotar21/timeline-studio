@@ -3,7 +3,7 @@
 **A cross-platform, zero-dependency Gantt chart tool for project managers.**
 Download three files. Open `index.html`. Done.
 
-![Version](https://img.shields.io/badge/version-0.23.1-blue)
+![Version](https://img.shields.io/badge/version-0.27.0-blue)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Files](https://img.shields.io/badge/architecture-3_files-orange)
 
@@ -51,7 +51,7 @@ That's it. No terminal. No package manager. No account.
 Milestones and tasks on a zoomable, scrollable timeline. Drag items to change dates or reorder. Swimlanes organize work into horizontal sections with optional sub-swimlanes.
 
 - **Swimlanes** with 3-state collapse (expanded / minimized / hidden) and sub-swimlanes
-- **Drag-and-drop** items left/right (dates) or up/down (rows), with arrow-key nudging
+- **Drag-and-drop** with ghost snap preview, date delta badge, header highlight, Shift for vertical-only lock, Escape to cancel
 - **Zoom** from 10% to 300%, fit-to-content auto-zoom, configurable timescale (Weeks/Months/Quarters/Years)
 - **Visual aids** -- today marker, weekend shading, holiday shading, watermark stamp
 - **7 milestone icon shapes**, 20 preset colors, progress bars on tasks
@@ -201,8 +201,7 @@ No build step. Edit the three files directly and refresh your browser.
 **Run tests** (Node.js CLI, zero dependencies):
 
 ```bash
-node tests/test_comprehensive.js   # 115 tests
-node tests/test_expanded.js        # 464 tests
+node tests/run-all.js              # 1,675 tests across 14 files
 ```
 
 **Tech stack:** Vanilla JavaScript (ES6+), SVG for dependency arrows, Canvas API for PNG export with DPI scaling, CSS custom properties for theming, localStorage for session recovery.
