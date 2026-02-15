@@ -387,7 +387,7 @@ body.theme-midnight #props-panel{box-shadow:-4px 0 20px rgba(0,0,0,.4)}
 .tl-status-sn{font-family:var(--mono);font-weight:700;font-size:8px;color:#fff;padding:1px 3px;border-radius:3px}
 .tl-status-text{font-size:8px;font-weight:600;white-space:nowrap}
 .tl-status-bottom-right{bottom:-8px;right:-4px;font-size:10px}
-.tl-status-top-left{top:-8px;left:-4px;font-size:10px}
+.tl-status-top-left{top:-2px;left:-4px;font-size:10px}
 /* Context menu submenu */
 .ctx-has-sub{position:relative}
 .ctx-arrow{float:right;font-size:8px;margin-left:8px;color:var(--tx3)}

@@ -1,4 +1,4 @@
-/* Timeline Studio v0.28.2 — Data table row selection (B24): shift+click range select on checkboxes and row backgrounds, ctrl+click toggle, plain click single-select. Mousedown-based shift detection, addEventListener stacking fix in bindDT(). */
+/* Timeline Studio v0.28.3 — Status badge clipping fix (B25): top-left badge offset adjusted from -8px to -2px in CSS, matching +6px shift applied to all SVG export badge offsets (task + milestone) for emoji, shortName, and text modes. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -2813,9 +2813,9 @@ const App={
           if(it.progress>0){const pw=w*(it.progress/100);svg+=`<rect x="${renderX}" y="${iy}" width="${pw}" height="${barH}" rx="4" fill="${eRenderColor}" opacity="${0.45*itemOp}"/>`;if(w>30)svg+=`<text x="${renderX+w/2}" y="${iy+barH/2+4}" fill="#fff" font-size="8" font-weight="700" text-anchor="middle" opacity="${0.9*itemOp}">${it.progress}%</text>`}
           /* Status badge (non-inline) */
           if(eSD&&eSDShow&&eSDPos!=='inline'){
-            if(eSDMode==='emoji'){const bx=eSDPos==='top-left'?renderX-4:renderX+w-4,by=eSDPos==='top-left'?iy-4:iy+barH+2;svg+=`<text x="${bx}" y="${by}" font-size="10" opacity="${itemOp}">${eSD.emoji}</text>`}
-            else if(eSDMode==='shortName'){const snW=this._mt(eSD.shortName,8,'700')+6,bx=eSDPos==='top-left'?renderX-4:renderX+w-snW+4,by=eSDPos==='top-left'?iy-10:iy+barH+2;svg+=`<rect x="${bx}" y="${by}" width="${snW}" height="12" rx="3" fill="${eSD.color}" opacity="${itemOp}"/><text x="${bx+snW/2}" y="${by+9}" fill="#fff" font-size="8" font-weight="700" text-anchor="middle" opacity="${itemOp}">${U.esc(eSD.shortName)}</text>`}
-            else if(eSDMode==='text'){const bx=eSDPos==='top-left'?renderX-4:renderX+w+4,by=eSDPos==='top-left'?iy-2:iy+barH+10;svg+=`<text x="${bx}" y="${by}" fill="${eSD.color}" font-size="8" font-weight="600" opacity="${itemOp}">${U.esc(eSD.name)}</text>`}
+            if(eSDMode==='emoji'){const bx=eSDPos==='top-left'?renderX-4:renderX+w-4,by=eSDPos==='top-left'?iy+2:iy+barH+2;svg+=`<text x="${bx}" y="${by}" font-size="10" opacity="${itemOp}">${eSD.emoji}</text>`}
+            else if(eSDMode==='shortName'){const snW=this._mt(eSD.shortName,8,'700')+6,bx=eSDPos==='top-left'?renderX-4:renderX+w-snW+4,by=eSDPos==='top-left'?iy-4:iy+barH+2;svg+=`<rect x="${bx}" y="${by}" width="${snW}" height="12" rx="3" fill="${eSD.color}" opacity="${itemOp}"/><text x="${bx+snW/2}" y="${by+9}" fill="#fff" font-size="8" font-weight="700" text-anchor="middle" opacity="${itemOp}">${U.esc(eSD.shortName)}</text>`}
+            else if(eSDMode==='text'){const bx=eSDPos==='top-left'?renderX-4:renderX+w+4,by=eSDPos==='top-left'?iy+4:iy+barH+10;svg+=`<text x="${bx}" y="${by}" fill="${eSD.color}" font-size="8" font-weight="600" opacity="${itemOp}">${U.esc(eSD.name)}</text>`}
           }
           /* Edge date labels */
           if(it.showStartDate)svg+=`<text x="${renderX-4}" y="${iy+barH/2+fs*0.3}" fill="${etc}" font-size="${Math.max(8,fs-1)}" text-anchor="end" opacity="${itemOp}">${U.fmt(it.startDate,fmt)}</text>`;
@@ -2856,9 +2856,9 @@ const App={
           svgItemXMap.set(it.id,{left:renderX-8,right:renderX+8,midY:iy+iconH/2});
           /* Status badge (non-inline) for milestone */
           if(eSD&&eSDShow&&eSDPos!=='inline'){
-            if(eSDMode==='emoji'){const bx=eSDPos==='top-left'?renderX-12:renderX+4,by=eSDPos==='top-left'?iy-4:iy+iconH+2;svg+=`<text x="${bx}" y="${by}" font-size="10" opacity="${itemOp}">${eSD.emoji}</text>`}
-            else if(eSDMode==='shortName'){const snW=this._mt(eSD.shortName,8,'700')+6,bx=eSDPos==='top-left'?renderX-12:renderX+4,by=eSDPos==='top-left'?iy-10:iy+iconH+2;svg+=`<rect x="${bx}" y="${by}" width="${snW}" height="12" rx="3" fill="${eSD.color}" opacity="${itemOp}"/><text x="${bx+snW/2}" y="${by+9}" fill="#fff" font-size="8" font-weight="700" text-anchor="middle" opacity="${itemOp}">${U.esc(eSD.shortName)}</text>`}
-            else if(eSDMode==='text'){const bx=eSDPos==='top-left'?renderX-12:renderX+12,by=eSDPos==='top-left'?iy-2:iy+iconH+10;svg+=`<text x="${bx}" y="${by}" fill="${eSD.color}" font-size="8" font-weight="600" opacity="${itemOp}">${U.esc(eSD.name)}</text>`}
+            if(eSDMode==='emoji'){const bx=eSDPos==='top-left'?renderX-12:renderX+4,by=eSDPos==='top-left'?iy+2:iy+iconH+2;svg+=`<text x="${bx}" y="${by}" font-size="10" opacity="${itemOp}">${eSD.emoji}</text>`}
+            else if(eSDMode==='shortName'){const snW=this._mt(eSD.shortName,8,'700')+6,bx=eSDPos==='top-left'?renderX-12:renderX+4,by=eSDPos==='top-left'?iy-4:iy+iconH+2;svg+=`<rect x="${bx}" y="${by}" width="${snW}" height="12" rx="3" fill="${eSD.color}" opacity="${itemOp}"/><text x="${bx+snW/2}" y="${by+9}" fill="#fff" font-size="8" font-weight="700" text-anchor="middle" opacity="${itemOp}">${U.esc(eSD.shortName)}</text>`}
+            else if(eSDMode==='text'){const bx=eSDPos==='top-left'?renderX-12:renderX+12,by=eSDPos==='top-left'?iy+4:iy+iconH+10;svg+=`<text x="${bx}" y="${by}" fill="${eSD.color}" font-size="8" font-weight="600" opacity="${itemOp}">${U.esc(eSD.name)}</text>`}
           }
           const lp=it.labelPosition||'right';
           const mMidY=iy+iconH/2+fs*0.35;
