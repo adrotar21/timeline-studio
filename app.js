@@ -1,4 +1,4 @@
-/* Timeline Studio v0.30.0 — Bulk drag-and-drop (F28): multi-select group move with CSS-only swimlane expansion, snapshot-based revert, single-band preview, cross-swimlane drop detection, ghost snap preview, and smart group-aware row compaction for items from different sub-swimlanes. */
+/* Timeline Studio v0.30.1 — Work-mode drag resize fix (B30): removed startTR() guard that blocked drag-based resizing for work-mode tasks, replaced calendar-only duration math with _countWorkingDays() for correct working-day duration during drag. New task default fix (B31): changed default durMode from 'work' to 'cal' for addItem() and data table type conversion, aligning with migration code and eliminating unintended resize restrictions on freshly created tasks. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -1371,7 +1371,7 @@ const App={
     const subSwId=atSubSwId||'';
     const subRow=typeof atSubRow==='number'?atSubRow:0;
     const it={id:U.id(),type,name:type==='milestone'?'New Milestone':'New Task',swimlaneId:sl.id,subSwimId:subSwId,subRow,color:COLORS[this.proj.items.length%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:'',status:'',statusDate:'',vLine:{enabled:false,style:'dashed',color:'#999999',direction:'both',extent:'swim'}};
-    if(type==='milestone')it.date=d;else{it.startDate=d;it.duration=14;it.durMode='work';it.endDate=this._calcEndDate(it)}
+    if(type==='milestone')it.date=d;else{it.startDate=d;it.duration=14;it.durMode='cal';it.endDate=this._calcEndDate(it)}
     this.proj.items.push(it);this.sel=[it.id];this.openPanel(it);
     if(this.proj.autoRange)this.autoRange();this.sched();this.autoSave()
   },
@@ -2909,10 +2909,7 @@ const App={
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);document.addEventListener('keydown',esc)},
 
   startTR(e,rh){e.stopPropagation();e.preventDefault();const iid=rh.dataset.iid,side=rh.dataset.side,it=this.gi(iid);if(!it)return;
-    // Block resize for work-mode tasks — calendar math would corrupt working-day duration
-    if(this.proj.scheduleAroundNonWorking&&(it.durMode||'cal')==='work'){
-      this.toast('Work-mode tasks can\'t be resized by dragging — use the Duration field instead','info');return}
-    const tl=this.met(),sx=e.clientX,oS=it.startDate,oE=it.endDate;this.snap();const mv=ev=>{const dx=ev.clientX-sx,dayD=Math.round((dx/tl.tw)*U.days(tl.start,tl.end));if(side==='left'){it.startDate=U.addDays(oS,dayD);if(U.days(it.startDate,it.endDate)<0)it.startDate=it.endDate}else{it.endDate=U.addDays(oE,dayD);if(U.days(it.startDate,it.endDate)<0)it.endDate=it.startDate}it.duration=U.days(it.startDate,it.endDate)+1;this.sched(true,false);this.refreshPanel()};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);if(this.proj.autoRange)this.autoRange();this.sched();this.autoSave();this.refreshPanel()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)},
+    const tl=this.met(),sx=e.clientX,oS=it.startDate,oE=it.endDate;const isWork=this.proj.scheduleAroundNonWorking&&(it.durMode||'cal')==='work';this.snap();const mv=ev=>{const dx=ev.clientX-sx,dayD=Math.round((dx/tl.tw)*U.days(tl.start,tl.end));if(side==='left'){it.startDate=U.addDays(oS,dayD);if(U.days(it.startDate,it.endDate)<0)it.startDate=it.endDate}else{it.endDate=U.addDays(oE,dayD);if(U.days(it.startDate,it.endDate)<0)it.endDate=it.startDate}it.duration=isWork?this._countWorkingDays(it.startDate,U.addDays(it.endDate,1)):(U.days(it.startDate,it.endDate)+1);this.sched(true,false);this.refreshPanel()};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);if(this.proj.autoRange)this.autoRange();this.sched();this.autoSave();this.refreshPanel()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)},
 
   bindRH(){document.querySelectorAll('.sl-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();const sl=this.gs(h.dataset.slId);if(!sl)return;const slEl=h.closest('.sw-row'),lblEl=this.$.tl_sl_labels.querySelector(`[data-sl-id="${sl.id}"]`);const sY=e.clientY,sH=slEl.offsetHeight;const hasSubs=sl.subSwimlanes?.length>0&&sl.collapsed==='expanded';const lastSs=hasSubs?sl.subSwimlanes[sl.subSwimlanes.length-1]:null;const startLastH=lastSs?(lastSs.height||50):0;const mv=ev=>{const nh=Math.max(50,sH+ev.clientY-sY);if(hasSubs&&lastSs){lastSs.height=Math.max(50,startLastH+ev.clientY-sY)}else{sl.height=nh}slEl.style.height=nh+'px';if(lblEl)lblEl.style.height=nh+'px';this.sched(true,false)};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}});document.querySelectorAll('.sub-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();e.stopPropagation();const sl=this.gs(h.dataset.slId);if(!sl)return;const ss=sl.subSwimlanes.find(s=>s.id===h.dataset.ssId);if(!ss)return;const sY=e.clientY,startH=ss.height||50;const mv=ev=>{ss.height=Math.max(50,startH+ev.clientY-sY);this.sched(true,false)};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}})},
 
@@ -3365,7 +3362,7 @@ const App={
       if(t.classList.contains('dt-hid')){const it=this.gi(t.dataset.id);if(it){this.snap();it.hidden=t.checked;this.sched();this.autoSave()}return}
       if(!id||!f)return;const it=this.gi(id);if(!it)return;const val=t.type==='number'?+t.value:t.value;
       this.snap();
-      if(f==='type'){it.type=val;if(val==='task'&&!it.startDate){it.startDate=it.date;it.duration=14;it.durMode='work';it.endDate=this._calcEndDate(it)}else if(val==='milestone'&&!it.date)it.date=it.startDate}
+      if(f==='type'){it.type=val;if(val==='task'&&!it.startDate){it.startDate=it.date;it.duration=14;it.durMode='cal';it.endDate=this._calcEndDate(it)}else if(val==='milestone'&&!it.date)it.date=it.startDate}
       else if(f==='startDate'){
         if(it.type==='milestone')it.date=val;
         else{
