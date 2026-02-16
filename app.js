@@ -1,4 +1,4 @@
-/* Timeline Studio v0.29.2 — Shift+drag -1 day offset fix (B28): `parseInt()` → `parseFloat()` in drag system prevents fractional pixel truncation from causing date round-trip errors during shift+drag (horizontal lock). */
+/* Timeline Studio v0.30.0 — Bulk drag-and-drop (F28): multi-select group move with CSS-only swimlane expansion, snapshot-based revert, single-band preview, cross-swimlane drop detection, ghost snap preview, and smart group-aware row compaction for items from different sub-swimlanes. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -88,6 +88,7 @@ const MOUSE_REFS=[
 ];
 const RESERVED_COMBOS=new Set(['Ctrl+v','Ctrl+c','Ctrl+x']);
 const BROWSER_RESERVED=new Set(['Ctrl+t','Ctrl+w','Ctrl+Tab','Ctrl+Shift+Tab','Ctrl+l','Ctrl+Shift+t','Ctrl+Shift+n','F5','Ctrl+F5','F12']);
+
 
 function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
@@ -1344,6 +1345,7 @@ const App={
   showModal(id){document.getElementById(id).classList.remove('hidden')},
   gi(id){return this.proj.items.find(i=>i.id===id)},
   gs(id){return this.proj.swimlanes.find(s=>s.id===id)},
+  _findSubSwim(ssId){for(const sl of this.proj.swimlanes)for(const ss of sl.subSwimlanes||[])if(ss.id===ssId)return ss;return null},
 
   getTargetSl(){
     if(this.sel.length){const it=this.gi(this.sel[0]);if(it)return this.gs(it.swimlaneId)}
@@ -2659,33 +2661,162 @@ const App={
   onTlCtx(e){const iEl=e.target.closest('.tl-item');if(iEl)this.showCtx(e,iEl.dataset.iid);else{e.preventDefault();this.sel=[];this.showCtx(e,null)}},
 
   startDrag(e,it,el){const tl=this.met(),sx=e.clientX,sy=e.clientY;
+    // Orphan cleanup: remove any leftover feedback from prior aborted drags
+    document.querySelectorAll('.drag-delta-tip,.drag-date-strip').forEach(el=>el.remove());
     const dragItems=this.sel.map(id=>{const itemEl=this.$.tl_body.querySelector(`[data-iid="${id}"]`);const item=this.gi(id);if(!itemEl||!item)return null;return{id,el:itemEl,item,oL:parseFloat(itemEl.style.left),oT:parseFloat(itemEl.style.top)}}).filter(Boolean);
     if(!dragItems.length)return;
     const origDate=it.type==='task'?it.startDate:it.date;
-    let dr=false,hlEl=null,hlRow=null,ghostEl=null,ghostRow=null,tipEl=null,stripEl=null,prevHdrStart=-1,prevHdrEnd=-1;
+    // Group key: order items by source swimlane/sub-swimlane position
+    const _slOrder=new Map();
+    this.proj.swimlanes.forEach((sl,si)=>{_slOrder.set(sl.id+':',si*1000);(sl.subSwimlanes||[]).forEach((ss,ssi)=>_slOrder.set(sl.id+':'+ss.id,si*1000+ssi))});
+    dragItems.forEach(d=>{const key=d.item.swimlaneId+':'+(d.item.subSwimId||'');d._groupKey=_slOrder.get(key)??0});
+    // Row compaction: group-aware — items from different sub-swimlanes stack by source order
+    if(dragItems.length>1){
+      const sorted=[...dragItems].sort((a,b)=>a._groupKey-b._groupKey||(a.item.subRow||0)-(b.item.subRow||0));
+      let globalRow=0,prevKey=-1;const rowMap=new Map();let groupRows=[];
+      for(const d of sorted){
+        if(d._groupKey!==prevKey){
+          if(groupRows.length){const uniq=[...new Set(groupRows.map(g=>g.subRow))].sort((a,b)=>a-b);const cMap=new Map();uniq.forEach((r,i)=>cMap.set(r,i));groupRows.forEach(g=>rowMap.set(g.id,globalRow+cMap.get(g.subRow)));globalRow+=uniq.length}
+          groupRows=[];prevKey=d._groupKey}
+        groupRows.push({id:d.id,subRow:d.item.subRow||0})}
+      if(groupRows.length){const uniq=[...new Set(groupRows.map(g=>g.subRow))].sort((a,b)=>a-b);const cMap=new Map();uniq.forEach((r,i)=>cMap.set(r,i));groupRows.forEach(g=>rowMap.set(g.id,globalRow+cMap.get(g.subRow)))}
+      const pRow=rowMap.get(it.id)||0;dragItems.forEach(d=>{d.rowOffset=(rowMap.get(d.id)||0)-pRow});
+    }else{dragItems.forEach(d=>{d.rowOffset=0})}
+    let dr=false,hlEl=null,hlRow=null,ghostEls=[],ghostRow=null,tipEl=null,stripEl=null,prevHdrStart=-1,prevHdrEnd=-1;
+    // CSS-only expansion: snapshot-based — saves every affected element's original style,
+    // then restores exactly on revert. No model mutation, no renderTL during drag.
+    const _expandedMap=new Map(); // targetId → {delta, slId, isSub}
+    const _snapshots=new Map();   // slId → {rowH, lblH, divTops:[], itemTops:Map<iid,top>, subLblHs:[]}
+    let _activeExpandId='';       // which target is currently expanded (only one at a time)
+    // Snapshot a swimlane's DOM state (once per swimlane, before first expansion)
+    const _snapshotSl=(slId)=>{
+      if(_snapshots.has(slId))return;
+      const rowEl=this.$.tl_body.querySelector(`.sw-row[data-sl-id="${slId}"]`);
+      const lblEl=this.$.tl_sl_labels.querySelector(`.sl-lbl[data-sl-id="${slId}"]`);
+      const snap={rowH:rowEl?rowEl.offsetHeight:0,lblH:lblEl?lblEl.offsetHeight:0,divTops:[],itemTops:new Map(),subLblHs:[]};
+      if(rowEl){
+        rowEl.querySelectorAll('.sub-sw-div').forEach(d=>snap.divTops.push(parseFloat(d.style.top)||0));
+        rowEl.querySelectorAll('.tl-item').forEach(el=>{if(el.dataset.iid)snap.itemTops.set(el.dataset.iid,parseFloat(el.style.top)||0)});
+      }
+      if(lblEl)lblEl.querySelectorAll('.sl-sub-lbl').forEach(s=>snap.subLblHs.push(s.offsetHeight));
+      _snapshots.set(slId,snap);
+    };
+    // Apply a height delta to a sub-swimlane or swimlane via CSS only (no renderTL)
+    const _cssExpand=(targetId,delta,slId,isSub,bandEnd)=>{
+      if(delta<=0)return;
+      _snapshotSl(slId);
+      _expandedMap.set(targetId,{delta,slId,isSub});
+      // Grow the .sw-row and matching .sl-lbl
+      const rowEl=this.$.tl_body.querySelector(`.sw-row[data-sl-id="${slId}"]`);
+      const lblEl=this.$.tl_sl_labels.querySelector(`.sl-lbl[data-sl-id="${slId}"]`);
+      if(rowEl)rowEl.style.height=(rowEl.offsetHeight+delta)+'px';
+      if(lblEl)lblEl.style.height=(lblEl.offsetHeight+delta)+'px';
+      if(isSub&&rowEl){
+        const sl=this.gs(slId);const subs=sl?.subSwimlanes||[];
+        const targetIdx=subs.findIndex(s=>s.id===targetId);
+        // Grow the matching sub-label in the label panel
+        if(lblEl){const subLbls=[...lblEl.querySelectorAll('.sl-sub-lbl')];
+          if(subLbls[targetIdx])subLbls[targetIdx].style.height=(subLbls[targetIdx].offsetHeight+delta)+'px'}
+        // Shift dividers AFTER this sub-swimlane
+        const allDivs=[...rowEl.querySelectorAll('.sub-sw-div')];
+        for(let i=targetIdx;i<allDivs.length;i++){
+          const d=allDivs[i];const ct=parseFloat(d.style.top)||0;d.style.top=(ct+delta)+'px'}
+        // Shift items BELOW the expanded band using geometry (not model subSwimId)
+        // bandEnd = the y-position where the target band ends (before expansion)
+        // Any item whose top >= bandEnd must be a later sub-swimlane's item
+        const dragIids=new Set(dragItems.map(d=>d.id));
+        rowEl.querySelectorAll('.tl-item').forEach(el=>{
+          if(dragIids.has(el.dataset.iid))return; // skip items being dragged
+          const ct=parseFloat(el.style.top)||0;
+          if(ct>=bandEnd){el.style.top=(ct+delta)+'px'}});
+      }
+    };
+    // Revert ALL CSS expansions by restoring from snapshots — guaranteed exact reversal
+    const _dragIids=new Set(dragItems.map(d=>d.id)); // items being dragged — never restore their position
+    const _cssRevertAll=()=>{
+      if(_snapshots.size===0){_expandedMap.clear();return}
+      _snapshots.forEach((snap,slId)=>{
+        const rowEl=this.$.tl_body.querySelector(`.sw-row[data-sl-id="${slId}"]`);
+        const lblEl=this.$.tl_sl_labels.querySelector(`.sl-lbl[data-sl-id="${slId}"]`);
+        if(rowEl)rowEl.style.height=snap.rowH+'px';
+        if(lblEl)lblEl.style.height=snap.lblH+'px';
+        // Restore divider positions
+        if(rowEl){const allDivs=[...rowEl.querySelectorAll('.sub-sw-div')];
+          for(let i=0;i<allDivs.length&&i<snap.divTops.length;i++)allDivs[i].style.top=snap.divTops[i]+'px'}
+        // Restore item positions (skip dragged items — their position is controlled by mousemove)
+        if(rowEl)rowEl.querySelectorAll('.tl-item').forEach(el=>{
+          if(_dragIids.has(el.dataset.iid))return;
+          if(el.dataset.iid&&snap.itemTops.has(el.dataset.iid))el.style.top=snap.itemTops.get(el.dataset.iid)+'px'});
+        // Restore sub-label heights
+        if(lblEl){const subLbls=[...lblEl.querySelectorAll('.sl-sub-lbl')];
+          for(let i=0;i<subLbls.length&&i<snap.subLblHs.length;i++)subLbls[i].style.height=snap.subLblHs[i]+'px'}
+      });
+      _snapshots.clear();_expandedMap.clear();
+    };
     const mv=ev=>{const dx=ev.clientX-sx,dy=ev.clientY-sy;if(!dr&&(Math.abs(dx)>3||Math.abs(dy)>3)){dr=true;dragItems.forEach(d=>d.el.classList.add('dragging'));this.snap();if(!this.panelPinned)this.closePanel()}if(dr){const shiftHeld=ev.shiftKey;dragItems.forEach(d=>{if(!this.proj.lockH&&!shiftHeld)d.el.style.left=(d.oL+dx)+'px';if(!this.proj.lockV)d.el.style.top=(d.oT+dy)+'px';d.el.style.cursor=shiftHeld?'ns-resize':'grabbing'});
       if(!this.proj.lockV){let found=null;document.querySelectorAll('.sw-row').forEach(r=>{const rect=r.getBoundingClientRect();if(ev.clientY>=rect.top&&ev.clientY<=rect.bottom&&r.dataset.slId&&!r.classList.contains('sl-hidden-indicator'))found=r});
-        if(found){const sl=this.gs(found.dataset.slId),rect=found.getBoundingClientRect(),yInSw=ev.clientY-rect.top;
+        if(found){const sl=this.gs(found.dataset.slId);let rect=found.getBoundingClientRect();const yInSw=ev.clientY-rect.top;
           const subs=sl&&sl.collapsed==='expanded'?sl.subSwimlanes||[]:[];
           let bandTop=0,bandH=rect.height;
-          if(subs.length>0){const dividers=[];found.querySelectorAll('.sub-sw-div').forEach(d=>{const t=parseFloat(d.style.top)||0;dividers.push(d.classList.contains('sub-rh')?t+3:t)});
-            const bands=[];let prevY=0;for(let si=0;si<subs.length;si++){const yEnd=si<dividers.length?dividers[si]:rect.height;bands.push({yStart:prevY,yEnd});prevY=yEnd}
-            if(bands.length&&prevY<rect.height)bands[bands.length-1].yEnd=rect.height;
-            for(const b of bands){if(yInSw>=b.yStart&&yInSw<b.yEnd){bandTop=b.yStart;bandH=b.yEnd-b.yStart;break}}}
-          if(hlRow!==found||!hlEl){if(hlEl)hlEl.remove();hlEl=document.createElement('div');hlEl.className='drag-band-hl';found.appendChild(hlEl);hlRow=found}
-          hlEl.style.top=bandTop+'px';hlEl.style.height=bandH+'px';
+          const bands=[];
+          const _computeBands=()=>{bandTop=0;bandH=rect.height;bands.length=0;
+            if(subs.length>0){const dv=[];found.querySelectorAll('.sub-sw-div').forEach(d=>{const t=parseFloat(d.style.top)||0;dv.push(d.classList.contains('sub-rh')?t+3:t)});
+              let pY=0;for(let si=0;si<subs.length;si++){const yE=si<dv.length?dv[si]:rect.height;bands.push({ssId:subs[si].id,yStart:pY,yEnd:yE});pY=yE}
+              if(bands.length&&pY<rect.height)bands[bands.length-1].yEnd=rect.height;
+              for(const b of bands){if(yInSw>=b.yStart&&yInSw<b.yEnd){bandTop=b.yStart;bandH=b.yEnd-b.yStart;break}}}};
+          _computeBands();
+          // --- CSS-only expansion check (no renderTL, no DOM destruction) ---
           const primaryD=dragItems.find(d=>d.id===it.id);
-          if(primaryD){const isT=it.type==='task',curL=parseFloat(primaryD.el.style.left),nx=curL+(isT?0:8),snapDate=this.xD(nx,tl);
-            const ghostX=isT?this.dX(snapDate,tl):this.dXMid(snapDate,tl)-8;
-            const newEnd=isT?this._calcEndDate({startDate:snapDate,duration:it.duration,durMode:it.durMode}):null;
-            const ghostW=isT?Math.max(8,(this.dXEnd(newEnd,tl)||0)-(this.dX(snapDate,tl)||0)):16;
-            const yInBand=yInSw-bandTop,snapRow=Math.max(0,Math.floor((yInBand-6)/38)),ghostY=bandTop+6+snapRow*38;
-            if(ghostRow!==found||!ghostEl){if(ghostEl)ghostEl.remove();ghostEl=document.createElement('div');ghostEl.className='drag-ghost';found.appendChild(ghostEl);ghostRow=found}
-            ghostEl.style.left=ghostX+'px';ghostEl.style.top=ghostY+'px';ghostEl.style.width=ghostW+'px';ghostEl.style.height=(isT?'22':'16')+'px'}}
-        else if(hlEl){hlEl.remove();hlEl=null;hlRow=null;if(ghostEl){ghostEl.remove();ghostEl=null;ghostRow=null}}}
+          if(primaryD){const isT=it.type==='task',curL=parseFloat(primaryD.el.style.left);
+            const nx=curL+(isT?0:8),snapDate=this.xD(nx,tl);
+            const yInBand=yInSw-bandTop,snapRow=Math.max(0,Math.floor((yInBand-6)/38));
+            const maxGR=snapRow+Math.max(0,...dragItems.map(d=>d.rowOffset));
+            const neededH=(maxGR+1)*38+10;
+            let currentTargetId='';
+            if(subs.length>0){for(const b of bands){if(yInSw>=b.yStart&&yInSw<b.yEnd){currentTargetId=b.ssId;break}}}else{currentTargetId=found.dataset.slId}
+            // If cursor moved to a different band/swimlane, revert previous expansion first
+            if(_activeExpandId&&_activeExpandId!==currentTargetId){
+              _cssRevertAll();_activeExpandId='';
+              // Re-read layout after revert
+              rect=found.getBoundingClientRect();
+              _computeBands();
+              // Recompute bandH after revert since band sizes changed back
+              const yInBand2=yInSw-bandTop;
+              // bandH is already recomputed by _computeBands
+            }
+            if(neededH>bandH&&!_expandedMap.has(currentTargetId)){
+              const delta=neededH-bandH;
+              const bandEnd=bandTop+bandH; // bottom of current band before expansion
+              _cssExpand(currentTargetId,delta,found.dataset.slId,subs.length>0,bandEnd);
+              _activeExpandId=currentTargetId;
+              // Re-read rect and bands after CSS resize
+              rect=found.getBoundingClientRect();
+              _computeBands()}
+            else if(neededH<=bandH&&_activeExpandId===currentTargetId){
+              // Band already has enough room (e.g. moved to higher row) — revert expansion
+              // Actually keep it: once expanded, stay expanded while in that band
+            }
+            // --- Create/update highlight band ---
+            if(hlRow!==found||!hlEl){if(hlEl)hlEl.remove();hlEl=document.createElement('div');hlEl.className='drag-band-hl';found.appendChild(hlEl);hlRow=found}
+            hlEl.style.top=bandTop+'px';hlEl.style.height=bandH+'px';
+            // --- Create/position ghosts ---
+            const MAX_GHOSTS=15,showAll=dragItems.length<=MAX_GHOSTS;
+            const ghostItems=showAll?dragItems:[primaryD];
+            const _foundSlId=found?.dataset?.slId||'';if(ghostRow!==_foundSlId||ghostEls.length!==ghostItems.length){ghostEls.forEach(g=>g.el.remove());ghostEls=[];ghostItems.forEach(d=>{const g=document.createElement('div');g.className=d.id===it.id?'drag-ghost drag-ghost-primary':'drag-ghost drag-ghost-secondary';found.appendChild(g);ghostEls.push({el:g,d})});ghostRow=_foundSlId}
+            ghostEls.forEach(({el:g,d})=>{const dIt=d.item,gIsT=dIt.type==='task';
+              const dCurL=parseFloat(d.el.style.left),dNx=dCurL+(gIsT?0:8),dSnap=this.xD(dNx,tl);
+              const gX=gIsT?this.dX(dSnap,tl):this.dXMid(dSnap,tl)-8;
+              const gEnd=gIsT?this._calcEndDate({startDate:dSnap,duration:dIt.duration,durMode:dIt.durMode}):null;
+              const gW=gIsT?Math.max(8,(this.dXEnd(gEnd,tl)||0)-(this.dX(dSnap,tl)||0)):16;
+              const gRow=snapRow+d.rowOffset,gY=bandTop+6+gRow*38;
+              g.style.left=gX+'px';g.style.top=gY+'px';g.style.width=gW+'px';g.style.height=(gIsT?'22':'16')+'px'});
+          }}
+        else if(hlEl){hlEl.remove();hlEl=null;hlRow=null;ghostEls.forEach(g=>g.el.remove());ghostEls=[];ghostRow=null;
+          _cssRevertAll();_activeExpandId='';}}
       /* --- Drag date feedback (works regardless of lockV) --- */
       {const primaryD=dragItems.find(d=>d.id===it.id);
-        if(primaryD){const isT=it.type==='task',curL=parseFloat(primaryD.el.style.left),nx=curL+(isT?0:8),snapDate=this.xD(nx,tl);
+        if(primaryD){const isT=it.type==='task',curL=parseFloat(primaryD.el.style.left);
+          const nx=curL+(isT?0:8),snapDate=this.xD(nx,tl);
           const newEnd=isT?this._calcEndDate({startDate:snapDate,duration:it.duration,durMode:it.durMode}):null;
           const delta=U.days(origDate,snapDate);
           // Delta badge at cursor
@@ -2694,8 +2825,9 @@ const App={
           tipEl.style.left=(ev.clientX+16)+'px';tipEl.style.top=(ev.clientY-28)+'px';
           // Bottom status strip
           if(!stripEl){stripEl=document.createElement('div');stripEl.className='drag-date-strip';document.body.appendChild(stripEl)}
-          if(isT){stripEl.textContent='Start: '+U.fmt(origDate,'MMM D')+' → '+U.fmt(snapDate,'MMM D')+'    End: '+U.fmt(it.endDate,'MMM D')+' → '+U.fmt(newEnd,'MMM D')}
-          else{stripEl.textContent='Date: '+U.fmt(origDate,'MMM D')+' → '+U.fmt(snapDate,'MMM D')}
+          const _nSuffix=dragItems.length>1?' ('+dragItems.length+' items)':'';
+          if(isT){stripEl.textContent='Start: '+U.fmt(origDate,'MMM D')+' → '+U.fmt(snapDate,'MMM D')+'    End: '+U.fmt(it.endDate,'MMM D')+' → '+U.fmt(newEnd,'MMM D')+_nSuffix}
+          else{stripEl.textContent='Date: '+U.fmt(origDate,'MMM D')+' → '+U.fmt(snapDate,'MMM D')+_nSuffix}
           // Header column highlight
           if(!shiftHeld){
             let sc=-1,ec=-1;
@@ -2710,14 +2842,15 @@ const App={
       }
     }};
     const _cleanFeedback=()=>{if(tipEl){tipEl.remove();tipEl=null}if(stripEl){stripEl.remove();stripEl=null}const hdrRows=this.$.tl_hdr.querySelectorAll('.th-row');const lastRow=hdrRows[hdrRows.length-1];if(lastRow){for(const c of lastRow.children)c.classList.remove('drag-target')}prevHdrStart=prevHdrEnd=-1};
-    const up=ev=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('keydown',esc);dragItems.forEach(d=>d.el.classList.remove('dragging'));if(hlEl){hlEl.remove();hlEl=null;hlRow=null}if(ghostEl){ghostEl.remove();ghostEl=null;ghostRow=null}_cleanFeedback();if(!dr){this.sched();return}if(dr){
+    const up=ev=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('keydown',esc);dragItems.forEach(d=>d.el.classList.remove('dragging'));if(hlEl){hlEl.remove();hlEl=null;hlRow=null}ghostEls.forEach(g=>g.el.remove());ghostEls=[];ghostRow=null;_cleanFeedback();if(!dr){this.sched();return}if(dr){
       dragItems.forEach(d=>{
         const nL=parseFloat(d.el.style.left),nx=nL+(d.item.type==='milestone'?8:0),nd=this.xD(nx,tl);
         if(!this.proj.lockH){if(d.item.type==='milestone')d.item.date=nd;else{d.item.startDate=nd;d.item.endDate=this._calcEndDate(d.item)}}
       });
+      const origSlId=it.swimlaneId;
       if(!this.proj.lockV){
         let targetSlId=null,targetRect=null,targetRow=null;
-        document.querySelectorAll('.sw-row').forEach(slEl=>{const r=slEl.getBoundingClientRect();if(ev.clientY>=r.top&&ev.clientY<=r.bottom&&slEl.dataset.slId){targetSlId=slEl.dataset.slId;targetRect=r;targetRow=slEl}});
+        document.querySelectorAll('.sw-row').forEach(slEl=>{const r=slEl.getBoundingClientRect();if(ev.clientY>=r.top&&ev.clientY<=r.bottom&&slEl.dataset.slId&&!slEl.classList.contains('sl-hidden-indicator')){targetSlId=slEl.dataset.slId;targetRect=r;targetRow=slEl}});
         if(targetSlId){
           dragItems.forEach(dd=>dd.item.swimlaneId=targetSlId);
           const sl=this.gs(targetSlId);
@@ -2725,7 +2858,6 @@ const App={
           const rH=38;
           const subs=sl&&sl.collapsed==='expanded'?sl.subSwimlanes||[]:[];
           if(subs.length>0){
-            // Sub-swimlane band detection (same logic as showCtx)
             const dividers=[];
             targetRow.querySelectorAll('.sub-sw-div').forEach(d=>{const t=parseFloat(d.style.top)||0;dividers.push(d.classList.contains('sub-rh')?t+3:t)});
             const bands=[];let prevY=0;
@@ -2734,14 +2866,18 @@ const App={
             let dropSubSw='',dropSubRow=0;
             for(const band of bands){if(yInSw>=band.yStart&&yInSw<band.yEnd){dropSubSw=band.ssId;dropSubRow=Math.max(0,Math.floor((yInSw-band.yStart-6)/rH));break}}
             if(!dropSubSw&&bands.length){dropSubSw=bands[0].ssId;dropSubRow=0}
-            const primarySubRow=dropSubRow;
-            dragItems.forEach(dd=>{dd.item.subSwimId=dropSubSw;if(dd.id===it.id)dd.item.subRow=primarySubRow;else dd.item.subRow=Math.max(0,primarySubRow+((dd.item.subRow||0)-(it.subRow||0)))});
+            // Use compacted row offsets for multi-drag bundling
+            dragItems.forEach(dd=>{dd.item.subSwimId=dropSubSw;dd.item.subRow=Math.max(0,dropSubRow+dd.rowOffset)});
           }else{
             const baseRow=Math.max(0,Math.floor((yInSw-6)/rH));
-            dragItems.forEach(dd=>{dd.item.subSwimId='';if(dd.id===it.id)dd.item.subRow=baseRow;else dd.item.subRow=Math.max(0,baseRow+((dd.item.subRow||0)-(it.subRow||0)))});
+            dragItems.forEach(dd=>{dd.item.subSwimId='';dd.item.subRow=Math.max(0,baseRow+dd.rowOffset)});
           }
+          // Toast for multi-item cross-swimlane drop
+          if(dragItems.length>1&&targetSlId!==origSlId){const tSl=this.gs(targetSlId);this.toast('Moved '+dragItems.length+' items to '+(tSl?.name||'swimlane'))}
         }
       }
+      // Revert all CSS-only expansions on drop — sched()+renderTL() will rebuild at correct heights
+      _cssRevertAll();_activeExpandId='';
       if(this.proj.autoRange)this.autoRange();
       if(this.proj.schedulingMode==='scheduled'){
         dragItems.forEach(d=>{
@@ -2763,9 +2899,13 @@ const App={
       if(this.sel.length===1){const selIt=this.gi(this.sel[0]);if(selIt)this.openPanel(selIt)}else if(this.sel.length>1)this.openBulkPanel()}};
     const esc=ev2=>{if(ev2.key==='Escape'&&dr){ev2.preventDefault();
       dragItems.forEach(d=>{d.el.style.left=d.oL+'px';d.el.style.top=d.oT+'px';d.el.classList.remove('dragging')});
-      if(hlEl){hlEl.remove();hlEl=null;hlRow=null}if(ghostEl){ghostEl.remove();ghostEl=null;ghostRow=null}_cleanFeedback();
+      if(hlEl){hlEl.remove();hlEl=null;hlRow=null}ghostEls.forEach(g=>g.el.remove());ghostEls=[];ghostRow=null;_cleanFeedback();
+      // Revert all CSS-only expansions on escape
+      _cssRevertAll();_activeExpandId='';
       document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('keydown',esc);
-      if(this.undoStack.length)this.undoStack.pop();dr=false}};
+      if(this.undoStack.length)this.undoStack.pop();
+      if(dragItems.length>1)this.toast('Drag cancelled – '+dragItems.length+' items restored');
+      this.sched();dr=false}};
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);document.addEventListener('keydown',esc)},
 
   startTR(e,rh){e.stopPropagation();e.preventDefault();const iid=rh.dataset.iid,side=rh.dataset.side,it=this.gi(iid);if(!it)return;

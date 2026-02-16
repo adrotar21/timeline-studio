@@ -169,6 +169,8 @@ body.theme-midnight #props-panel{box-shadow:-4px 0 20px rgba(0,0,0,.4)}
 .sw-row.collapsed{height:28px!important;overflow:hidden}
 .drag-band-hl{position:absolute;left:0;right:0;background:var(--accL);z-index:3;pointer-events:none}
 .drag-ghost{position:absolute;border:2px dashed var(--acc);border-radius:4px;opacity:.45;z-index:4;pointer-events:none}
+.drag-ghost.drag-ghost-primary{opacity:.55}
+.drag-ghost.drag-ghost-secondary{opacity:.3}
 .drag-delta-tip{position:fixed;z-index:10001;background:rgba(0,0,0,.85);color:#fff;padding:3px 8px;border-radius:4px;font-family:var(--mono);font-size:11px;font-weight:600;pointer-events:none;white-space:nowrap}
 .drag-date-strip{position:fixed;bottom:0;left:0;right:0;height:22px;background:rgba(0,0,0,.85);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:500;z-index:10001;pointer-events:none;letter-spacing:.3px}
 .th-cell.drag-target{background:rgba(255,255,255,.08);box-shadow:inset 0 -2px 0 var(--acc)}
