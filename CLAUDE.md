@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.30.1` — Work-mode drag resize fix (B30) + new task cal-mode default (B31). Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.30.2` — New Project shortcut fix (B32) + doc shortcut audit. Live at `https://adrotar21.github.io/timeline-studio/`.
 - Version history tracked in `BACKLOG.md` under the Versioning table and via **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 

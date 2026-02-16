@@ -170,10 +170,12 @@ screenshots/        # README images
 |----------|--------|----------|--------|
 | `Ctrl+S` | Save | `Ctrl+Shift+S` | Save As |
 | `Ctrl+Z` | Undo | `Ctrl+Y` | Redo |
-| `Ctrl+N` | New Project | `Ctrl+O` | Open File |
+| `Ctrl+Alt+N` | New Project | `Ctrl+O` | Open File |
 | `Ctrl+A` | Select All | `Delete` | Delete selected |
 | `Ctrl+Shift+F` | Fit to Content | `Alt+1` | Fit to Content (alt) |
+| `Ctrl+Shift+G` | Fit to Selection | `Ctrl+Shift+K` | Open Shortcut Manager |
 | `Ctrl+Shift+P` | Propagate | `Escape` | Deselect / close |
+| `+` / `-` | Zoom In/Out (5%) | `Middle-drag` | Pan timeline |
 | `Arrow keys` | Nudge items | `Ctrl+Arrows` | Nudge faster (7d) |
 | `Ctrl+Click` | Multi-select | `Alt+Drag` | Lasso select |
 | `Ctrl+Scroll` | Zoom (5% steps) | `Ctrl+Shift+Scroll` | Fine zoom (1% steps) |

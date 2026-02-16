@@ -1,4 +1,4 @@
-/* Timeline Studio v0.30.1 — Work-mode drag resize fix (B30): removed startTR() guard that blocked drag-based resizing for work-mode tasks, replaced calendar-only duration math with _countWorkingDays() for correct working-day duration during drag. New task default fix (B31): changed default durMode from 'work' to 'cal' for addItem() and data table type conversion, aligning with migration code and eliminating unintended resize restrictions on freshly created tasks. */
+/* Timeline Studio v0.30.2 — New Project shortcut changed from Ctrl+N to Ctrl+Alt+N (B32) to avoid browser conflict. Ctrl+N added to BROWSER_RESERVED. Doc shortcut audit: README table updated with Ctrl+Shift+G, Ctrl+Shift+K, +/-, Middle-drag; MANUAL_QA.md fixed Ctrl+Shift+C and Ctrl+Shift+Z references. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -38,7 +38,7 @@ const SHORTCUT_ACTIONS=[
   {id:'redo',cat:'Reserved',label:'Redo',defaults:['Ctrl+y'],global:true,reserved:true},
   {id:'save',cat:'Reserved',label:'Save',defaults:['Ctrl+s'],global:true,reserved:true},
   {id:'saveAs',cat:'Reserved',label:'Save As',defaults:['Ctrl+Shift+s'],global:true,reserved:true},
-  {id:'newProject',cat:'Reserved',label:'New Project',defaults:['Ctrl+n'],global:true,reserved:true},
+  {id:'newProject',cat:'Reserved',label:'New Project',defaults:['Ctrl+Alt+n'],global:true,reserved:true},
   {id:'openFile',cat:'Reserved',label:'Open File',defaults:['Ctrl+o'],global:true,reserved:true},
   {id:'escape',cat:'Reserved',label:'Deselect / Close',defaults:['Escape'],global:true,reserved:true,special:true},
   {id:'shortcutMgr',cat:'Reserved',label:'Open Shortcut Manager',defaults:['Ctrl+Shift+k'],global:true,reserved:true},
@@ -87,7 +87,7 @@ const MOUSE_REFS=[
   {combo:'Middle-drag',desc:'Pan / scroll timeline'},
 ];
 const RESERVED_COMBOS=new Set(['Ctrl+v','Ctrl+c','Ctrl+x']);
-const BROWSER_RESERVED=new Set(['Ctrl+t','Ctrl+w','Ctrl+Tab','Ctrl+Shift+Tab','Ctrl+l','Ctrl+Shift+t','Ctrl+Shift+n','F5','Ctrl+F5','F12']);
+const BROWSER_RESERVED=new Set(['Ctrl+t','Ctrl+w','Ctrl+Tab','Ctrl+Shift+Tab','Ctrl+l','Ctrl+Shift+t','Ctrl+Shift+n','Ctrl+n','F5','Ctrl+F5','F12']);
 
 
 function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}

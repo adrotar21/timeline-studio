@@ -206,14 +206,14 @@ Full walkthrough organized by feature area. Do this before major releases.
 - [ ] Special characters (commas, quotes) escaped correctly
 
 #### Clipboard Screenshot
-- [ ] Ctrl+Shift+C copies viewport to clipboard
+- [ ] Screenshot (viewport): use toolbar Export > Copy Screenshot (no default shortcut)
 - [ ] Paste into image editor confirms correct capture
 
 ### Keyboard Shortcuts
 
 #### Core Shortcuts
 - [ ] Ctrl+Z: Undo
-- [ ] Ctrl+Shift+Z: Redo
+- [ ] Ctrl+Y: Redo
 - [ ] Ctrl+S: Save
 - [ ] Ctrl+A: Select All items
 - [ ] Delete: Remove selected items
