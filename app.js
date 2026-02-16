@@ -1,4 +1,4 @@
-/* Timeline Studio v0.31.0 — Advanced Import (F35): click-to-link column mapping GUI with auto-detection, prefix delimiters, status matching, overloads. Tunable Auto Arrange: density-based algorithm with Row Spread / Label Padding / Date Weight sliders, Consider Label Width toggle, live preview with draggable modal, Reset Defaults button. Import label defaults (center for tasks, bottom for milestones). */
+/* Timeline Studio v0.31.1 — File handle bug fixes (B33–B35): Save As button no longer clears _fileHandle before picker (B33), Save As preserves original file handle for future Ctrl+S instead of redirecting to the copy (B34), openFile() now confirms unsaved changes before discarding (B35). */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -342,10 +342,11 @@ const App={
   async saveFile(saveAs=false){
     const data=JSON.stringify(this.proj,null,2);
     if(!saveAs&&this._fileHandle){try{const w=await this._fileHandle.createWritable();await w.write(data);await w.close();this.markClean();this.toast('Saved!');this.autoSave();return}catch(e){}}
-    if(window.showSaveFilePicker){try{this._fileHandle=await window.showSaveFilePicker({suggestedName:(this.proj.name||'timeline')+'.tlproj',types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}]});const w=await this._fileHandle.createWritable();await w.write(data);await w.close();this.markClean();this.toast('Saved!');this.autoSave();return}catch(e){if(e.name==='AbortError')return}}
+    if(window.showSaveFilePicker){try{const prevHandle=saveAs?this._fileHandle:null;const h=await window.showSaveFilePicker({suggestedName:(this.proj.name||'timeline')+'.tlproj',types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}]});const w=await h.createWritable();await w.write(data);await w.close();this._fileHandle=saveAs&&prevHandle?prevHandle:h;this.markClean();this.toast(saveAs?'Saved copy!':'Saved!');this.autoSave();return}catch(e){if(e.name==='AbortError')return}}
     const b=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.tlproj';a.click();URL.revokeObjectURL(a.href);this.markClean();this.toast('Downloaded!');this.autoSave()
   },
   async openFile(){
+    if(this._unsaved&&!confirm('Unsaved changes will be lost. Continue?'))return;
     if(window.showOpenFilePicker){
       try{const[handle]=await window.showOpenFilePicker({types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}],multiple:false});
         const file=await handle.getFile();const text=await file.text();
@@ -894,7 +895,7 @@ const App={
     on('btn-new',()=>{this.$.file_dropdown.classList.add('hidden');this.newProjAct()});
     on('btn-open',()=>{this.$.file_dropdown.classList.add('hidden');this.openFile()});
     on('btn-save',()=>{this.$.file_dropdown.classList.add('hidden');this.saveFile()});
-    on('btn-save-as',()=>{this.$.file_dropdown.classList.add('hidden');this._fileHandle=null;this.saveFile(true)});
+    on('btn-save-as',()=>{this.$.file_dropdown.classList.add('hidden');this.saveFile(true)});
     // Add dropdown
     on('btn-add-menu',()=>{this.closeAllDD();this.$.add_dropdown.classList.toggle('hidden');this.posDD(this.$.add_dropdown)});
     on('btn-add-ms',()=>{this.$.add_dropdown.classList.add('hidden');this.addItem('milestone')});
