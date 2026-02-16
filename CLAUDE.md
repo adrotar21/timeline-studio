@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.30.2` — New Project shortcut fix (B32) + doc shortcut audit. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.31.0` — Advanced Import (F35) + Tunable Auto Arrange. Live at `https://adrotar21.github.io/timeline-studio/`.
 - Version history tracked in `BACKLOG.md` under the Versioning table and via **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 
@@ -33,14 +33,14 @@ This is a non-negotiable design constraint. The three-file architecture is what 
 ```
 TimelineProject/
 ├── index.html                      # Complete DOM structure, modals, inline styles
-├── app.js                          # All application logic (~2596 lines)
+├── app.js                          # All application logic (~4400 lines)
 ├── styles.css                      # Theming via CSS custom properties, layout
 ├── Showcase.tlproj                 # Example project file (JSON)
 ├── CLAUDE.md                       # This file — project context for AI assistants
 ├── BACKLOG.md                      # Prioritized bugs/features with version history
 ├── dependency-prd.md               # Dependency engine PRD (Phase 1 + Phase 2)
 ├── screenshots/                    # README screenshots (5 PNGs)
-└── tests/                         # 1,624 tests across 14 files
+└── tests/                         # 2,112 tests across 18 files
     ├── helpers/                    # Shared assert lib, mock engine, builder factories
     ├── core/                       # Scheduling engine, dependency type tests
     ├── features/                   # Per-feature: status, shortcuts, swimlane, fit, data table, CSV, SVG

@@ -1,4 +1,4 @@
-/* Timeline Studio v0.30.2 — New Project shortcut changed from Ctrl+N to Ctrl+Alt+N (B32) to avoid browser conflict. Ctrl+N added to BROWSER_RESERVED. Doc shortcut audit: README table updated with Ctrl+Shift+G, Ctrl+Shift+K, +/-, Middle-drag; MANUAL_QA.md fixed Ctrl+Shift+C and Ctrl+Shift+Z references. */
+/* Timeline Studio v0.31.0 — Advanced Import (F35): click-to-link column mapping GUI with auto-detection, prefix delimiters, status matching, overloads. Tunable Auto Arrange: density-based algorithm with Row Spread / Label Padding / Date Weight sliders, Consider Label Width toggle, live preview with draggable modal, Reset Defaults button. Import label defaults (center for tasks, bottom for milestones). */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -90,7 +90,7 @@ const RESERVED_COMBOS=new Set(['Ctrl+v','Ctrl+c','Ctrl+x']);
 const BROWSER_RESERVED=new Set(['Ctrl+t','Ctrl+w','Ctrl+Tab','Ctrl+Shift+Tab','Ctrl+l','Ctrl+Shift+t','Ctrl+Shift+n','Ctrl+n','F5','Ctrl+F5','F12']);
 
 
-function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
+function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
 const App={
   proj:newProj(),sel:[],undoStack:[],redoStack:[],
@@ -100,6 +100,7 @@ const App={
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
   _fileHandle:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
   _lassoMode:false,_panMode:false,_panning:false,_collapsedSl:new Set(),_pendingFit:false,
+  _impData:null,_impMappings:[],_impOverloads:[],_impSelSrc:null,_impStatusMap:{},_impLinkColors:['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'],
   _scMap:{},_scOverrides:null,_scRecording:null,_nudgeSnapped:false,_nudgeSnapTimer:null,_scMsgTimer:null,
 
   /* Keyboard Shortcut Engine */
@@ -220,6 +221,9 @@ const App={
      'help-body','np-template','np-name',
      'data-filter-bar','flt-type','flt-name','flt-owner','flt-swim','flt-sub','flt-notes','flt-start','flt-end','flt-status',
      'as-term','as-results',
+     'imp-adv-toggle','imp-adv-arrow','imp-adv-body','imp-file-input','imp-file-name',
+     'imp-map-area','imp-status-area','imp-perfect-match','imp-preview-wrap','imp-status',
+     'imp-overload-area','btn-imp-do',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
     this.loadAuto();this.migrate();this._loadShortcuts();this._buildShortcutMap();
     this.applyTheme();this.bind();this.sched();if(this.proj.items.length)this._pendingFit=true;
@@ -250,7 +254,7 @@ const App={
     p.holidays.forEach(h=>{if(h.schedAround==null)h.schedAround=true});
     if(p.tttEnabled==null)p.tttEnabled=false;if(p.tttMilestoneId==null)p.tttMilestoneId='';
     if(p.showFloat==null)p.showFloat=false;if(p.schedulingMode==null)p.schedulingMode='manual';
-    if(p.labelWidth==null)p.labelWidth=160;
+    if(p.labelWidth==null)p.labelWidth=160;if(p.autoSortSwimlanes==null)p.autoSortSwimlanes=false;if(p.arrangeSpread==null)p.arrangeSpread=50;if(p.arrangePadding==null)p.arrangePadding=50;if(p.arrangeDateWeight==null)p.arrangeDateWeight=20;if(p.arrangeLabels==null)p.arrangeLabels=false;
     if(!Array.isArray(p.statusDefs))p.statusDefs=[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}];
     if(!p.statusDisplay)p.statusDisplay={show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''};
     /* Migrate colorOverride from mode dropdown to separate toggle */
@@ -963,6 +967,10 @@ const App={
     on('btn-status-impact-close',()=>{document.getElementById('status-impact-modal').classList.add('hidden')});
     on('btn-add-ssw',()=>this.addSubSw());on('btn-dt-paste',()=>this.showPaste());on('btn-do-paste',()=>this.doPaste());
     this.$.paste_ta.oninput=()=>this.previewPaste();
+    on('imp-adv-toggle',()=>this.toggleAdvImport());
+    on('btn-imp-file',()=>this.$.imp_file_input.click());
+    if(this.$.imp_file_input)this.$.imp_file_input.onchange=e=>this.handleImportFile(e);
+    on('btn-imp-do',()=>this.doAdvancedImport());
     on('btn-dt-add',()=>this.addItem('milestone'));on('btn-dt-del',()=>this.deleteSel());on('btn-dt-dup',()=>this.dupSel());
     on('btn-clr-sel-deps',()=>this.clearSelDeps());
     on('btn-clr-all-deps',()=>{if(confirm('Remove ALL deps?')){this.snap();this.proj.items.forEach(i=>i.deps=[]);this.sched();this.autoSave()}});
@@ -1008,8 +1016,8 @@ const App={
     document.getElementById('hol-paste-ta').oninput=()=>{const r=this.parseHolidays(document.getElementById('hol-paste-ta').value);document.getElementById('hol-paste-prev').textContent=r.length?`Found ${r.length} holiday${r.length>1?'s':''}`:''};
     const opSlider=document.getElementById('s-wknd-opacity');if(opSlider)opSlider.oninput=function(){document.getElementById('s-wknd-opval').textContent=this.value+'%'};
     document.querySelectorAll('.theme-card').forEach(c=>{c.onclick=()=>{document.querySelectorAll('.theme-card').forEach(x=>x.classList.remove('active'));c.classList.add('active')}});
-    document.querySelectorAll('[data-close-modal]').forEach(b=>{b.onclick=e=>e.target.closest('.modal')?.classList.add('hidden')});
-    document.querySelectorAll('.modal-overlay').forEach(el=>{el.onclick=()=>el.closest('.modal')?.classList.add('hidden')});
+    document.querySelectorAll('[data-close-modal]').forEach(b=>{b.onclick=e=>{const m=e.target.closest('.modal');if(m){m.classList.add('hidden');if(m.id==='settings-modal')this._resetSettingsLive()}}});
+    document.querySelectorAll('.modal-overlay').forEach(el=>{el.onclick=()=>{const m=el.closest('.modal');if(m){m.classList.add('hidden');if(m.id==='settings-modal')this._resetSettingsLive()}}});
     document.addEventListener('click',e=>{
       if(!e.target.closest('#ctx-menu'))this.$.ctx_menu.classList.add('hidden');
       if(!e.target.closest('#dt-ctx-menu'))this.$.dt_ctx_menu.classList.add('hidden');
@@ -1797,6 +1805,11 @@ const App={
     this.sched();this.autoSave();this.toast('Status settings applied');
   },
 
+  _resetSettingsLive(){
+    const sm=document.getElementById('settings-modal');if(!sm)return;
+    sm.classList.remove('modal-live');
+    const mc=sm.querySelector('.modal-content');if(mc){mc.style.left='';mc.style.top=''}
+  },
   showSettings(){
     const p=this.proj;this.$.s_name.value=p.name;this.$.s_owner.value=p.owner||'';
     this.$.s_start.value=p.timelineStart;this.$.s_end.value=p.timelineEnd;
@@ -1824,6 +1837,61 @@ const App={
     document.getElementById('s-hol-opval').textContent=(p.holidayOpacity||12)+'%';
     document.getElementById('s-hol-labels').checked=p.holidayLabels!==false;
     document.getElementById('s-sched-around').checked=p.scheduleAroundNonWorking!==false;
+    document.getElementById('s-auto-sort-swim').checked=!!p.autoSortSwimlanes;
+    const arrSpEl=document.getElementById('s-arrange-spread'),arrSpVal=document.getElementById('s-arrange-spread-val');
+    const arrPdEl=document.getElementById('s-arrange-padding'),arrPdVal=document.getElementById('s-arrange-padding-val');
+    const arrDwEl=document.getElementById('s-arrange-dateweight'),arrDwVal=document.getElementById('s-arrange-dateweight-val');
+    const arrLiveChk=document.getElementById('s-arrange-live');
+    const settingsModal=document.getElementById('settings-modal');
+    const settingsContent=settingsModal?.querySelector('.modal-content');
+    const settingsHeader=settingsModal?.querySelector('.modal-header');
+    const arrLabChk=document.getElementById('s-arrange-labels');
+    /* Live preview state */
+    let liveSnapped=false;
+    const liveUpdate=()=>{
+      if(!arrLiveChk||!arrLiveChk.checked)return;
+      if(!liveSnapped){this.snap();liveSnapped=true}
+      p.arrangeSpread=+arrSpEl.value;p.arrangePadding=+arrPdEl.value;
+      if(arrDwEl)p.arrangeDateWeight=+arrDwEl.value;
+      if(arrLabChk)p.arrangeLabels=arrLabChk.checked;
+      this._autoLayoutItems([...p.items]);this.sched()
+    };
+    /* Toggle live preview mode: make modal movable, overlay transparent */
+    const toggleLive=(on)=>{
+      if(!settingsModal)return;
+      settingsModal.classList.toggle('modal-live',on);
+      if(on&&settingsContent){
+        /* Position modal to top-right so timeline is visible */
+        const vw=window.innerWidth,vh=window.innerHeight;
+        const rect=settingsContent.getBoundingClientRect();
+        settingsContent.style.left=Math.max(8,vw-rect.width-24)+'px';
+        settingsContent.style.top=Math.max(8,Math.min(60,(vh-rect.height)/2))+'px';
+        liveUpdate();
+      }else if(settingsContent){
+        settingsContent.style.left='';settingsContent.style.top='';
+      }
+    };
+    if(arrLiveChk){arrLiveChk.checked=false;arrLiveChk.onchange=function(){toggleLive(this.checked)}}
+    /* Draggable header (only active in modal-live mode) */
+    if(settingsHeader&&settingsContent){
+      let dragX=0,dragY=0,startL=0,startT=0,dragging=false;
+      const onMove=e=>{if(!dragging)return;settingsContent.style.left=(startL+e.clientX-dragX)+'px';settingsContent.style.top=(startT+e.clientY-dragY)+'px'};
+      const onUp=()=>{dragging=false;document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp)};
+      settingsHeader.addEventListener('mousedown',e=>{
+        if(!settingsModal.classList.contains('modal-live'))return;
+        if(e.target.closest('button'))return;/* don't drag from close btn */
+        dragging=true;dragX=e.clientX;dragY=e.clientY;
+        const r=settingsContent.getBoundingClientRect();startL=r.left;startT=r.top;
+        document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+        e.preventDefault()
+      })
+    }
+    if(arrSpEl){arrSpEl.value=p.arrangeSpread!=null?p.arrangeSpread:50;if(arrSpVal)arrSpVal.textContent=arrSpEl.value;arrSpEl.oninput=function(){if(arrSpVal)arrSpVal.textContent=this.value;liveUpdate()}}
+    if(arrPdEl){arrPdEl.value=p.arrangePadding!=null?p.arrangePadding:50;if(arrPdVal)arrPdVal.textContent=arrPdEl.value;arrPdEl.oninput=function(){if(arrPdVal)arrPdVal.textContent=this.value;liveUpdate()}}
+    if(arrDwEl){arrDwEl.value=p.arrangeDateWeight!=null?p.arrangeDateWeight:20;if(arrDwVal)arrDwVal.textContent=arrDwEl.value;arrDwEl.oninput=function(){if(arrDwVal)arrDwVal.textContent=this.value;liveUpdate()}}
+    if(arrLabChk){arrLabChk.checked=!!p.arrangeLabels;arrLabChk.onchange=function(){liveUpdate()}}
+    const btnArrReset=document.getElementById('btn-arrange-reset');
+    if(btnArrReset)btnArrReset.onclick=()=>{const d=newProj();if(arrSpEl){arrSpEl.value=d.arrangeSpread;if(arrSpVal)arrSpVal.textContent=d.arrangeSpread}if(arrPdEl){arrPdEl.value=d.arrangePadding;if(arrPdVal)arrPdVal.textContent=d.arrangePadding}if(arrDwEl){arrDwEl.value=d.arrangeDateWeight;if(arrDwVal)arrDwVal.textContent=d.arrangeDateWeight}if(arrLabChk)arrLabChk.checked=!!d.arrangeLabels;liveUpdate()};
     document.getElementById('hol-import-box').classList.add('hidden');
     document.getElementById('hol-add-box')?.classList.add('hidden');
     document.getElementById('hol-paste-ta').value='';
@@ -1903,6 +1971,7 @@ const App={
     }
   },
   applySettings(){
+    this._resetSettingsLive();
     this.snap();const p=this.proj;p.name=this.$.s_name.value;p.owner=this.$.s_owner.value;
     p.timelineStart=this.$.s_start.value;p.timelineEnd=this.$.s_end.value;
     p.autoRange=this.$.s_auto_range.checked;p.showToday=this.$.s_today.checked;p.showDeps=this.$.s_deps.checked;
@@ -1921,6 +1990,11 @@ const App={
     const oldSchedAround=p.scheduleAroundNonWorking;
     p.scheduleAroundNonWorking=document.getElementById('s-sched-around').checked;
     if(p.scheduleAroundNonWorking!==oldSchedAround)this._recalcNonWorkingDays();
+    p.autoSortSwimlanes=document.getElementById('s-auto-sort-swim').checked;
+    const arrSpEl2=document.getElementById('s-arrange-spread');if(arrSpEl2)p.arrangeSpread=+arrSpEl2.value;
+    const arrPdEl2=document.getElementById('s-arrange-padding');if(arrPdEl2)p.arrangePadding=+arrPdEl2.value;
+    const arrDwEl2=document.getElementById('s-arrange-dateweight');if(arrDwEl2)p.arrangeDateWeight=+arrDwEl2.value;
+    const arrLabChk2=document.getElementById('s-arrange-labels');if(arrLabChk2)p.arrangeLabels=arrLabChk2.checked;
     p.watermark=this.$.s_watermark.checked;p.wmDate=this.$.s_wm_date.value;p.wmPos=this.$.s_wm_pos.value;
     p.wmShowOwner=document.getElementById('s-wm-owner').checked;
     const dfEl=document.getElementById('s-default-folder');if(dfEl)p.defaultFolder=dfEl.value.trim();
@@ -1991,10 +2065,640 @@ const App={
     if(changed)this.sched();
   },
 
-  showPaste(){this.$.paste_sw.innerHTML=this.proj.swimlanes.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');this.$.paste_ta.value='';this.$.paste_prev.textContent='';this.showModal('paste-modal');this.$.paste_ta.focus()},
+  showPaste(){this.$.paste_sw.innerHTML=this.proj.swimlanes.map(s=>`<option value="${s.id}">${U.esc(s.name)}</option>`).join('');this.$.paste_ta.value='';this.$.paste_prev.textContent='';this._impData=null;this._impMappings=[];this._impOverloads=[];this._impSelSrc=null;this._impStatusMap={};if(this.$.imp_file_name)this.$.imp_file_name.textContent='No file selected';if(this.$.imp_file_input)this.$.imp_file_input.value='';if(this.$.imp_map_area)this.$.imp_map_area.classList.add('hidden');if(this.$.imp_status_area)this.$.imp_status_area.classList.add('hidden');if(this.$.imp_perfect_match)this.$.imp_perfect_match.classList.add('hidden');if(this.$.imp_preview_wrap){this.$.imp_preview_wrap.classList.add('hidden');this.$.imp_preview_wrap.innerHTML=''}if(this.$.imp_overload_area){this.$.imp_overload_area.classList.add('hidden');this.$.imp_overload_area.innerHTML=''}if(this.$.imp_status)this.$.imp_status.textContent='';if(this.$.btn_imp_do)this.$.btn_imp_do.classList.add('hidden');if(this.$.imp_adv_toggle)this.$.imp_adv_toggle.classList.remove('open');if(this.$.imp_adv_body)this.$.imp_adv_body.classList.add('hidden');this.showModal('paste-modal');this.$.paste_ta.focus()},
   previewPaste(){const r=this.parsePaste(this.$.paste_ta.value);this.$.paste_prev.textContent=r.length?`Found ${r.length} items`:''},
   parsePaste(text){return text.trim().split('\n').filter(l=>l.trim()).map(line=>{const c=line.split('\t').map(s=>s.trim());if(c.length<2||!c[0])return null;if(c.length>=3){const d1=U.parseDate(c[1]),d2=U.parseDate(c[2]);if(d1&&d2)return{name:c[0],type:'task',startDate:U.iso(d1),endDate:U.iso(d2)};if(d1)return{name:c[0],type:'milestone',date:U.iso(d1)}}if(c.length>=2){const d=U.parseDate(c[1]);if(d)return{name:c[0],type:'milestone',date:U.iso(d)}}return null}).filter(Boolean)},
   doPaste(){const rows=this.parsePaste(this.$.paste_ta.value);if(!rows.length){this.toast('No valid data','error');return}this.snap();const tgt=this.$.paste_sw.value;rows.forEach((r,i)=>{const it={id:U.id(),type:r.type,name:r.name,swimlaneId:tgt,subSwimId:'',subRow:i%3,color:COLORS[i%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:''};if(r.type==='milestone')it.date=r.date;else{it.startDate=r.startDate;it.endDate=r.endDate;it.duration=U.days(r.startDate,r.endDate)+1}this.proj.items.push(it)});if(this.proj.autoRange)this.autoRange();document.getElementById('paste-modal').classList.add('hidden');this.sched();this.autoSave();this.toast(`Imported ${rows.length} items`)},
+
+  /* ===== ADVANCED IMPORT (F35) ===== */
+  _IMP_TGT_FIELDS:['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Predecessors','Status','StatusDate','Progress','Notes','Color','Pinned','Hidden','LabelPos','FontSize','TextColor','DateFormat','ShowDate'],
+  _IMP_ALIASES:{
+    Name:['name','task name','title','item','activity','description','task'],
+    Owner:['owner','assigned to','assignee','resource','responsible'],
+    Type:['type','item type'],
+    Start:['start','start date','begin','from','start_date'],
+    End:['end','end date','finish','due','to','due date','finish date','end_date'],
+    Duration:['duration','dur','days','length'],
+    Swimlane:['swimlane','lane','swim lane','category','group','phase','stream'],
+    SubSwim:['sub-swimlane','sub swimlane','sub','sub lane','subswimlane','subswim'],
+    Row:['row','sub row','subrow'],
+    Predecessors:['predecessors','predecessor','deps','dependencies','pred','depends on'],
+    Status:['status','state','health'],
+    StatusDate:['statusdate','status date','status_date'],
+    Progress:['progress','pct','percent','%','% complete'],
+    Notes:['notes','note','comments','comment','details'],
+    Color:['color','colour'],
+    Pinned:['pinned','pin','locked'],
+    Hidden:['hidden','hide'],
+    LabelPos:['labelpos','label position','labelposition','label pos'],
+    FontSize:['fontsize','font size','font_size'],
+    TextColor:['textcolor','text color','text_color'],
+    DateFormat:['dateformat','date format','date_format'],
+    ShowDate:['showdate','show date','show_date']
+  },
+  /* CSV/TSV Parsing */
+  parseCSV(text){
+    const rows=[],n=text.length;let row=[],field='',inQ=false,i=0;
+    while(i<n){const c=text[i];
+      if(inQ){if(c==='"'){if(i+1<n&&text[i+1]==='"'){field+='"';i+=2}else{inQ=false;i++}}else{field+=c;i++}}
+      else{if(c==='"'){inQ=true;i++}else if(c===','){row.push(field.trim());field='';i++}
+      else if(c==='\r'){row.push(field.trim());field='';rows.push(row);row=[];i++;if(i<n&&text[i]==='\n')i++}
+      else if(c==='\n'){row.push(field.trim());field='';rows.push(row);row=[];i++}
+      else{field+=c;i++}}
+    }
+    if(field||row.length)row.push(field.trim());
+    if(row.length>0&&!(row.length===1&&row[0]===''))rows.push(row);
+    return rows;
+  },
+  parseTSV(text){
+    return text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim()).map(l=>l.split('\t').map(c=>c.trim()));
+  },
+  /* Toggle / File Handling */
+  toggleAdvImport(){
+    const tg=this.$.imp_adv_toggle,bd=this.$.imp_adv_body;if(!tg||!bd)return;
+    tg.classList.toggle('open');bd.classList.toggle('hidden');
+  },
+  handleImportFile(e){
+    const file=e.target.files&&e.target.files[0];if(!file)return;
+    this.$.imp_file_name.textContent=file.name;
+    file.text().then(text=>{
+      const ext=file.name.split('.').pop().toLowerCase();
+      let rows;
+      if(ext==='tsv')rows=this.parseTSV(text);
+      else if(ext==='csv')rows=this.parseCSV(text);
+      else{const l1=text.split('\n')[0]||'';rows=(l1.split('\t').length>l1.split(',').length)?this.parseTSV(text):this.parseCSV(text)}
+      if(!rows.length||rows.length<2){this.toast('File has no data rows','error');return}
+      const headers=rows[0],data=rows.slice(1).filter(r=>r.some(c=>c));
+      this._impData={headers,rows:data};
+      this._impMappings=this.autoDetectMappings(headers);
+      this._impOverloads=[];this._impSelSrc=null;this._impStatusMap={};
+      const isTLS=this._checkTLSReimport(this._impMappings,headers);
+      if(isTLS)this.$.imp_perfect_match.classList.remove('hidden');
+      else this.$.imp_perfect_match.classList.add('hidden');
+      this.$.imp_status.textContent=`${data.length} data row${data.length!==1?'s':''}, ${headers.length} column${headers.length!==1?'s':''}`;
+      this.$.btn_imp_do.classList.remove('hidden');
+      this.renderMappingGUI();
+      this._checkStatusMapping();
+      this.renderImportPreview();
+    }).catch(err=>{this.toast('Failed to read file: '+err.message,'error')});
+  },
+  /* Auto-Detection */
+  autoDetectMappings(headers){
+    const mappings=[],used=new Set();
+    headers.forEach((h,i)=>{
+      const hl=h.toLowerCase().trim();
+      for(const[field,aliases] of Object.entries(this._IMP_ALIASES)){
+        if(used.has(field))continue;
+        if(aliases.includes(hl)){mappings.push({srcIdx:i,tgtField:field,color:this._impLinkColors[mappings.length%this._impLinkColors.length]});used.add(field);return}
+      }
+    });
+    return mappings;
+  },
+  _checkTLSReimport(mappings,headers){
+    return headers.length>0&&mappings.length===headers.length;
+  },
+  /* Click-to-Link Mapping GUI */
+  renderMappingGUI(){
+    const area=this.$.imp_map_area;if(!area||!this._impData)return;
+    area.classList.remove('hidden');area.innerHTML='';
+    const tgtFields=this._IMP_TGT_FIELDS;
+    const srcLinked=new Map();const tgtLinked=new Map();
+    this._impMappings.forEach(m=>{srcLinked.set(m.srcIdx,m);tgtLinked.set(m.tgtField,m)});
+    this._impOverloads.forEach(ov=>{ov.srcIdxs.forEach(si=>srcLinked.set(si,{tgtField:ov.tgtField,color:'#6b7280'}));tgtLinked.set(ov.tgtField,{color:'#6b7280'})});
+    const title=document.createElement('div');title.className='imp-section-title';title.textContent='Column Mapping';title.style.marginTop='0';area.appendChild(title);
+    const hint=document.createElement('div');hint.style.cssText='font-size:10px;color:var(--tx3);margin-bottom:8px';hint.textContent='Click a source column, then click a target field to link. Ctrl+Click to select multiple sources and combine into one target. Click a linked chip to unlink.';area.appendChild(hint);
+    const cols=document.createElement('div');cols.className='imp-map-cols';cols.style.position='relative';area.appendChild(cols);
+    /* Left: source columns */
+    const srcCol=document.createElement('div');srcCol.className='imp-map-col';
+    const srcTitle=document.createElement('div');srcTitle.className='imp-map-col-title';srcTitle.textContent='Imported Columns';srcCol.appendChild(srcTitle);
+    this._impData.headers.forEach((h,i)=>{
+      const chip=document.createElement('div');chip.className='imp-chip';chip.dataset.side='src';chip.dataset.idx=i;
+      const dot=document.createElement('span');dot.className='imp-chip-dot';dot.dataset.dotSrc=i;
+      const m=srcLinked.get(i);
+      if(m){chip.classList.add('linked');dot.style.background=m.color;chip.style.borderColor=m.color+'66'}
+      if(this._impSelSrc instanceof Set?this._impSelSrc.has(i):this._impSelSrc===i)chip.classList.add('selected');
+      const lbl=document.createElement('span');lbl.textContent=h;lbl.style.cssText='overflow:hidden;text-overflow:ellipsis;flex:1';lbl.title=h;
+      chip.appendChild(dot);chip.appendChild(lbl);
+      if(m&&this._impMappings.some(mm=>mm.srcIdx===i)){const badge=document.createElement('span');badge.className='imp-chip-badge';badge.textContent='auto';chip.appendChild(badge)}
+      chip.onclick=(e)=>this._onChipClick('src',i,e);
+      srcCol.appendChild(chip);
+    });
+    cols.appendChild(srcCol);
+    /* SVG overlay */
+    const svgNS='http://www.w3.org/2000/svg';
+    const svg=document.createElementNS(svgNS,'svg');svg.classList.add('imp-link-svg');svg.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none';
+    cols.appendChild(svg);
+    /* Right: target fields */
+    const tgtCol=document.createElement('div');tgtCol.className='imp-map-col';
+    const tgtTitle=document.createElement('div');tgtTitle.className='imp-map-col-title';tgtTitle.textContent='Timeline Studio Fields';tgtCol.appendChild(tgtTitle);
+    tgtFields.forEach(f=>{
+      const chip=document.createElement('div');chip.className='imp-chip';chip.dataset.side='tgt';chip.dataset.field=f;
+      const dot=document.createElement('span');dot.className='imp-chip-dot';dot.dataset.dotTgt=f;
+      const m=tgtLinked.get(f);
+      if(m){chip.classList.add('linked');dot.style.background=m.color;chip.style.borderColor=(m.color||'#6b7280')+'66'}
+      const lbl=document.createElement('span');lbl.textContent=f;lbl.style.cssText='overflow:hidden;text-overflow:ellipsis;flex:1';
+      chip.appendChild(dot);chip.appendChild(lbl);
+      chip.onclick=()=>this._onChipClick('tgt',f);
+      tgtCol.appendChild(chip);
+    });
+    cols.appendChild(tgtCol);
+    /* Combine Columns button */
+    const ovBtn=document.createElement('button');ovBtn.className='btn btn-secondary';ovBtn.style.cssText='font-size:10px;padding:4px 10px;margin-top:8px';ovBtn.textContent='+ Combine Columns';
+    ovBtn.onclick=()=>this.addOverloadRow();area.appendChild(ovBtn);
+    /* Draw lines after layout settles */
+    requestAnimationFrame(()=>this._drawMappingLines(svg,cols));
+  },
+  _onChipClick(side,val,evt){
+    const ctrlKey=evt&&(evt.ctrlKey||evt.metaKey);
+    if(side==='src'){
+      const idx=+val;
+      /* If this source is already linked in 1:1, unlink it */
+      const li=this._impMappings.findIndex(m=>m.srcIdx===idx);
+      if(li>=0){
+        const wasStatus=this._impMappings[li].tgtField==='Status';
+        this._impMappings.splice(li,1);this._impSelSrc=null;
+        this.renderMappingGUI();if(wasStatus)this._checkStatusMapping();this.renderImportPreview();return;
+      }
+      /* If this source is part of an overload, unlink the whole overload row */
+      const ovIdx=this._impOverloads.findIndex(ov=>ov.srcIdxs.includes(idx));
+      if(ovIdx>=0){
+        const wasStatus=this._impOverloads[ovIdx].tgtField==='Status';
+        this._impOverloads.splice(ovIdx,1);this._impSelSrc=null;
+        this.renderOverloads();this.renderMappingGUI();if(wasStatus)this._checkStatusMapping();this.renderImportPreview();return;
+      }
+      /* Ctrl+Click: toggle source in multi-selection */
+      if(ctrlKey){
+        if(!(this._impSelSrc instanceof Set))this._impSelSrc=this._impSelSrc!=null?new Set([this._impSelSrc]):new Set();
+        if(this._impSelSrc.has(idx))this._impSelSrc.delete(idx);else this._impSelSrc.add(idx);
+        if(!this._impSelSrc.size)this._impSelSrc=null;
+        this.renderMappingGUI();return;
+      }
+      /* Regular click: single select/deselect */
+      const curSingle=this._impSelSrc instanceof Set?null:this._impSelSrc;
+      this._impSelSrc=(curSingle===idx)?null:idx;
+      this.renderMappingGUI();
+    }else{
+      /* Target clicked */
+      const field=val;
+      const selSet=this._impSelSrc instanceof Set?this._impSelSrc:null;
+      const selSingle=this._impSelSrc instanceof Set?null:this._impSelSrc;
+      if(selSet===null&&selSingle===null){
+        /* Nothing selected: if target is linked, unlink from target side */
+        const li=this._impMappings.findIndex(m=>m.tgtField===field);
+        if(li>=0){const wasStatus=field==='Status';this._impMappings.splice(li,1);this.renderMappingGUI();if(wasStatus)this._checkStatusMapping();this.renderImportPreview()}
+        const oi=this._impOverloads.findIndex(ov=>ov.tgtField===field);
+        if(oi>=0){const wasStatus=field==='Status';this._impOverloads.splice(oi,1);this.renderOverloads();this.renderMappingGUI();if(wasStatus)this._checkStatusMapping();this.renderImportPreview()}
+        return;
+      }
+      if(selSet&&selSet.size>1){
+        /* Multi-select → auto-create overload */
+        const srcIdxs=[...selSet].sort((a,b)=>a-b);
+        /* Remove any existing 1:1 mappings for these sources or this target */
+        this._impMappings=this._impMappings.filter(m=>m.tgtField!==field&&!srcIdxs.includes(m.srcIdx));
+        /* Remove any existing overload for this target */
+        this._impOverloads=this._impOverloads.filter(ov=>ov.tgtField!==field);
+        const delims=[];const prefixes=[];
+        for(let i=0;i<srcIdxs.length;i++){delims.push(' ');prefixes.push('')}
+        this._impOverloads.push({srcIdxs,tgtField:field,delimiters:delims.slice(0,-1),prefixes});
+        this._impSelSrc=null;
+        this.renderOverloads();this.renderMappingGUI();
+        if(field==='Status')this._checkStatusMapping();
+        this.renderImportPreview();
+        this.$.imp_overload_area.classList.remove('hidden');
+        return;
+      }
+      /* Single source selected → 1:1 mapping */
+      const srcIdx=selSet?[...selSet][0]:selSingle;
+      this._impMappings=this._impMappings.filter(m=>m.tgtField!==field&&m.srcIdx!==srcIdx);
+      this._impMappings.push({srcIdx,tgtField:field,color:this._impLinkColors[this._impMappings.length%this._impLinkColors.length]});
+      this._impSelSrc=null;
+      this.renderMappingGUI();
+      if(field==='Status')this._checkStatusMapping();
+      this.renderImportPreview();
+    }
+  },
+  _drawMappingLines(svg,container){
+    if(!svg||!container)return;
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    const cRect=container.getBoundingClientRect();
+    const svgNS='http://www.w3.org/2000/svg';
+    this._impMappings.forEach(m=>{
+      const srcDot=container.querySelector(`[data-dot-src="${m.srcIdx}"]`);
+      const tgtDot=container.querySelector(`[data-dot-tgt="${m.tgtField}"]`);
+      if(!srcDot||!tgtDot)return;
+      const sr=srcDot.getBoundingClientRect(),tr=tgtDot.getBoundingClientRect();
+      const line=document.createElementNS(svgNS,'line');
+      line.setAttribute('x1',sr.right-cRect.left);line.setAttribute('y1',sr.top+sr.height/2-cRect.top);
+      line.setAttribute('x2',tr.left-cRect.left);line.setAttribute('y2',tr.top+tr.height/2-cRect.top);
+      line.setAttribute('stroke',m.color||'#3b82f6');line.setAttribute('stroke-width','2');line.setAttribute('stroke-linecap','round');
+      line.setAttribute('opacity','0.6');
+      svg.appendChild(line);
+    });
+    /* Also draw overload lines */
+    this._impOverloads.forEach(ov=>{
+      const tgtDot=container.querySelector(`[data-dot-tgt="${ov.tgtField}"]`);if(!tgtDot)return;
+      const tr=tgtDot.getBoundingClientRect();
+      ov.srcIdxs.forEach(si=>{
+        const srcDot=container.querySelector(`[data-dot-src="${si}"]`);if(!srcDot)return;
+        const sr=srcDot.getBoundingClientRect();
+        const line=document.createElementNS(svgNS,'line');
+        line.setAttribute('x1',sr.right-cRect.left);line.setAttribute('y1',sr.top+sr.height/2-cRect.top);
+        line.setAttribute('x2',tr.left-cRect.left);line.setAttribute('y2',tr.top+tr.height/2-cRect.top);
+        line.setAttribute('stroke','#6b7280');line.setAttribute('stroke-width','1.5');
+        line.setAttribute('stroke-dasharray','4 2');line.setAttribute('opacity','0.5');
+        svg.appendChild(line);
+      });
+    });
+  },
+  /* Overload (Combine Columns) */
+  addOverloadRow(){
+    this._impOverloads.push({srcIdxs:[],tgtField:'',delimiters:[' '],prefixes:['']});
+    this.renderOverloads();this.$.imp_overload_area.classList.remove('hidden');
+  },
+  removeOverloadRow(idx){
+    this._impOverloads.splice(idx,1);this.renderOverloads();this.renderMappingGUI();this.renderImportPreview();
+  },
+  renderOverloads(){
+    const area=this.$.imp_overload_area;if(!area)return;
+    if(!this._impOverloads.length){area.classList.add('hidden');area.innerHTML='';return}
+    area.classList.remove('hidden');area.innerHTML='';
+    const title=document.createElement('div');title.className='imp-section-title';title.textContent='Combined Columns';area.appendChild(title);
+    const usedInMap=new Set(this._impMappings.map(m=>m.srcIdx));
+    const usedInOv=new Set();this._impOverloads.forEach(ov=>ov.srcIdxs.forEach(s=>usedInOv.add(s)));
+    const hdrs=this._impData?this._impData.headers:[];
+    this._impOverloads.forEach((ov,oi)=>{
+      const row=document.createElement('div');row.className='imp-overload-row';
+      if(!ov.prefixes)ov.prefixes=[];
+      /* Source dropdowns with prefix inputs + delimiters between */
+      const maxSrc=4;
+      for(let si=0;si<ov.srcIdxs.length||si===0;si++){
+        if(si>0){
+          const delInput=document.createElement('input');delInput.className='imp-overload-delim';
+          delInput.value=ov.delimiters[si-1]||' ';delInput.title='Delimiter between columns';delInput.placeholder=' ';
+          delInput.oninput=()=>{ov.delimiters[si-1]=delInput.value;this.renderImportPreview()};
+          row.appendChild(delInput);
+        }
+        /* Prefix input before each source */
+        const pfx=document.createElement('input');pfx.className='imp-overload-delim';pfx.style.width='40px';
+        pfx.value=ov.prefixes[si]||'';pfx.title='Prefix text (prepended before this column value)';pfx.placeholder='pfx';
+        const _psi=si;pfx.oninput=()=>{while(ov.prefixes.length<=_psi)ov.prefixes.push('');ov.prefixes[_psi]=pfx.value;this.renderImportPreview()};
+        row.appendChild(pfx);
+        const sel=document.createElement('select');
+        sel.innerHTML='<option value="">(column)</option>'+hdrs.map((h,hi)=>`<option value="${hi}"${ov.srcIdxs[si]===hi?' selected':''}>${U.esc(h)}</option>`).join('');
+        sel.value=ov.srcIdxs[si]!=null?ov.srcIdxs[si]:'';
+        const _si=si;sel.onchange=()=>{
+          const v=sel.value===''?null:+sel.value;
+          if(v!==null){ov.srcIdxs[_si]=v;while(ov.delimiters.length<ov.srcIdxs.length-1)ov.delimiters.push(' ');while(ov.prefixes.length<ov.srcIdxs.length)ov.prefixes.push('')}
+          else{ov.srcIdxs.splice(_si,1);ov.delimiters.splice(Math.max(0,_si-1),1);ov.prefixes.splice(_si,1)}
+          this.renderOverloads();this.renderMappingGUI();this.renderImportPreview();
+        };
+        row.appendChild(sel);
+      }
+      if(ov.srcIdxs.length<maxSrc){
+        const addBtn=document.createElement('button');addBtn.className='imp-overload-add';addBtn.textContent='+';addBtn.title='Add another source column';
+        addBtn.onclick=()=>{ov.srcIdxs.push(null);ov.delimiters.push(' ');ov.prefixes.push('');this.renderOverloads()};
+        row.appendChild(addBtn);
+      }
+      const arrow=document.createElement('span');arrow.className='imp-overload-arrow';arrow.textContent='\u2192';row.appendChild(arrow);
+      /* Target dropdown */
+      const tsel=document.createElement('select');
+      tsel.innerHTML='<option value="">(target)</option>'+this._IMP_TGT_FIELDS.map(f=>`<option value="${f}"${ov.tgtField===f?' selected':''}>${f}</option>`).join('');
+      tsel.onchange=()=>{ov.tgtField=tsel.value;this.renderMappingGUI();this.renderImportPreview()};
+      row.appendChild(tsel);
+      const rm=document.createElement('button');rm.className='imp-overload-rm';rm.textContent='\u2715';rm.title='Remove';rm.onclick=()=>this.removeOverloadRow(oi);
+      row.appendChild(rm);
+      area.appendChild(row);
+    });
+  },
+  /* Inline Status Matching */
+  _checkStatusMapping(){
+    const area=this.$.imp_status_area;if(!area)return;
+    const statusMapping=this._impMappings.find(m=>m.tgtField==='Status');
+    if(!statusMapping||!this._impData){area.classList.add('hidden');area.innerHTML='';this._impStatusMap={};return}
+    const colIdx=statusMapping.srcIdx;
+    const uniqueVals=[...new Set(this._impData.rows.map(r=>(r[colIdx]||'').trim()).filter(v=>v))];
+    if(!uniqueVals.length){area.classList.add('hidden');this._impStatusMap={};return}
+    const defs=this.proj.statusDefs||[];
+    let allMatch=true;const autoMap={};
+    uniqueVals.forEach(v=>{
+      const vl=v.toLowerCase();
+      const match=defs.find(sd=>sd.name&&sd.name.toLowerCase()===vl);
+      if(match){autoMap[v]=match.id}else{allMatch=false;autoMap[v]=''}
+    });
+    this._impStatusMap=autoMap;
+    if(allMatch){area.classList.add('hidden');area.innerHTML='';return}
+    this.renderStatusMatching(uniqueVals,defs);
+  },
+  renderStatusMatching(uniqueVals,defs){
+    const area=this.$.imp_status_area;if(!area)return;
+    area.classList.remove('hidden');area.innerHTML='';
+    const title=document.createElement('div');title.className='imp-section-title';title.textContent='Status Matching';area.appendChild(title);
+    const desc=document.createElement('div');desc.style.cssText='font-size:10px;color:var(--tx3);margin-bottom:6px';
+    desc.textContent='Some imported status values don\'t match your current definitions. Map them below.';area.appendChild(desc);
+    uniqueVals.forEach(v=>{
+      const row=document.createElement('div');row.className='imp-status-row';
+      const valSpan=document.createElement('span');valSpan.className='imp-status-val';valSpan.textContent='"'+v+'"';valSpan.title=v;row.appendChild(valSpan);
+      const arrow=document.createElement('span');arrow.className='imp-status-arrow';arrow.textContent='\u2192';row.appendChild(arrow);
+      const sel=document.createElement('select');
+      let opts='<option value="">(skip)</option><option value="__create__">(create new)</option>';
+      defs.filter(sd=>sd.id!=='blank').forEach(sd=>{opts+=`<option value="${sd.id}">${U.esc(sd.name)}</option>`});
+      sel.innerHTML=opts;
+      if(this._impStatusMap[v])sel.value=this._impStatusMap[v];
+      sel.onchange=()=>{this._impStatusMap[v]=sel.value};
+      row.appendChild(sel);area.appendChild(row);
+    });
+    const notice=document.createElement('div');notice.className='imp-status-notice';
+    notice.textContent='To edit your status definitions before importing, go to Settings > Status.';
+    area.appendChild(notice);
+  },
+  /* Preview Table */
+  renderImportPreview(){
+    const wrap=this.$.imp_preview_wrap;if(!wrap||!this._impData)return;
+    const mapped=this._buildMappedRows();if(!mapped.length){wrap.classList.add('hidden');wrap.innerHTML='';return}
+    wrap.classList.remove('hidden');
+    const preview=mapped.slice(0,5);
+    const allFields=new Set();this._impMappings.forEach(m=>allFields.add(m.tgtField));
+    this._impOverloads.forEach(ov=>{if(ov.tgtField)allFields.add(ov.tgtField)});
+    const fields=[...allFields];if(!fields.length){wrap.innerHTML='';return}
+    let h='<div class="imp-section-title" style="margin-top:0">Preview (first '+preview.length+' rows)</div><table class="imp-prev-table"><thead><tr>';
+    fields.forEach(f=>{h+=`<th>${U.esc(f)}</th>`});
+    h+='</tr></thead><tbody>';
+    preview.forEach(row=>{h+='<tr>';fields.forEach(f=>{const v=row[f]||'';h+=`<td title="${U.esc(v)}">${U.esc(v)}</td>`});h+='</tr>'});
+    h+='</tbody></table>';wrap.innerHTML=h;
+  },
+  _buildMappedRows(){
+    if(!this._impData)return[];
+    return this._impData.rows.map(r=>{
+      const out={};
+      this._impMappings.forEach(m=>{if(m.srcIdx<r.length)out[m.tgtField]=r[m.srcIdx]||''});
+      this._impOverloads.forEach(ov=>{
+        if(!ov.tgtField||!ov.srcIdxs.length)return;
+        const delims=ov.delimiters||[];const pfxs=ov.prefixes||[];
+        let combined='',count=0;
+        ov.srcIdxs.forEach((si,i)=>{
+          if(si==null||si>=r.length)return;
+          if(count>0)combined+=(delims[i-1]!=null?delims[i-1]:' ');
+          combined+=(pfxs[i]||'')+(r[si]||'');count++;
+        });
+        out[ov.tgtField]=combined;
+      });
+      return out;
+    });
+  },
+  /* Resolution Helpers */
+  _resolveSwimlaneName(name){
+    if(!name)return this.proj.swimlanes[0]?this.proj.swimlanes[0].id:'';
+    const nl=name.toLowerCase().trim();
+    const match=this.proj.swimlanes.find(s=>s.name.toLowerCase().trim()===nl);
+    if(match)return match.id;
+    const newSl={id:U.id(),name:name.trim(),color:COLORS[this.proj.swimlanes.length%COLORS.length],height:120,subSwimlanes:[],collapsed:'expanded'};
+    this.proj.swimlanes.push(newSl);return newSl.id;
+  },
+  _resolveSubSwimName(slId,name){
+    if(!name||!slId)return'';
+    const sl=this.proj.swimlanes.find(s=>s.id===slId);if(!sl)return'';
+    const nl=name.toLowerCase().trim();
+    const match=(sl.subSwimlanes||[]).find(ss=>ss.name.toLowerCase().trim()===nl);
+    if(match)return match.id;
+    if(!sl.subSwimlanes)sl.subSwimlanes=[];
+    const newSs={id:U.id(),name:name.trim(),collapsed:'expanded'};
+    sl.subSwimlanes.push(newSs);return newSs.id;
+  },
+  _resolveStatusForImport(val){
+    if(!val)return'';
+    const mapped=this._impStatusMap[val];
+    if(!mapped||mapped==='')return'';
+    if(mapped==='__create__'){
+      const newDef={id:U.id(),name:val.trim(),desc:'Imported status',color:'#6b7280',shortName:val.trim().charAt(0).toUpperCase(),emoji:'\u26AA'};
+      this.proj.statusDefs.push(newDef);this._impStatusMap[val]=newDef.id;return newDef.id;
+    }
+    return mapped;
+  },
+  /* Predecessor Parsing */
+  parsePredString(predStr){
+    if(!predStr)return[];
+    return predStr.split(/[,;]/).map(s=>s.trim()).filter(Boolean).map(part=>{
+      const m=part.match(/^(\d+)\s*(FS|SS|FF|SF)?\s*([+-]\s*\d+)?\s*d?\s*$/i);
+      if(!m)return null;
+      return{rowNum:+m[1],type:m[2]?m[2].toUpperCase():'FS',lag:m[3]?parseInt(m[3].replace(/\s/g,''),10):0};
+    }).filter(Boolean);
+  },
+  /* Main Import Execution */
+  doAdvancedImport(){
+    if(!this._impData||!this._impMappings.length&&!this._impOverloads.length){this.toast('No column mappings configured','error');return}
+    const mapped=this._buildMappedRows();if(!mapped.length){this.toast('No data rows to import','error');return}
+    this.snap();
+    const tgtSl=this.$.paste_sw.value;let createdSl=0,createdStatus=0;
+    const newItems=mapped.map((row,i)=>{
+      const it={id:U.id(),type:'milestone',name:row.Name||'Item '+(i+1),swimlaneId:tgtSl,subSwimId:'',subRow:i%3,
+        color:COLORS[i%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,
+        showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',
+        dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:'',durMode:'cal'};
+      if(row.Owner)it.owner=row.Owner;
+      if(row.Notes)it.notes=row.Notes;
+      if(row.Color&&/^#[0-9a-f]{3,8}$/i.test(row.Color))it.color=row.Color;
+      if(row.Progress)it.progress=Math.max(0,Math.min(100,parseInt(row.Progress,10)||0));
+      if(row.Pinned)it.pinned=/^(y|yes|true|1)$/i.test(row.Pinned);
+      if(row.Hidden)it.hidden=/^(y|yes|true|1)$/i.test(row.Hidden);
+      if(row.LabelPos)it.labelPosition=row.LabelPos;
+      if(row.FontSize)it.fontSize=parseInt(row.FontSize,10)||0;
+      if(row.TextColor)it.textColor=row.TextColor;
+      if(row.DateFormat)it.dateFormat=row.DateFormat;
+      if(row.ShowDate)it.showDate=/^(y|yes|true|1)$/i.test(row.ShowDate);
+      /* Swimlane resolution */
+      if(row.Swimlane){
+        const slBefore=this.proj.swimlanes.length;
+        it.swimlaneId=this._resolveSwimlaneName(row.Swimlane);
+        if(this.proj.swimlanes.length>slBefore)createdSl++;
+      }
+      if(row.SubSwim)it.subSwimId=this._resolveSubSwimName(it.swimlaneId,row.SubSwim);
+      if(row.Row!=null&&row.Row!=='')it.subRow=parseInt(row.Row,10)||0;
+      /* Status resolution */
+      if(row.Status){
+        const stBefore=this.proj.statusDefs.length;
+        it.status=this._resolveStatusForImport(row.Status);
+        if(this.proj.statusDefs.length>stBefore)createdStatus++;
+      }
+      if(row.StatusDate){const sd=U.parseDate(row.StatusDate);if(sd)it.statusDate=U.iso(sd)}
+      /* Dates & type inference */
+      const startD=row.Start?U.parseDate(row.Start):null;
+      const endD=row.End?U.parseDate(row.End):null;
+      let explicitType=row.Type?row.Type.toLowerCase().trim():'';
+      if(explicitType==='task'||explicitType==='milestone')it.type=explicitType;
+      else if(startD&&endD){
+        /* Same start/end → milestone. Duration=1 with same dates → milestone. */
+        const sameDate=U.iso(startD)===U.iso(endD);
+        const dur1=row.Duration&&parseInt(row.Duration,10)===1;
+        it.type=(sameDate||(dur1&&sameDate))?'milestone':'task';
+      }else if(startD)it.type='milestone';
+      if(it.type==='task'){
+        it.startDate=startD?U.iso(startD):U.iso(new Date());
+        it.endDate=endD?U.iso(endD):null;
+        if(row.Duration&&!it.endDate){
+          it.duration=parseInt(row.Duration,10)||14;
+          it.endDate=U.iso(U.addDays(it.startDate,it.duration-1));
+        }else if(it.endDate){
+          it.duration=U.days(it.startDate,it.endDate)+1;
+        }else{
+          it.duration=14;it.endDate=U.iso(U.addDays(it.startDate,13));
+        }
+      }else{
+        it.date=startD?U.iso(startD):U.iso(new Date());
+      }
+      /* Default label positions for import (unless CSV explicitly mapped LabelPos) */
+      if(!row.LabelPos)it.labelPosition=it.type==='task'?'center':'bottom';
+      return it;
+    });
+    /* Pass 2: Resolve predecessors */
+    const predField=this._impMappings.find(m=>m.tgtField==='Predecessors');
+    if(predField){
+      mapped.forEach((row,i)=>{
+        if(!row.Predecessors)return;
+        const preds=this.parsePredString(row.Predecessors);
+        preds.forEach(p=>{
+          if(p.rowNum<1||p.rowNum>newItems.length)return;
+          if(p.rowNum-1===i)return;
+          newItems[i].deps.push({id:newItems[p.rowNum-1].id,type:p.type,lag:p.lag});
+        });
+      });
+    }
+    /* Pass 2.5: Auto-layout rows (skip if Row column explicitly mapped) */
+    const hasRowMapping=this._impMappings.some(m=>m.tgtField==='Row')||this._impOverloads.some(ov=>ov.tgtField==='Row');
+    if(!hasRowMapping)this._autoLayoutItems(newItems);
+    /* Pass 3: Finalize */
+    newItems.forEach(it=>this.proj.items.push(it));
+    if(this.proj.autoSortSwimlanes)this._sortSwimlanesGravity();
+    if(this.proj.autoRange)this.autoRange();
+    document.getElementById('paste-modal').classList.add('hidden');
+    this.sched();this.autoSave();
+    let msg=`Imported ${newItems.length} item${newItems.length!==1?'s':''}`;
+    if(createdSl)msg+=`, created ${createdSl} swimlane${createdSl!==1?'s':''}`;
+    if(createdStatus)msg+=`, created ${createdStatus} status${createdStatus!==1?'es':''}`;
+    this.toast(msg);
+  },
+
+  /* Density-Based Auto-Layout — tunable via proj.arrangeSpread and proj.arrangePadding.
+     Computes a row budget from item density, distributes items using date-elapsed
+     percentage for natural top-left → bottom-right waterfall, then compacts empties.
+     Used by both import (newItems only) and autoArrange (any scope). */
+  _autoLayoutItems(items){
+    if(!items||!items.length)return;
+    const p=this.proj;
+    /* Use zoom=100% as reference so layout is deterministic regardless of current view zoom */
+    const baseCw={weeks:60,months:100,quarters:200,years:400}[p.timescale]||100;
+    const daysPerCol={weeks:7,months:30,quarters:91,years:365}[p.timescale]||30;
+    const pxPerDay=Math.max(0.5,baseCw/daysPerCol);
+    const fs=p.fontSize||11;
+    /* Tunable parameters from project settings */
+    const padPx=10+((p.arrangePadding!=null?p.arrangePadding:50)/100)*110;/* 10–120px */
+    const spread=(p.arrangeSpread!=null?p.arrangeSpread:50)/100;/* 0.1–1.0 */
+    const dateWt=(100-(p.arrangeDateWeight!=null?p.arrangeDateWeight:20))/100;/* slider 0→waterfall, 100→pack */
+    const useLabels=!!p.arrangeLabels;/* consider label width in collision detection */
+    /* Group by swimlane+sub-swimlane */
+    const grps=new Map();
+    items.forEach(it=>{const k=it.swimlaneId+'|'+(it.subSwimId||'');if(!grps.has(k))grps.set(k,[]);grps.get(k).push(it)});
+    for(const[,grp]of grps){
+      /* Step 1: Sort chronologically */
+      grp.sort((a,b)=>{const da=new Date((a.date||a.startDate||'')+'T12:00:00'),db=new Date((b.date||b.startDate||'')+'T12:00:00');return da-db});
+      /* Step 2: Compute visual ends and density stats */
+      let earliestStart=null,latestVE=null,totalVisDays=0;
+      const meta=[];
+      for(const it of grp){
+        const s=it.date||it.startDate||'',e=it.endDate||it.date||s;
+        const lp=it.labelPosition||'right';
+        const nameW=useLabels?this._mt(it.name||'',fs,'600'):0;
+        const barDur=Math.max(1,U.days(s,e)+1);
+        const barPx=barDur*pxPerDay;
+        let totalPx=barPx+padPx;/* padPx always adds inter-item breathing room */
+        if(useLabels&&nameW){
+          if(lp==='right')totalPx=barPx+nameW+padPx;
+          else if(lp==='top'||lp==='bottom'){const half=nameW/2,barHalf=barPx/2;if(half>barHalf)totalPx=Math.max(totalPx,barPx+(half-barHalf)*2+padPx)}
+          /* left, center: label doesn't extend rightward past bar → totalPx stays barPx+padPx */
+        }
+        const totalDays=Math.max(barDur,Math.ceil(totalPx/pxPerDay));
+        const ve=U.addDays(s,totalDays);
+        meta.push({s,ve,totalDays});
+        totalVisDays+=totalDays;
+        if(!earliestStart||s<earliestStart)earliestStart=s;
+        if(!latestVE||ve>latestVE)latestVE=ve;
+      }
+      /* Step 3: Density → row budget (tuned by spread slider) */
+      const N=grp.length;
+      const dateSpan=Math.max(1,U.days(earliestStart,latestVE));
+      const avgVisDays=totalVisDays/N;
+      const coverage=(N*avgVisDays)/dateSpan;
+      const minRows=Math.max(1,Math.ceil(coverage));
+      const rawTarget=minRows+spread*(N-minRows);/* lerp: minRows → N */
+      const targetRows=U.clamp(Math.round(rawTarget),1,N);
+      /* Step 4: Date-based proportional placement with spiral search */
+      const rowEnds=[];/* rowEnds[r] = visual end ISO string */
+      for(let i=0;i<N;i++){
+        const it=grp[i],{s,ve}=meta[i];
+        /* Preferred row: blend index-based (pack) and date-based (waterfall) via dateWt */
+        const idxPct=N>1?i/(N-1):0;/* 0→first item, 1→last item (pack top-down) */
+        const daysPct=Math.max(0,U.days(earliestStart,s))/dateSpan;/* date-elapsed % */
+        const blended=idxPct*(1-dateWt)+daysPct*dateWt;/* lerp between pack and waterfall */
+        const preferred=Math.min(targetRows-1,Math.floor(blended*targetRows));
+        let placed=-1;
+        const maxSearch=Math.max(rowEnds.length+1,targetRows+1);
+        for(let off=0;off<=maxSearch&&placed<0;off++){
+          const candidates=off===0?[preferred]:[preferred-off,preferred+off];
+          for(const r of candidates){
+            if(r<0)continue;
+            if(r<rowEnds.length){
+              if(U.days(rowEnds[r],s)>=1){placed=r;break}
+            }else if(r===rowEnds.length){placed=r;break}
+          }
+        }
+        if(placed>=0){
+          while(rowEnds.length<=placed)rowEnds.push(null);
+          rowEnds[placed]=ve;it.subRow=placed;
+        }else{
+          rowEnds.push(ve);it.subRow=rowEnds.length-1;
+        }
+      }
+      /* Step 5: Compact empty rows */
+      const used=new Set(grp.map(it=>it.subRow));
+      const sorted=[...used].sort((a,b)=>a-b);
+      const rMap=new Map();sorted.forEach((old,idx)=>rMap.set(old,idx));
+      grp.forEach(it=>{it.subRow=rMap.get(it.subRow)});
+    }
+  },
+  /* Swimlane Gravity Sort — reorders swimlanes and sub-swimlanes by
+     weighted average date (tasks weighted by duration, milestones by 1). */
+  _sortSwimlanesGravity(){
+    const p=this.proj,EPOCH='2000-01-01';
+    function gravity(its){
+      if(!its.length)return Infinity;
+      let wSum=0,wTot=0;
+      for(const it of its){
+        let mid,w;
+        if(it.type==='task'&&it.startDate&&it.endDate){
+          mid=(U.days(EPOCH,it.startDate)+U.days(EPOCH,it.endDate))/2;
+          w=Math.max(1,it.duration||U.days(it.startDate,it.endDate)+1);
+        }else{
+          mid=U.days(EPOCH,it.date||it.startDate||EPOCH);w=1;
+        }
+        wSum+=w*mid;wTot+=w;
+      }
+      return wTot>0?wSum/wTot:Infinity;
+    }
+    /* Build item index by swimlane */
+    const bySl=new Map();
+    for(const it of p.items){if(!bySl.has(it.swimlaneId))bySl.set(it.swimlaneId,[]);bySl.get(it.swimlaneId).push(it)}
+    /* Sort swimlanes */
+    p.swimlanes.sort((a,b)=>gravity(bySl.get(a.id)||[])-gravity(bySl.get(b.id)||[]));
+    /* Sort sub-swimlanes within each swimlane */
+    for(const sl of p.swimlanes){
+      if(!sl.subSwimlanes||sl.subSwimlanes.length<2)continue;
+      const slItems=bySl.get(sl.id)||[];
+      sl.subSwimlanes.sort((a,b)=>{
+        const aI=slItems.filter(it=>it.subSwimId===a.id);
+        const bI=slItems.filter(it=>it.subSwimId===b.id);
+        return gravity(aI)-gravity(bI);
+      });
+    }
+  },
 
   /* ===== HOLIDAYS ===== */
   parseHolidays(text){return text.trim().split('\n').filter(l=>l.trim()).map(line=>{const c=line.split('\t').map(s=>s.trim());if(c.length<2||!c[0])return null;if(c.length>=3){const d1=U.parseDate(c[1]),d2=U.parseDate(c[2]);if(d1&&d2)return{name:c[0],start:U.iso(d1),end:U.iso(d2)};if(d1)return{name:c[0],start:U.iso(d1),end:U.iso(d1)}}if(c.length>=2){const d=U.parseDate(c[1]);if(d)return{name:c[0],start:U.iso(d),end:U.iso(d)}}return null}).filter(Boolean)},
@@ -3602,34 +4306,22 @@ const App={
     return crit.size?crit:null
   },
 
-  /* Auto-Arrange (fixed: proper Date sorting) */
+  /* Auto-Arrange — delegates to label-aware _autoLayoutItems.
+     When scope='all' or 'swimlane', we must include ALL items in affected groups
+     so density calculation matches import. For 'selection', we still include the
+     full sub-swimlane group so the algorithm sees the same density context. */
   autoArrange(scope='all'){
     this.snap();
     let items;
-    if(scope==='selection')items=this.sel.map(id=>this.gi(id)).filter(Boolean);
-    else if(scope==='swimlane'&&this.sel.length){const it=this.gi(this.sel[0]);items=it?this.proj.items.filter(i=>i.swimlaneId===it.swimlaneId):[];
+    if(scope==='selection'&&this.sel.length){
+      /* Collect full sub-swimlane groups for any selected item so density context matches */
+      const grpKeys=new Set();
+      this.sel.forEach(id=>{const it=this.gi(id);if(it)grpKeys.add(it.swimlaneId+'|'+(it.subSwimId||''))});
+      items=this.proj.items.filter(it=>grpKeys.has(it.swimlaneId+'|'+(it.subSwimId||'')));
+    }else if(scope==='swimlane'&&this.sel.length){
+      const it=this.gi(this.sel[0]);items=it?this.proj.items.filter(i=>i.swimlaneId===it.swimlaneId):[];
     }else items=[...this.proj.items];
-    const groups=new Map();
-    items.forEach(it=>{const k=it.swimlaneId+'|'+(it.subSwimId||'');if(!groups.has(k))groups.set(k,[]);groups.get(k).push(it)});
-    for(const[,grp]of groups){
-      // Fixed: sort by Date objects, not string comparison
-      grp.sort((a,b)=>{
-        const da=new Date((a.date||a.startDate||'')+'T12:00:00');
-        const db=new Date((b.date||b.startDate||'')+'T12:00:00');
-        return da-db;
-      });
-      const rows=[];
-      for(const it of grp){
-        const s=it.date||it.startDate||'',e=it.endDate||it.date||s;
-        let placed=false;
-        for(let r=0;r<rows.length;r++){
-          const last=rows[r][rows[r].length-1];
-          if(U.days(last.end,s)>=1){rows[r].push({start:s,end:e});it.subRow=r;placed=true;
-            if(rows[r].length>=2){const prev=rows[r][rows[r].length-2];if(U.days(prev.end,s)<=7)it.labelPosition='right'}
-            break}}
-        if(!placed){rows.push([{start:s,end:e}]);it.subRow=rows.length-1}
-      }
-    }
+    this._autoLayoutItems(items);
     this.sched();this.autoSave();this.toast('Auto-arranged!')
   },
 

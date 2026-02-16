@@ -139,7 +139,7 @@
         <button class="data-btn" id="btn-clr-sel-deps" style="color:var(--danger)">✕ Sel Deps</button>
         <button class="data-btn" id="btn-clr-all-deps" style="color:var(--danger)">✕ All Deps</button>
         <div class="toolbar-separator"></div>
-        <button class="data-btn" id="btn-dt-paste">📋 Paste</button>
+        <button class="data-btn" id="btn-dt-paste">📋 Paste & Import</button>
         <button class="data-btn" id="btn-dt-export">⬇ Export</button>
         <button class="data-btn" id="btn-dt-filter" data-tooltip="Toggle column filters">🔍 Filter</button>
         <div class="data-search-wrap">
@@ -260,6 +260,52 @@
           <div class="form-group"><label><input type="checkbox" id="s-sched-around" checked> Schedule around weekends &amp; holidays</label>
             <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">When enabled, Propagate and Auto-Schedule will push dates past weekends and holidays marked with the <strong>Sched</strong> checkbox below.</div>
           </div>
+          <div class="form-group" style="margin-top:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <label style="font-weight:600;font-size:11px">Auto Arrange</label>
+              <button class="btn btn-secondary" id="btn-arrange-reset" type="button" style="font-size:9px;padding:2px 8px">Reset Defaults</button>
+            </div>
+            <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4;margin-bottom:6px">Controls how Auto Arrange and imported items are distributed across rows. Imported items are always auto-arranged when no Row column is mapped.</div>
+            <div class="form-group">
+              <label>Row Spread</label>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:9px;color:var(--tx3)">Compact</span>
+                <input type="range" id="s-arrange-spread" min="10" max="100" value="50" style="width:140px">
+                <span style="font-size:9px;color:var(--tx3)">Spread</span>
+                <span id="s-arrange-spread-val" style="font-size:10px;color:var(--tx3);min-width:28px">50</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Label Padding</label>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:9px;color:var(--tx3)">Tight</span>
+                <input type="range" id="s-arrange-padding" min="0" max="100" value="50" style="width:140px">
+                <span style="font-size:9px;color:var(--tx3)">Roomy</span>
+                <span id="s-arrange-padding-val" style="font-size:10px;color:var(--tx3);min-width:28px">50</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Date Weight</label>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:9px;color:var(--tx3)">Pack</span>
+                <input type="range" id="s-arrange-dateweight" min="0" max="100" value="20" style="width:140px">
+                <span style="font-size:9px;color:var(--tx3)">Waterfall</span>
+                <span id="s-arrange-dateweight-val" style="font-size:10px;color:var(--tx3);min-width:28px">20</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label><input type="checkbox" id="s-arrange-labels"> Consider label width</label>
+              <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">When enabled, label text width is included in collision detection so labels don't overlap. Disable for tighter packing, then adjust label positions (center, left, etc.) as needed.</div>
+            </div>
+            <div class="form-group">
+              <label><input type="checkbox" id="s-arrange-live"> Live preview</label>
+              <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">⚠️ Applies sliders to <strong>all items</strong> in real time. The settings window will become movable so you can see the timeline update as you drag the sliders.</div>
+            </div>
+            <div class="form-group">
+              <label><input type="checkbox" id="s-auto-sort-swim"> Sort swimlanes by date gravity</label>
+              <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">Reorders swimlanes and sub-swimlanes chronologically by weighted average date. Tasks carry more weight than milestones. Automatically applied during import when swimlane/sub-swimlane columns are mapped.</div>
+            </div>
+          </div>
           <div class="form-group">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
               <label style="margin:0;font-weight:600;font-size:11px">Holidays (<span id="hol-count">0</span>)</label>
@@ -353,7 +399,35 @@
     </div>
   </div>
   <!-- Paste Modal -->
-  <div id="paste-modal" class="modal hidden"><div class="modal-overlay"></div><div class="modal-content modal-wide"><div class="modal-header"><h2>Paste from Excel</h2><button class="modal-close" data-close-modal>&times;</button></div><div class="modal-body"><p class="paste-inst">Paste tab-separated data: <code>Name [Tab] Date</code> or <code>Name [Tab] Start [Tab] End</code></p><textarea id="paste-ta" class="paste-area" rows="10" placeholder="Paste data here…"></textarea><div id="paste-prev" style="font-size:12px;color:var(--success);margin-top:6px"></div><div class="form-group" style="margin-top:12px"><label>Target Swimlane</label><select id="paste-sw" class="form-input"></select></div></div><div class="modal-footer"><button class="btn btn-secondary" data-close-modal>Cancel</button><button class="btn btn-primary" id="btn-do-paste">Import</button></div></div></div>
+  <div id="paste-modal" class="modal hidden"><div class="modal-overlay"></div><div class="modal-content modal-wide" style="max-width:720px">
+    <div class="modal-header"><h2>Paste & Import</h2><button class="modal-close" data-close-modal>&times;</button></div>
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto">
+      <div class="form-group" style="margin-bottom:12px"><label>Target Swimlane</label><select id="paste-sw" class="form-input"></select></div>
+      <!-- Simple Paste Section -->
+      <div class="imp-section-title">Simple Paste</div>
+      <p class="paste-inst">Paste tab-separated data: <code>Name [Tab] Date</code> or <code>Name [Tab] Start [Tab] End</code></p>
+      <textarea id="paste-ta" class="paste-area" rows="8" placeholder="Paste data here..."></textarea>
+      <div id="paste-prev" style="font-size:12px;color:var(--success);margin-top:6px"></div>
+      <div style="margin-top:8px;text-align:right"><button class="btn btn-primary" id="btn-do-paste">Paste Import</button></div>
+      <!-- Advanced Import Section -->
+      <div id="imp-adv-toggle" class="imp-toggle" style="margin-top:16px"><span id="imp-adv-arrow" class="imp-toggle-arrow">&#9654;</span> Advanced Import (CSV/TSV File)</div>
+      <div id="imp-adv-body" class="hidden">
+        <div style="display:flex;align-items:center;gap:8px;margin:10px 0">
+          <button class="btn btn-secondary" id="btn-imp-file" style="font-size:11px;padding:5px 10px">Choose File</button>
+          <input type="file" id="imp-file-input" accept=".csv,.tsv,.txt" style="display:none">
+          <span id="imp-file-name" style="font-size:11px;color:var(--tx3)">No file selected</span>
+        </div>
+        <div id="imp-perfect-match" class="imp-perfect-match hidden" style="margin-bottom:10px">All columns auto-matched. This appears to be a Timeline Studio export.</div>
+        <div id="imp-map-area" class="hidden"></div>
+        <div id="imp-overload-area" class="hidden" style="margin-top:8px"></div>
+        <div id="imp-status-area" class="hidden" style="margin-top:10px"></div>
+        <div id="imp-preview-wrap" class="hidden" style="margin-top:10px"></div>
+        <div id="imp-status" style="font-size:11px;color:var(--tx3);margin-top:6px"></div>
+        <div style="margin-top:10px;text-align:right"><button class="btn btn-primary hidden" id="btn-imp-do">Import</button></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-close-modal>Cancel</button></div>
+  </div></div>
   <!-- New Project Modal -->
   <div id="new-proj-modal" class="modal hidden"><div class="modal-overlay"></div><div class="modal-content modal-sm"><div class="modal-header"><h2>New Project</h2><button class="modal-close" data-close-modal>&times;</button></div><div class="modal-body">
     <div class="form-group"><label>Template</label><select id="np-template" class="form-input"><option value="blank">Blank Timeline</option><option value="product-launch">Product Launch</option><option value="software-dev">Software Development</option><option value="duplicate">Duplicate Current Project</option></select></div>

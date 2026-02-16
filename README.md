@@ -3,7 +3,7 @@
 **A cross-platform, zero-dependency Gantt chart tool for project managers.**
 Download three files. Open `index.html`. Done.
 
-![Version](https://img.shields.io/badge/version-0.27.0-blue)
+![Version](https://img.shields.io/badge/version-0.31.0-blue)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Files](https://img.shields.io/badge/architecture-3_files-orange)
 
@@ -107,6 +107,27 @@ Multiple output formats for sharing timelines with stakeholders.
 - **Watermark** -- configurable "Last Updated" date stamp with position and optional project owner
 - **Fit-to-content** auto-crops exports to show all items with no wasted space
 
+### Import
+
+Bring data in from Excel, CSV, or other tools with a visual column mapping workflow.
+
+- **Click-to-link column mapping** -- visual GUI to assign source columns to target fields with drag-drop reorder
+- **Auto-detection** -- automatically identifies date, number, status, and color columns
+- **Prefix delimiter extraction** -- split structured names (e.g., "PROJ-001: Task Name") into swimlane groupings
+- **Overload modes** -- append, replace, or skip duplicate items on re-import
+- **Status matching** -- auto-maps imported statuses to project definitions with manual override
+- **Paste from Excel** -- tab-separated import for quick data entry
+
+### Auto Arrange
+
+Automatically lay out items within swimlanes using a tunable density-based algorithm. Access via right-click context menu or Settings.
+
+- **Three tuning sliders** -- Row Spread (compact to sparse), Label Padding (tight to loose), Date Weight (pack to waterfall)
+- **Consider Label Width** toggle -- include or ignore text labels in collision detection
+- **Live preview** -- real-time layout updates with a draggable, transparent-overlay settings modal
+- **Label-position-aware** -- respects right/left/center/top/bottom label placement during collision detection
+- **Reset Defaults** button to restore all sliders to factory settings
+
 ### Themes
 
 Four built-in themes. Switch instantly from Settings.
@@ -156,7 +177,7 @@ The entire application is three files. This is a deliberate architectural constr
 ```
 index.html          # UI structure and modals
 styles.css          # Theming via CSS custom properties
-app.js              # All application logic (~2,600 lines)
+app.js              # All application logic (~4,400 lines)
 Showcase.tlproj     # Example project file
 tests/              # Test suites (not required to run the app)
 screenshots/        # README images
@@ -203,7 +224,7 @@ No build step. Edit the three files directly and refresh your browser.
 **Run tests** (Node.js CLI, zero dependencies):
 
 ```bash
-node tests/run-all.js              # 1,675 tests across 14 files
+node tests/run-all.js              # 2,112 tests across 18 files
 ```
 
 **Tech stack:** Vanilla JavaScript (ES6+), SVG for dependency arrows, Canvas API for PNG export with DPI scaling, CSS custom properties for theming, localStorage for session recovery.
