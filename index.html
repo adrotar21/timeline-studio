@@ -166,9 +166,11 @@
       </div>
       <div id="data-table-wrap"><table id="data-table"><thead id="dt-head"></thead><tbody id="dt-body"></tbody></table></div>
     </div>
-    <div id="dt-ctx-menu" class="hidden">
-      <div class="ctx-item" data-dtact="toggle-pin">📌 Toggle Pin</div>
-      <div class="ctx-item" data-dtact="toggle-hidden">Toggle Hidden</div>
+    <div id="dt-ctx-menu" class="hidden"></div>
+    <div id="dt-ctx-input" class="hidden">
+      <div class="dci-label"></div>
+      <input type="text" id="dci-val" class="form-input" placeholder="">
+      <div class="dci-btns"><button class="btn btn-secondary" id="dci-cancel">Cancel</button><button class="btn btn-primary" id="dci-apply">Apply</button></div>
     </div>
     <aside id="props-panel" class="panel-hidden">
       <div class="panel-header"><h3 id="panel-title">Properties</h3><div class="panel-hdr-acts"><button class="panel-pin" id="btn-pin" data-tooltip="Pin panel open">📌</button><button class="panel-close" id="btn-close-panel">&times;</button></div></div>

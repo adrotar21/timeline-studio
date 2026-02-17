@@ -1,4 +1,4 @@
-/* Timeline Studio v0.31.1 — File handle bug fixes (B33–B35): Save As button no longer clears _fileHandle before picker (B33), Save As preserves original file handle for future Ctrl+S instead of redirecting to the copy (B34), openFile() now confirms unsaved changes before discarding (B35). */
+/* Timeline Studio v0.32.0 — Data Table Context Menu (F40): Column-aware right-click bulk editing in Data View. Recognizes property type (text/status/lane/sub/color/row/progress/pin/hidden/type) and offers smart operations. Text fields: apply value, prepend, append, clear. Enum fields: dropdown picker applies to all selected. Pin/hidden: set/unset/toggle. Type: bulk convert with date rules. Delete with dependency cleanup. Single undo per operation. Restored inline status dropdown (F38). Fixed right-click collapsing multi-selection (B37). 173 new tests. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -1022,6 +1022,7 @@ const App={
     document.addEventListener('click',e=>{
       if(!e.target.closest('#ctx-menu'))this.$.ctx_menu.classList.add('hidden');
       if(!e.target.closest('#dt-ctx-menu'))this.$.dt_ctx_menu.classList.add('hidden');
+      if(!e.target.closest('#dt-ctx-input')){const dci=document.getElementById('dt-ctx-input');if(dci)dci.classList.add('hidden')}
       if(!e.target.closest('.save-btn-group')){this.closeAllDD()}
     });
     this.$.ctx_menu.addEventListener('click',e=>{const a=e.target.closest('[data-action]')?.dataset.action;if(a&&!e.target.closest('.ctx-disabled'))this.ctxAct(a);this.$.ctx_menu.classList.add('hidden')});
@@ -3936,6 +3937,7 @@ const App={
   renderDT(){
     const p=this.proj;
     const cols=[{k:'_cb',l:'',w:52},{k:'name',l:'Name',w:160},{k:'owner',l:'Owner',w:90},{k:'type',l:'Type',w:55},{k:'startDate',l:'Start',w:100},{k:'endDate',l:'End',w:100},{k:'duration',l:'Dur',w:50},{k:'status',l:'Status',w:55},{k:'swimlaneId',l:'Lane',w:90},{k:'subSwimId',l:'Sub',w:75},{k:'color',l:'',w:28},{k:'subRow',l:'Row',w:34},{k:'deps',l:'Dep',w:32},{k:'progress',l:'%',w:36},{k:'pinned',l:'📌',w:28},{k:'hidden',l:'👁',w:28},{k:'notes',l:'Notes',w:120}];
+    this._dtCols=cols;
     const sc=this._sortCol,sd=this._sortDir;
     /* Build visible item ids first so header checkbox can reflect state */
     const visibleIds=[];
@@ -3993,7 +3995,7 @@ const App={
           <td><input class="dt-in ${cLC}" type="date" data-f="startDate" value="${it.type==='milestone'?(it.date||''):(it.startDate||'')}" data-id="${it.id}" ${isCalc?'readonly':''}></td>
           <td><input class="dt-in ${cLC}" type="date" data-f="endDate" value="${it.endDate||''}" data-id="${it.id}" ${it.type==='milestone'||isCalc?'disabled':''}></td>
           <td><input class="dt-in" type="number" data-f="duration" value="${it.duration||''}" data-id="${it.id}" min="1" style="width:44px" ${it.type==='milestone'?'disabled':''}></td>
-          <td>${(()=>{const sd=this._getStatusDef(it.status);return sd?`<span class="dt-status-badge" style="background:${sd.color};color:#fff;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;white-space:nowrap">${U.esc(sd.shortName)}</span>`:`<span style="color:var(--tx3);font-size:10px">—</span>`})()}</td>
+          <td><select class="dt-sel dt-status-sel" data-f="status" data-id="${it.id}"><option value="">—</option>${(this.proj.statusDefs||[]).filter(sd=>sd.id!=='blank').map(sd=>`<option value="${sd.id}" ${sd.id===it.status?'selected':''}>${sd.emoji} ${U.esc(sd.shortName)}</option>`).join('')}</select></td>
           <td><select class="dt-sel" data-f="swimlaneId" data-id="${it.id}">${p.swimlanes.map(s=>`<option value="${s.id}" ${s.id===it.swimlaneId?'selected':''}>${s.name}</option>`).join('')}</select></td>
           <td><select class="dt-sel" data-f="subSwimId" data-id="${it.id}"><option value="">—</option>${subSws.map(ss=>`<option value="${ss.id}" ${ss.id===it.subSwimId?'selected':''}>${ss.name}</option>`).join('')}</select></td>
           <td><input type="color" class="dt-clr" value="${it.color}" data-f="color" data-id="${it.id}"></td>
@@ -4086,7 +4088,8 @@ const App={
       }else if(f==='duration'){
         it.duration=val;
         if(it.startDate){it.endDate=this._calcEndDate(it)}
-      }else if(f==='owner'){it.owner=val}
+      }else if(f==='status'){it.status=val;it.statusDate=it.status?U.iso(new Date()):''}
+      else if(f==='owner'){it.owner=val}
       else if(f==='notes'){it.notes=val}
       else it[f]=val;
       if(this.proj.autoRange)this.autoRange();this.sched();this.autoSave();this.refreshPanel()
@@ -4096,20 +4099,14 @@ const App={
       else if(f==='owner'){it.owner=e.target.value;this.autoSave()}
       else if(f==='notes'){it.notes=e.target.value;this.autoSave()}
     };
-    // Right-click context menu on data table rows
+    // Right-click context menu on data table rows — column-aware bulk edit
     tb.oncontextmenu=e=>{
       const row=e.target.closest('tr[data-iid]');if(!row)return;e.preventDefault();
+      const td=e.target.closest('td');if(!td)return;
       const id=row.dataset.iid;if(!this.sel.includes(id))this.sel=[id];
       const it=this.gi(id);if(!it)return;
-      const menu=this.$['dt-ctx-menu'];if(!menu)return;
-      menu.innerHTML=`<div class="ctx-item" data-a="toggle-pin">${it.pinned?'✓ ':' '}📌 Pin Date</div><div class="ctx-sep"></div><div class="ctx-item" data-a="del">Delete</div>`;
-      menu.style.left=e.clientX+'px';menu.style.top=e.clientY+'px';menu.classList.remove('hidden');
-      menu.onclick=ev=>{const a=ev.target.dataset?.a;if(!a)return;menu.classList.add('hidden');this.snap();
-        if(a==='toggle-pin'){it.pinned=!it.pinned}
-        else if(a==='del'){const s=new Set(this.sel);this.proj.items.forEach(i=>i.deps=(i.deps||[]).filter(d=>!s.has(this.depId(d))));this.proj.items=this.proj.items.filter(i=>!s.has(i.id));this.sel=[]}
-        this.sched();this.autoSave()};
-      const hide=()=>{menu.classList.add('hidden');document.removeEventListener('click',hide)};
-      setTimeout(()=>document.addEventListener('click',hide),0);
+      const ci=td.cellIndex;const colKey=this._dtCols?.[ci]?.k||null;
+      this._buildDtCtxMenu(colKey,it,e.clientX,e.clientY);
     };
     tb.onclick=e=>{
       if(e.target.closest('.dt-sw-hdr')&&e.detail===2){const sl=this.gs(e.target.closest('.dt-sw-hdr').dataset.slId);if(sl)this.showSwM(sl)}
@@ -4120,10 +4117,233 @@ const App={
       const cb=e.target.closest('.dt-cb');
       if(cb&&e.shiftKey&&this._lastShiftSel){e.preventDefault();this._dtSelect(cb.dataset.id,true,false);return}
       if(e.target.closest('.dt-cb,.dt-pin,.dt-hid'))return;
+      if(e.button===2&&this.sel.includes(row.dataset.iid))return;
       this._dtSelect(row.dataset.iid,e.shiftKey,e.ctrlKey||e.metaKey);
     };
     this.$.dt_head.onclick=e=>{const th=e.target.closest('th[data-sortable]');if(!th)return;const col=th.dataset.col;if(this._sortCol===col)this._sortDir=this._sortDir==='asc'?'desc':'asc';else{this._sortCol=col;this._sortDir='asc'}this.sched(false,true)};
     this.$.dt_head.onmousedown=e=>{const rh=e.target.closest('.th-rs');if(!rh)return;e.preventDefault();const th=rh.parentElement,sx=e.clientX,sw=th.getBoundingClientRect().width;const mv=ev=>{const nw=Math.max(25,sw+ev.clientX-sx);th.style.width=nw+'px';th.style.minWidth=nw+'px';const ci=th.cellIndex;if(ci>=0){this.$.dt_body.querySelectorAll('tr').forEach(row=>{const td=row.cells[ci];if(td){td.style.width=nw+'px';td.style.minWidth=nw+'px'}})}};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up)};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}
+  },
+
+  /* ── Data Table Context Menu (Column-Aware Bulk Edit) ── */
+  _buildDtCtxMenu(colKey,it,x,y){
+    const menu=this.$.dt_ctx_menu;if(!menu)return;
+    const n=this.sel.length;const multi=n>1;
+    let h='';
+    // Text fields: name, owner, notes
+    if(['name','owner','notes'].includes(colKey)){
+      const val=it[colKey]||'';const preview=val.length>25?val.slice(0,25)+'…':val;
+      if(multi)h+=`<div class="ctx-hint">Edit ${colKey} for ${n} selected items</div>`;
+      if(colKey!=='name')h+=`<div class="ctx-item" data-dta="copy-val">Apply "${U.esc(preview)}" to all</div>`;
+      h+=`<div class="ctx-item" data-dta="prepend">Prepend text…</div>`;
+      h+=`<div class="ctx-item" data-dta="append">Append text…</div>`;
+      h+=`<div class="ctx-sep"></div>`;
+      h+=`<div class="ctx-item" data-dta="clear">Clear ${colKey}</div>`;
+    }
+    // Status
+    else if(colKey==='status'){
+      if(multi)h+=`<div class="ctx-hint">Set status for ${n} selected items</div>`;
+      const defs=this.proj.statusDefs||[];
+      h+=`<div class="ctx-item${!it.status?' ctx-active':''}" data-dta="set-status" data-v="">(None)</div>`;
+      defs.filter(sd=>sd.id!=='blank').forEach(sd=>{
+        h+=`<div class="ctx-item${sd.id===it.status?' ctx-active':''}" data-dta="set-status" data-v="${sd.id}">${sd.emoji} ${U.esc(sd.name)}</div>`;
+      });
+    }
+    // Swimlane
+    else if(colKey==='swimlaneId'){
+      if(multi)h+=`<div class="ctx-hint">Move ${n} selected items to lane</div>`;
+      this.proj.swimlanes.forEach(s=>{
+        h+=`<div class="ctx-item${s.id===it.swimlaneId?' ctx-active':''}" data-dta="set-swim" data-v="${s.id}">${U.esc(s.name)}</div>`;
+      });
+    }
+    // Sub-swimlane
+    else if(colKey==='subSwimId'){
+      const sl=this.proj.swimlanes.find(s=>s.id===it.swimlaneId);
+      const subs=sl?.subSwimlanes||[];
+      if(multi)h+=`<div class="ctx-hint">Move ${n} selected items to sub-lane</div>`;
+      subs.forEach(ss=>{
+        h+=`<div class="ctx-item${ss.id===it.subSwimId?' ctx-active':''}" data-dta="set-sub" data-v="${ss.id}" data-sl="${it.swimlaneId}">${U.esc(ss.name)}</div>`;
+      });
+      h+=`<div class="ctx-item${!it.subSwimId?' ctx-active':''}" data-dta="set-sub" data-v="" data-sl="${it.swimlaneId}">(None)</div>`;
+    }
+    // Color
+    else if(colKey==='color'){
+      h+=`<div class="ctx-item" data-dta="copy-val">Apply <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${it.color};vertical-align:middle"></span> to ${multi?n+' selected items':'this item'}</div>`;
+      h+=`<div class="ctx-sep"></div><div class="ctx-clr-grid">`;
+      COLORS.forEach(c=>{h+=`<div class="ctx-clr-sw${c===it.color?' active':''}" data-dta="set-color" data-v="${c}" style="background:${c}" title="${c}"></div>`});
+      h+=`</div>`;
+    }
+    // Row (subRow)
+    else if(colKey==='subRow'){
+      const rv=it.subRow||0;
+      h+=`<div class="ctx-hint">${multi?`Set row for ${n} selected items`:'Set row'} (within each item's own lane)</div>`;
+      for(let r=0;r<=5;r++){h+=`<div class="ctx-item${r===rv?' ctx-active':''}" data-dta="set-row" data-v="${r}">Row ${r}</div>`}
+    }
+    // Progress
+    else if(colKey==='progress'){
+      const pv=it.progress||0;
+      h+=`<div class="ctx-item" data-dta="set-progress-single" data-v="${pv}">Set to ${pv}%</div>`;
+      if(multi){h+=`<div class="ctx-sep"></div><div class="ctx-item" data-dta="copy-val">Apply ${pv}% to ${n} selected items</div>`}
+      h+=`<div class="ctx-sep"></div>`;
+      [0,25,50,75,100].forEach(p=>{h+=`<div class="ctx-item${p===pv?' ctx-active':''}" data-dta="set-progress" data-v="${p}">${p}%</div>`});
+    }
+    // Pinned
+    else if(colKey==='pinned'){
+      if(multi){
+        h+=`<div class="ctx-item" data-dta="pin-all">📌 Pin ${n} selected items</div>`;
+        h+=`<div class="ctx-item" data-dta="unpin-all">Unpin ${n} selected items</div>`;
+        h+=`<div class="ctx-item" data-dta="toggle-pin">Toggle pin for ${n} selected</div>`;
+      }else{
+        h+=`<div class="ctx-item" data-dta="toggle-pin">${it.pinned?'✓ ':''}📌 Pin Date</div>`;
+      }
+    }
+    // Hidden
+    else if(colKey==='hidden'){
+      if(multi){
+        h+=`<div class="ctx-item" data-dta="hide-all">👁 Hide ${n} selected items</div>`;
+        h+=`<div class="ctx-item" data-dta="show-all">Show ${n} selected items</div>`;
+        h+=`<div class="ctx-item" data-dta="toggle-hidden">Toggle visibility for ${n} selected</div>`;
+      }else{
+        h+=`<div class="ctx-item" data-dta="toggle-hidden">${it.hidden?'✓ ':''}👁 Hidden</div>`;
+      }
+    }
+    // Type
+    else if(colKey==='type'){
+      if(multi)h+=`<div class="ctx-hint">Set type for ${n} selected items</div>`;
+      h+=`<div class="ctx-item${it.type==='milestone'?' ctx-active':''}" data-dta="set-type" data-v="milestone">Milestone</div>`;
+      h+=`<div class="ctx-item${it.type==='task'?' ctx-active':''}" data-dta="set-type" data-v="task">Task</div>`;
+      h+=`<div class="ctx-sep"></div>`;
+      h+=`<div class="ctx-hint">Milestone→Task adds 14-day duration</div>`;
+      h+=`<div class="ctx-hint">Task→Milestone keeps start date only</div>`;
+    }
+    // Universal footer (always)
+    if(!['pinned','hidden'].includes(colKey)){
+      h+=`<div class="ctx-sep"></div>`;
+      h+=`<div class="ctx-item" data-dta="toggle-pin">${it.pinned?'✓ ':''}📌 Pin Date</div>`;
+    }
+    h+=`<div class="ctx-item" data-dta="del">Delete</div>`;
+    menu.innerHTML=h;
+    menu.style.left=Math.min(x,window.innerWidth-220)+'px';
+    menu.style.top=Math.min(y,window.innerHeight-Math.min(menu.scrollHeight||300,400)-10)+'px';
+    menu.classList.remove('hidden');
+    // Reposition after render if needed
+    requestAnimationFrame(()=>{const r=menu.getBoundingClientRect();if(r.bottom>window.innerHeight-8)menu.style.top=Math.max(4,window.innerHeight-r.height-8)+'px'});
+    menu.onclick=ev=>{
+      const el=ev.target.closest('[data-dta]');if(!el)return;
+      const a=el.dataset.dta;if(!a)return;
+      menu.classList.add('hidden');
+      this._execDtCtxAction(a,colKey,it,el,x,y);
+    };
+    const hide=()=>{menu.classList.add('hidden');document.removeEventListener('click',hide)};
+    setTimeout(()=>document.addEventListener('click',hide),0);
+  },
+
+  _execDtCtxAction(action,colKey,it,el,x,y){
+    const items=this.sel.map(id=>this.gi(id)).filter(Boolean);
+    if(action==='copy-val'){
+      this.snap();
+      if(['name','owner','notes'].includes(colKey)){
+        const val=it[colKey]||'';items.forEach(i=>{i[colKey]=val});
+      }else if(colKey==='color'){
+        items.forEach(i=>{i.color=it.color});
+      }else if(colKey==='progress'){
+        items.forEach(i=>{i.progress=it.progress||0});
+      }
+      this.sched();this.autoSave();this.refreshPanel();this.toast(`Applied to ${items.length} item${items.length===1?'':'s'}`);
+    }
+    else if(action==='prepend'||action==='append'){
+      this._showDtCtxInput(action,colKey,items,x,y);return;
+    }
+    else if(action==='clear'){
+      this.snap();items.forEach(i=>{i[colKey]=''});
+      this.sched();this.autoSave();this.refreshPanel();this.toast(`Cleared ${colKey} for ${items.length} item${items.length===1?'':'s'}`);
+    }
+    else if(action==='set-status'){
+      const v=el.dataset.v;this.snap();
+      items.forEach(i=>{i.status=v||'';i.statusDate=i.status?U.iso(new Date()):''});
+      this.sched();this.autoSave();this.refreshPanel();this.toast(`Status updated for ${items.length} item${items.length===1?'':'s'}`);
+    }
+    else if(action==='set-swim'){
+      const v=el.dataset.v;this.snap();
+      const sl=this.proj.swimlanes.find(s=>s.id===v);
+      items.forEach(i=>{i.swimlaneId=v;i.subSwimId=''});
+      this.sched();this.autoSave();this.refreshPanel();this.toast(`Moved ${items.length} item${items.length===1?'':'s'} to ${sl?.name||'lane'}`);
+    }
+    else if(action==='set-sub'){
+      const v=el.dataset.v;const slId=el.dataset.sl;this.snap();
+      items.forEach(i=>{i.swimlaneId=slId;i.subSwimId=v});
+      this.sched();this.autoSave();this.refreshPanel();
+      const sl=this.proj.swimlanes.find(s=>s.id===slId);const ss=(sl?.subSwimlanes||[]).find(s=>s.id===v);
+      this.toast(v?`Moved to ${ss?.name||'sub'}`:('Cleared sub-swimlane'));
+    }
+    else if(action==='set-color'){
+      const v=el.dataset.v;this.snap();items.forEach(i=>{i.color=v});
+      this.sched();this.autoSave();this.refreshPanel();this.toast(`Color applied to ${items.length} item${items.length===1?'':'s'}`);
+    }
+    else if(action==='set-row'){
+      const v=+el.dataset.v;this.snap();items.forEach(i=>{i.subRow=v});
+      this.sched();this.autoSave();this.refreshPanel();this.toast(`Row set to ${v}`);
+    }
+    else if(action==='set-progress'){
+      const v=+el.dataset.v;this.snap();items.forEach(i=>{i.progress=v});
+      this.sched();this.autoSave();this.refreshPanel();this.toast(`Progress set to ${v}%`);
+    }
+    else if(action==='set-progress-single'){
+      // Single item quick edit — no-op since already at that value, but allow from preset clicks
+      return;
+    }
+    else if(action==='set-type'){
+      const v=el.dataset.v;this.snap();
+      items.forEach(i=>{
+        if(i.type===v)return;
+        i.type=v;
+        if(v==='task'&&!i.startDate){i.startDate=i.date;i.duration=14;i.durMode='cal';i.endDate=this._calcEndDate(i)}
+        else if(v==='milestone'&&!i.date)i.date=i.startDate;
+      });
+      this.sched();this.autoSave();this.refreshPanel();this.toast(`Type set for ${items.length} item${items.length===1?'':'s'}`);
+    }
+    else if(action==='pin-all'){this.snap();items.forEach(i=>{i.pinned=true});this.sched();this.autoSave();this.refreshPanel();this.toast(`Pinned ${items.length} items`)}
+    else if(action==='unpin-all'){this.snap();items.forEach(i=>{i.pinned=false});this.sched();this.autoSave();this.refreshPanel();this.toast(`Unpinned ${items.length} items`)}
+    else if(action==='toggle-pin'){this.snap();items.forEach(i=>{i.pinned=!i.pinned});this.sched();this.autoSave();this.refreshPanel();this.toast('Toggled pin')}
+    else if(action==='hide-all'){this.snap();items.forEach(i=>{i.hidden=true});this.sched();this.autoSave();this.refreshPanel();this.toast(`Hidden ${items.length} items`)}
+    else if(action==='show-all'){this.snap();items.forEach(i=>{i.hidden=false});this.sched();this.autoSave();this.refreshPanel();this.toast(`Shown ${items.length} items`)}
+    else if(action==='toggle-hidden'){this.snap();items.forEach(i=>{i.hidden=!i.hidden});this.sched();this.autoSave();this.refreshPanel();this.toast('Toggled visibility')}
+    else if(action==='del'){
+      this.snap();const s=new Set(this.sel);
+      this.proj.items.forEach(i=>i.deps=(i.deps||[]).filter(d=>!s.has(this.depId(d))));
+      this.proj.items=this.proj.items.filter(i=>!s.has(i.id));this.sel=[];
+      this.sched();this.autoSave();this.closePanel();this.toast('Deleted');
+    }
+  },
+
+  _showDtCtxInput(mode,field,items,x,y){
+    const el=document.getElementById('dt-ctx-input');if(!el)return;
+    const n=items.length;
+    el.querySelector('.dci-label').textContent=`${mode==='prepend'?'Prepend to':'Append to'} ${field} for ${n} item${n===1?'':'s'}`;
+    const inp=document.getElementById('dci-val');
+    inp.value='';inp.placeholder=mode==='prepend'?'Text to prepend…':'Text to append…';
+    el.style.left=Math.min(x,window.innerWidth-240)+'px';
+    el.style.top=Math.min(y,window.innerHeight-80)+'px';
+    el.classList.remove('hidden');
+    inp.focus();
+    const apply=()=>{
+      const val=inp.value;
+      if(!val){el.classList.add('hidden');return}
+      this.snap();
+      items.forEach(i=>{
+        if(mode==='prepend')i[field]=val+(i[field]||'');
+        else i[field]=(i[field]||'')+val;
+      });
+      el.classList.add('hidden');
+      this.sched();this.autoSave();this.refreshPanel();
+      this.toast(`${mode==='prepend'?'Prepended':'Appended'} to ${n} item${n===1?'':'s'}`);
+    };
+    document.getElementById('dci-apply').onclick=apply;
+    document.getElementById('dci-cancel').onclick=()=>el.classList.add('hidden');
+    inp.onkeydown=e=>{
+      e.stopPropagation(); // prevent shortcut dispatcher
+      if(e.key==='Enter'){e.preventDefault();apply()}
+      else if(e.key==='Escape'){e.preventDefault();el.classList.add('hidden')}
+    };
   },
 
   doSearch(){const term=this.$.data_search.value.trim().toLowerCase();this._searchTerm=term;this._searchMatches=[];this._searchIdx=-1;if(term){this.proj.items.forEach(i=>{if(i.name.toLowerCase().includes(term)||(i.owner||'').toLowerCase().includes(term)||(i.notes||'').toLowerCase().includes(term))this._searchMatches.push(i.id)});if(this._searchMatches.length)this._searchIdx=0}this.$.data_search_ct.textContent=this._searchMatches.length?`${this._searchIdx+1}/${this._searchMatches.length}`:'';this.sched(false,true);if(this._searchMatches.length)this.scrollToSM()},
