@@ -1,4 +1,4 @@
-/* Timeline Studio v0.33.1 — Tab key panel glitch fix (B36): Pressing Tab while timeline focused (no selection) no longer opens a broken empty properties pane. Tab is now intercepted in the keydown handler and prevented from focusing offscreen panel elements when not in a form field. */
+/* Timeline Studio v0.34.0 — Collapsible Properties Panel (F36): Three-button panel system (📌 Pin Open, › Collapse, » Pin Collapse) replaces old auto-hide model. Collapsed state shows 28px vertical tab with hint animation. Empty state when nothing selected. Data view auto-collapses with state memory. Both timeline and data table account for panel/tab width. Session persistence via localStorage. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -94,7 +94,8 @@ function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner
 
 const App={
   proj:newProj(),sel:[],undoStack:[],redoStack:[],
-  view:'timeline',panelOpen:false,panelPinned:false,editItem:null,
+  view:'timeline',panelOpen:false,panelCollapsed:false,panelPinCollapsed:false,panelPinOpen:false,editItem:null,
+  _panelHintCooldown:0,_panelPreDataView:null,
   _dirty:false,_dataDirty:false,_raf:null,_unsaved:false,
   _sortCol:null,_sortDir:'asc',
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
@@ -179,7 +180,7 @@ const App={
     snapFull(){this.copyScreenshot(false)},
   },
   _handleEscape(){
-    this.sel=[];if(!this.panelPinned)this.closePanel();
+    this.sel=[];this.editItem=null;this.closePanel();
     this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');
     document.querySelectorAll('.modal:not(.hidden)').forEach(m=>m.classList.add('hidden'));
     if(this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}
@@ -224,9 +225,12 @@ const App={
      'imp-adv-toggle','imp-adv-arrow','imp-adv-body','imp-file-input','imp-file-name',
      'imp-map-area','imp-status-area','imp-perfect-match','imp-preview-wrap','imp-status',
      'imp-overload-area','btn-imp-do',
+     'panel-tab','btn-pin-open','btn-collapse','btn-pin-collapse',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
     this.loadAuto();this.migrate();this._loadShortcuts();this._buildShortcutMap();
-    this.applyTheme();this.bind();this.sched();if(this.proj.items.length)this._pendingFit=true;
+    try{this.panelCollapsed=localStorage.getItem('tls3_panelCollapsed')==='1';this.panelPinCollapsed=localStorage.getItem('tls3_pinCollapsed')==='1'}catch(e){}
+    if(this.panelCollapsed){this.$.panel_tab.classList.remove('hidden');this.$.props_panel.classList.add('panel-hidden');this.panelOpen=false}else{this.panelOpen=true;this._renderEmptyPanel()}
+    this._syncPanelPad();this.applyTheme();this.bind();this.sched();if(this.proj.items.length)this._pendingFit=true;
     this.$.tl_body_scroll.addEventListener('scroll',()=>{
       this.$.tl_sl_labels.scrollTop=this.$.tl_body_scroll.scrollTop;
       this.$.tl_hdr_scroll.scrollLeft=this.$.tl_body_scroll.scrollLeft;
@@ -920,8 +924,10 @@ const App={
     on('btn-tools-menu',()=>{this.closeAllDD();this.$.tools_dropdown.classList.toggle('hidden');this.posDD(this.$.tools_dropdown)});
     on('btn-settings',()=>this.showSettings());
     on('btn-help',()=>this.showHelp());
-    on('btn-close-panel',()=>{if(this.panelPinned){this.panelPinned=false;document.getElementById('btn-pin').classList.remove('pinned')}this.panelOpen=false;this.editItem=null;this.$.props_panel.classList.add('panel-hidden')});
-    on('btn-pin',()=>{this.panelPinned=!this.panelPinned;document.getElementById('btn-pin').classList.toggle('pinned',this.panelPinned)});
+    on('btn-pin-open',()=>{this.panelPinOpen=!this.panelPinOpen;this._syncPinOpenBtn()});
+    on('btn-collapse',()=>this.collapsePanel(false));
+    on('btn-pin-collapse',()=>this.collapsePanel(true));
+    this.$.panel_tab.addEventListener('click',()=>this.expandPanel());
     on('btn-lock',()=>{this.$.tools_dropdown.classList.add('hidden');this.proj.locked=!this.proj.locked;this.proj.lockH=this.proj.locked;this.proj.lockV=this.proj.locked;this.sched();this.autoSave();this.toast(this.proj.locked?'Locked':'Unlocked')});
     on('btn-hide',()=>{this.$.tools_dropdown.classList.add('hidden');this.proj.hideMode=!this.proj.hideMode;this.sched();this.toast(this.proj.hideMode?'Hiding hidden':'Showing all')});
     on('btn-crit-path',()=>{this.$.tools_dropdown.classList.add('hidden');this.toggleCritPath()});
@@ -1097,10 +1103,17 @@ const App={
     this.view=v;document.querySelectorAll('.view-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
     const tc=this.$.tl_container,dc=this.$.data_container,mc=this.$.main_content;
     mc.classList.remove('split-view');tc.classList.remove('view-active','view-hidden');dc.classList.remove('view-active','view-hidden');
-    if(v==='timeline'){tc.classList.add('view-active');dc.classList.add('view-hidden')}
-    else if(v==='data'){tc.classList.add('view-hidden');dc.classList.add('view-active');if(!this.panelPinned)this.closePanel()}
-    else{mc.classList.add('split-view');tc.classList.add('view-active');dc.classList.add('view-active')}
-    this.sched()
+    if(v==='timeline'||v==='split'){
+      tc.classList.add('view-active');
+      if(v==='split'){mc.classList.add('split-view');dc.classList.add('view-active')}else{dc.classList.add('view-hidden')}
+      if(this._panelPreDataView!==null){const saved=this._panelPreDataView;this._panelPreDataView=null;if(!saved.collapsed){this.panelPinCollapsed=saved.pinCollapsed;this._savePanelState()}};
+      if(this.panelCollapsed)this.$.panel_tab.classList.remove('hidden')
+    }else if(v==='data'){
+      tc.classList.add('view-hidden');dc.classList.add('view-active');
+      if(!this.panelCollapsed){this._panelPreDataView={collapsed:false,pinCollapsed:this.panelPinCollapsed};this.collapsePanel(true)}
+      else{this._panelPreDataView={collapsed:true,pinCollapsed:this.panelPinCollapsed}}
+    }
+    this._syncPanelPad();this.sched()
   },
   _selCentroidDate(){
     if(!this.sel.length)return null;
@@ -1121,7 +1134,7 @@ const App={
     const oldZ=this.proj.zoom||100;
     const newZ=U.clamp(oldZ+d,30,300);
     if(newZ===oldZ)return;
-    const panelW=this.panelOpen?290:0;
+    const panelW=this.panelOpen?290:28;
     const vpW=bs.clientWidth-panelW;
     const tl=this.met();
     const cDate=this._selCentroidDate();
@@ -1235,7 +1248,7 @@ const App={
   },
   fitToContent(){
     const bs=this.$.tl_body_scroll;if(!bs)return;
-    const panelW=this.panelOpen?290:0;
+    const panelW=this.panelOpen?290:28;
     const vpW=bs.clientWidth-panelW;
     const p=this.proj;
     const collapsedSlIds=new Set(p.swimlanes.filter(sl=>sl.collapsed!=='expanded').map(sl=>sl.id));
@@ -1303,7 +1316,7 @@ const App={
     const selItems=this.sel.map(id=>this.gi(id)).filter(Boolean);
     if(!selItems.length){this.fitToContent();return}
     const bs=this.$.tl_body_scroll;if(!bs)return;
-    const panelW=this.panelOpen?290:0;
+    const panelW=this.panelOpen?290:28;
     const vpW=bs.clientWidth-panelW;
     const p=this.proj;
     const fitItems=p.hideMode?selItems.filter(i=>!i.hidden):selItems;
@@ -1353,7 +1366,7 @@ const App={
     });
     this.toast(`Fit to selection (${fitItems.length} item${fitItems.length===1?'':'s'})`);
   },
-  goToday(){const tl=this.met();const x=this.dX(U.iso(new Date()),tl);if(x!==null){const panelW=this.panelOpen?290:0;this.$.tl_body_scroll.scrollLeft=x-(this.$.tl_body_scroll.clientWidth-panelW)/2}},
+  goToday(){const tl=this.met();const x=this.dX(U.iso(new Date()),tl);if(x!==null){const panelW=this.panelOpen?290:28;this.$.tl_body_scroll.scrollLeft=x-(this.$.tl_body_scroll.clientWidth-panelW)/2}},
   showModal(id){document.getElementById(id).classList.remove('hidden')},
   gi(id){return this.proj.items.find(i=>i.id===id)},
   gs(id){return this.proj.swimlanes.find(s=>s.id===id)},
@@ -1467,7 +1480,7 @@ const App={
   ctxAct(a){
     const it=this.sel.length===1?this.gi(this.sel[0]):null;
     switch(a){
-      case'edit':if(it)this.openPanel(it);else if(this.sel.length>1)this.openBulkPanel();break;
+      case'edit':if(this.panelCollapsed)this.expandPanel();if(it)this.openPanel(it);else if(this.sel.length>1)this.openBulkPanel();break;
       case'duplicate':this.dupSel();break;case'delete':this.deleteSel();break;
       case'add-ms-here':this.addItem('milestone',this._ctxDate,this._ctxSlId,this._ctxSubSwId,this._ctxSubRow);break;
       case'add-task-here':this.addItem('task',this._ctxDate,this._ctxSlId,this._ctxSubSwId,this._ctxSubRow);break;
@@ -2834,7 +2847,7 @@ const App={
         minL=Math.min(minL,iL);maxR=Math.max(maxR,iR);
       }
       if(minL===Infinity)return;
-      const clearRight=bs.scrollLeft+bs.clientWidth-290-20;/* 20px margin */
+      const clearRight=bs.scrollLeft+bs.clientWidth-(this.panelOpen?290:28)-20;/* 20px margin */
       const clearLeft=bs.scrollLeft+20;
       if(maxR>clearRight){
         bs.scrollTo({left:bs.scrollLeft+(maxR-clearRight),behavior:'smooth'});
@@ -2843,11 +2856,52 @@ const App={
       }
     });
   },
-  openPanel(it){this.editItem=it;this.panelOpen=true;this._applyPanelPad();this.$.props_panel.classList.remove('panel-hidden');this.$.panel_title.textContent=it.type==='milestone'?'Milestone':'Task';this.renderPanel(it);this._scrollItemClear(it)},
-  openBulkPanel(){this.panelOpen=true;this._applyPanelPad();this.$.props_panel.classList.remove('panel-hidden');this.$.panel_title.textContent=`Bulk Edit (${this.sel.length})`;this.renderBulkPanel();this._scrollItemClear()},
-  closePanel(){if(this.panelPinned)return;this.panelOpen=false;this.editItem=null;this._clearPanelPad();this.$.props_panel.classList.add('panel-hidden')},
-  _applyPanelPad(){this.$.tl_body.style.width=(this._tlTW||0)+290+'px'},
-  _clearPanelPad(){this.$.tl_body.style.width=(this._tlTW||0)+'px'},
+  openPanel(it){
+    this.editItem=it;this.$.panel_title.textContent=it.type==='milestone'?'Milestone':'Task';this.renderPanel(it);
+    if(this.panelCollapsed){if(this.panelPinCollapsed){this._hintCollapsedTab();return}this.expandPanel();return}
+    this.panelOpen=true;this.$.props_panel.classList.remove('panel-hidden');this._syncPanelPad();this._scrollItemClear(it)
+  },
+  openBulkPanel(){
+    this.$.panel_title.textContent=`Bulk Edit (${this.sel.length})`;this.renderBulkPanel();
+    if(this.panelCollapsed){if(this.panelPinCollapsed){this._hintCollapsedTab();return}this.expandPanel();return}
+    this.panelOpen=true;this.$.props_panel.classList.remove('panel-hidden');this._syncPanelPad();this._scrollItemClear()
+  },
+  closePanel(){
+    if(this.panelCollapsed){this.editItem=null;return}
+    if(this.panelPinOpen){this._renderEmptyPanel();return}
+    this.collapsePanel(false)
+  },
+  collapsePanel(pinned){
+    this.panelCollapsed=true;this.panelPinCollapsed=!!pinned;this.panelOpen=false;
+    this.$.props_panel.classList.add('panel-hidden');this.$.panel_tab.classList.remove('hidden');
+    this._syncPanelPad();this._savePanelState()
+  },
+  expandPanel(){
+    this.panelCollapsed=false;this.panelPinCollapsed=false;this.panelOpen=true;
+    this.$.props_panel.classList.remove('panel-hidden');this.$.panel_tab.classList.add('hidden');
+    this._syncPanelPad();this._savePanelState();this._syncPinOpenBtn();
+    if(this.sel.length===1){const it=this.gi(this.sel[0]);if(it){this.editItem=it;this.$.panel_title.textContent=it.type==='milestone'?'Milestone':'Task';this.renderPanel(it);this._scrollItemClear(it)}}
+    else if(this.sel.length>1){this.$.panel_title.textContent=`Bulk Edit (${this.sel.length})`;this.renderBulkPanel();this._scrollItemClear()}
+    else{this._renderEmptyPanel()}
+  },
+  _renderEmptyPanel(){
+    this.$.panel_title.textContent='Properties';this.editItem=null;
+    const hasHint=this.proj.items.length<3;
+    this.$.panel_body.innerHTML=`<div style="text-align:center;padding:40px 16px;color:var(--tx3)"><div style="font-size:24px;margin-bottom:10px">📋</div><div style="font-size:12px;font-weight:600;color:var(--tx2)">Select an item to edit its properties</div>${hasHint?`<div style="margin-top:8px;font-size:11px;line-height:1.6">Click <strong>+ Task</strong> or <strong>+ Milestone</strong> to add items.<br>Right-click the timeline to add at a specific date.</div>`:''}</div>`
+  },
+  _hintCollapsedTab(){
+    if(!this.panelCollapsed)return;const now=Date.now();if(now-this._panelHintCooldown<4000)return;
+    this._panelHintCooldown=now;const tab=this.$.panel_tab;if(!tab)return;
+    tab.classList.remove('hint');void tab.offsetWidth;tab.classList.add('hint');
+    tab.addEventListener('animationend',()=>tab.classList.remove('hint'),{once:true})
+  },
+  _syncPanelPad(){
+    const w=this.panelOpen?290:28;
+    this.$.tl_body.style.width=(this._tlTW||0)+w+'px';
+    if(this.$.data_table_wrap)this.$.data_table_wrap.style.paddingRight=w+'px'
+  },
+  _syncPinOpenBtn(){const btn=this.$.btn_pin_open;if(btn)btn.classList.toggle('active',this.panelPinOpen)},
+  _savePanelState(){try{localStorage.setItem('tls3_panelCollapsed',this.panelCollapsed?'1':'0');localStorage.setItem('tls3_pinCollapsed',this.panelPinCollapsed?'1':'0')}catch(e){}},
 
   renderBulkPanel(){
     const items=this.sel.map(id=>this.gi(id)).filter(Boolean);if(!items.length)return;
@@ -3300,7 +3354,7 @@ const App={
       else if(v.direction==='up'){bot=vl.slY+vl.iy+16}
       bodyH+=`<div style="position:absolute;left:${vl.x}px;top:${top}px;height:${bot-top}px;${dash};pointer-events:none;z-index:2;opacity:0.6"></div>`}
     bodyH+=`<svg id="dep-svg" style="width:${tl.tw}px;height:100%"></svg>`;
-    this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this._tlTW=tl.tw;this.$.tl_body.style.width=(this.panelOpen?tl.tw+290:tl.tw)+'px';
+    this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this._tlTW=tl.tw;this.$.tl_body.style.width=tl.tw+(this.panelOpen?290:28)+'px';
     /* Empty-state hint for new users */
     if(p.items.length===0){const _hc=th.tlTx,_hc2=th.tlTx2;this.$.tl_body.innerHTML+=`<div class="tl-empty-hint" style="color:${_hc}"><div style="font-size:28px;margin-bottom:8px">📋</div><div>Click <strong>+ Task</strong> or <strong>+ Milestone</strong> in the toolbar to add your first item.</div><div style="margin-top:6px;font-size:11px;color:${_hc2}">Or choose a template from <strong style="color:${_hc}">New</strong> (📄).<br>Right-click the timeline to add at a specific date.</div></div>`}
 
@@ -3414,7 +3468,7 @@ const App={
     const rh=e.target.closest('.tl-task-rs');if(rh&&!this.proj.locked){this.startTR(e,rh);return}const iEl=e.target.closest('.tl-item');if(iEl){const id=iEl.dataset.iid;if(e.ctrlKey||e.metaKey){const idx=this.sel.indexOf(id);if(idx>=0)this.sel.splice(idx,1);else this.sel.push(id)}else if(!this.sel.includes(id))this.sel=[id];
     if(this.sel.length===1){const it=this.gi(this.sel[0]);if(it)this.openPanel(it)}else if(this.sel.length>1)this.openBulkPanel();
     const it=this.gi(id);if(it&&!this.proj.locked){this.startDrag(e,it,iEl);return}this.sched();return}
-    if(!e.target.closest('.sl-rh')&&!e.ctrlKey&&!e.metaKey){this.sel=[];if(!this.panelPinned)this.closePanel();this.sched()}},
+    if(!e.target.closest('.sl-rh')&&!e.ctrlKey&&!e.metaKey){this.sel=[];this.closePanel();this.sched()}},
   onTlCtx(e){const iEl=e.target.closest('.tl-item');if(iEl)this.showCtx(e,iEl.dataset.iid);else{e.preventDefault();this.sel=[];this.showCtx(e,null)}},
 
   startDrag(e,it,el){const tl=this.met(),sx=e.clientX,sy=e.clientY;
@@ -3510,7 +3564,7 @@ const App={
       });
       _snapshots.clear();_expandedMap.clear();
     };
-    const mv=ev=>{const dx=ev.clientX-sx,dy=ev.clientY-sy;if(!dr&&(Math.abs(dx)>3||Math.abs(dy)>3)){dr=true;dragItems.forEach(d=>d.el.classList.add('dragging'));this.snap();if(!this.panelPinned)this.closePanel()}if(dr){const shiftHeld=ev.shiftKey;dragItems.forEach(d=>{if(!this.proj.lockH&&!shiftHeld)d.el.style.left=(d.oL+dx)+'px';if(!this.proj.lockV)d.el.style.top=(d.oT+dy)+'px';d.el.style.cursor=shiftHeld?'ns-resize':'grabbing'});
+    const mv=ev=>{const dx=ev.clientX-sx,dy=ev.clientY-sy;if(!dr&&(Math.abs(dx)>3||Math.abs(dy)>3)){dr=true;dragItems.forEach(d=>d.el.classList.add('dragging'));this.snap()}if(dr){const shiftHeld=ev.shiftKey;dragItems.forEach(d=>{if(!this.proj.lockH&&!shiftHeld)d.el.style.left=(d.oL+dx)+'px';if(!this.proj.lockV)d.el.style.top=(d.oT+dy)+'px';d.el.style.cursor=shiftHeld?'ns-resize':'grabbing'});
       if(!this.proj.lockV){let found=null;document.querySelectorAll('.sw-row').forEach(r=>{const rect=r.getBoundingClientRect();if(ev.clientY>=rect.top&&ev.clientY<=rect.bottom&&r.dataset.slId&&!r.classList.contains('sl-hidden-indicator'))found=r});
         if(found){const sl=this.gs(found.dataset.slId);let rect=found.getBoundingClientRect();const yInSw=ev.clientY-rect.top;
           const subs=sl&&sl.collapsed==='expanded'?sl.subSwimlanes||[]:[];
@@ -4077,7 +4131,7 @@ const App={
     }
     if(this.sel.length===1){const it=this.gi(this.sel[0]);if(it)this.openPanel(it)}
     else if(this.sel.length>1)this.openBulkPanel();
-    else if(!this.panelPinned)this.closePanel();
+    else this.closePanel();
     this.sched();
   },
 

@@ -8,6 +8,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.34.0** | 2026-02-17 | Collapsible Properties Panel (F36): Three-button panel system (📌 Pin Open, › Collapse, » Pin Collapse) replaces old auto-hide model. Pin Open keeps panel expanded on deselect (shows empty state); Collapse temporarily collapses to 28px tab (auto-reopens on next item click); Pin Collapse locks panel collapsed with gentle hint animation (1.2s glow, 4s cooldown) when items are clicked. Empty state with contextual hints when nothing selected. Data view auto-collapses with `_panelPreDataView` state memory for seamless restore. Both timeline and data table get `paddingRight` for collapsed 28px tab. Context menu "Edit Properties" overrides pin-collapse. Panel stays open during drag. Session persistence via `localStorage`. |
 | **0.33.1** | 2026-02-17 | Tab key panel glitch fix (B36): Pressing Tab while timeline focused (no selection) no longer opens a broken empty properties pane. Tab intercepted in keydown handler — `preventDefault()` when not in a form field, normal Tab navigation preserved within inputs. |
 | **0.33.0** | 2026-02-17 | Simple Auto Arrange Slider: New "Layout Style" slider (Compact ↔ Waterfall) maps a single 0–100 value to three advanced parameters (Spread, Padding, Date Weight) + Consider Labels toggle via piecewise linear interpolation. Advanced options collapsed behind "▸ Advanced Options" panel with bidirectional sync. Added F41 (Layout engine enhancements) as P2 Research backlog item referencing `timeline-studio-layout-engine-analysis.md`. |
 | **0.32.0** | 2026-02-17 | Data Table Context Menu (F40, B37, F38): Column-aware right-click bulk editing in Data View. Recognizes property type (text/status/lane/sub/color/row/progress/pin/hidden/type) and offers smart operations — text fields get apply-value/prepend/append/clear; enum fields get dropdown pickers that apply to all selected; pin/hidden get set/unset/toggle; type gets bulk convert with date conversion rules; delete cleans dependency references. `ctx-hint` headers show affected item count. Mini-input popover for prepend/append with Enter/Escape/stopPropagation. Single `snap()` per operation for atomic undo. Restored inline status `<select>` dropdown in data table (F38). Fixed right-click collapsing multi-selection — `onmousedown` now skips `_dtSelect` for button=2 when item already selected (B37). 173 new tests in `test_dt_context_menu.js`. |
@@ -101,7 +102,6 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
-| F36 | **Collapsible properties pane** | Pin-close the properties pane with a slim vertical tab (matching the hidden-swimlane curved-tab design) that shows centered vertical text like "Properties — click to expand." Clicking the tab re-opens the pane. Add a configurable keyboard shortcut (default binding TBD). Use this mechanism to auto-hide during Data View editing and smartly close/reopen based on user selection context. | M | :orange_circle: P1 | :white_circle: Open |
 | F37 | **Header bar state indicators** | Redesign the top toolbar to clearly surface item states: Auto vs Manual scheduling (current toggle is non-obvious — auto mode should be visually prominent), Hidden vs Visible, and Locked vs Unlocked. These are mutually exclusive states that need distinct visual cues (e.g., colored pills, icons with labels, or segmented toggles). Same design pattern should extend to showing active filter state in Data View. | M | :orange_circle: P1 | :white_circle: Open |
 | F19 | **Swimlane header font size** | Per-swimlane font size for header labels. Configurable in swimlane edit modal with bulk propagation. Must flow through `_svgText()` for export. | S | :yellow_circle: P2 | :white_circle: Open |
 | F4 | **Days scale option** | Add "Days" to the timescale options (currently: Weeks, Months, Quarters, Years). | L | :yellow_circle: P2 | :white_circle: Open |
@@ -127,7 +127,6 @@
 _All P0 items resolved in v0.14.0._
 
 ### :orange_circle: P1 — High Priority for V1
-- **F36** — Collapsible properties pane (M)
 - **F37** — Header bar state indicators (M)
 
 ### :yellow_circle: P2 — Nice to Have for V1
@@ -168,6 +167,7 @@ _All P0 items resolved in v0.14.0._
 
 | # | Title | Size | Version | Notes |
 |---|-------|------|---------|-------|
+| F36 | **Collapsible Properties Panel** | M | 0.34.0 | Three-button panel system (📌 Pin Open, › Collapse, » Pin Collapse). Pin Open keeps panel expanded on deselect (empty state). Collapse temporarily collapses to 28px tab (auto-reopens on next click). Pin Collapse locks collapsed with hint animation (1.2s glow, 4s cooldown). Data view auto-collapses with state memory (`_panelPreDataView`). Both views get `paddingRight` for 28px tab. Context menu "Edit" overrides pin-collapse. Panel stays open during drag. Session persistence via `localStorage`. |
 | B36 | **Tab key opens glitched empty properties pane** | XS | 0.33.1 | Pressing Tab while timeline focused (no selection) opened the properties pane in a broken all-black state. Tab's default browser focus-navigation reached offscreen panel buttons (hidden via `transform:translateX(100%)` but still focusable). Fix: added Tab key guard in the document keydown handler — `preventDefault()` when `activeElement` is not an input/textarea/select, preserving normal Tab navigation within form fields. |
 | F40 | **Data Table Context Menu** | L | 0.32.0 | Column-aware right-click bulk editing in Data View. Recognizes property type and offers smart operations: text fields (apply value, prepend, append, clear), enum fields (dropdown picker applies to all selected), pin/hidden (set/unset/toggle), type (bulk convert with date rules), delete with dep cleanup. `ctx-hint` headers show affected item count. Mini-input popover for prepend/append. Single `snap()` per operation. 173 new tests. |
 | F38 | **Data View status dropdown** | S | 0.32.0 | Restored inline `<select>` dropdown for Status column in Data View. Lists all `statusDefs` (excluding blank) with emoji + shortName. Change handler updates `statusDate` to today when status is set, clears it when status is cleared. |
