@@ -8,6 +8,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.33.1** | 2026-02-17 | Tab key panel glitch fix (B36): Pressing Tab while timeline focused (no selection) no longer opens a broken empty properties pane. Tab intercepted in keydown handler — `preventDefault()` when not in a form field, normal Tab navigation preserved within inputs. |
 | **0.33.0** | 2026-02-17 | Simple Auto Arrange Slider: New "Layout Style" slider (Compact ↔ Waterfall) maps a single 0–100 value to three advanced parameters (Spread, Padding, Date Weight) + Consider Labels toggle via piecewise linear interpolation. Advanced options collapsed behind "▸ Advanced Options" panel with bidirectional sync. Added F41 (Layout engine enhancements) as P2 Research backlog item referencing `timeline-studio-layout-engine-analysis.md`. |
 | **0.32.0** | 2026-02-17 | Data Table Context Menu (F40, B37, F38): Column-aware right-click bulk editing in Data View. Recognizes property type (text/status/lane/sub/color/row/progress/pin/hidden/type) and offers smart operations — text fields get apply-value/prepend/append/clear; enum fields get dropdown pickers that apply to all selected; pin/hidden get set/unset/toggle; type gets bulk convert with date conversion rules; delete cleans dependency references. `ctx-hint` headers show affected item count. Mini-input popover for prepend/append with Enter/Escape/stopPropagation. Single `snap()` per operation for atomic undo. Restored inline status `<select>` dropdown in data table (F38). Fixed right-click collapsing multi-selection — `onmousedown` now skips `_dtSelect` for button=2 when item already selected (B37). 173 new tests in `test_dt_context_menu.js`. |
 | **0.31.1** | 2026-02-16 | File handle bug fixes (B33–B35): Save As button no longer clears `_fileHandle` before picker (B33), Save As preserves original file handle for future Ctrl+S instead of redirecting to the copy (B34), `openFile()` now confirms unsaved changes before discarding (B35). |
@@ -90,7 +91,7 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
-| B36 | **Tab key opens glitched empty properties pane** | Pressing Tab while the timeline is focused (with no item selected) opens the properties pane in a broken all-black state. The Tab handler should check for an active selection and do nothing if nothing is selected. | XS | :orange_circle: P1 | :white_circle: Open |
+| | _No open bugs_ | | | | |
 
 ---
 
@@ -126,7 +127,6 @@
 _All P0 items resolved in v0.14.0._
 
 ### :orange_circle: P1 — High Priority for V1
-- **B36** — Tab key opens glitched empty properties pane (XS)
 - **F36** — Collapsible properties pane (M)
 - **F37** — Header bar state indicators (M)
 
@@ -168,6 +168,7 @@ _All P0 items resolved in v0.14.0._
 
 | # | Title | Size | Version | Notes |
 |---|-------|------|---------|-------|
+| B36 | **Tab key opens glitched empty properties pane** | XS | 0.33.1 | Pressing Tab while timeline focused (no selection) opened the properties pane in a broken all-black state. Tab's default browser focus-navigation reached offscreen panel buttons (hidden via `transform:translateX(100%)` but still focusable). Fix: added Tab key guard in the document keydown handler — `preventDefault()` when `activeElement` is not an input/textarea/select, preserving normal Tab navigation within form fields. |
 | F40 | **Data Table Context Menu** | L | 0.32.0 | Column-aware right-click bulk editing in Data View. Recognizes property type and offers smart operations: text fields (apply value, prepend, append, clear), enum fields (dropdown picker applies to all selected), pin/hidden (set/unset/toggle), type (bulk convert with date rules), delete with dep cleanup. `ctx-hint` headers show affected item count. Mini-input popover for prepend/append. Single `snap()` per operation. 173 new tests. |
 | F38 | **Data View status dropdown** | S | 0.32.0 | Restored inline `<select>` dropdown for Status column in Data View. Lists all `statusDefs` (excluding blank) with emoji + shortName. Change handler updates `statusDate` to today when status is set, clears it when status is cleared. |
 | B37 | **Right-click collapses multi-selection** | XS | 0.32.0 | `tb.onmousedown` fired before `tb.oncontextmenu` on right-click (button=2), calling `_dtSelect()` with no modifiers which replaced the multi-selection with just the clicked item. Fix: added `if(e.button===2&&this.sel.includes(row.dataset.iid))return;` guard to skip `_dtSelect` when right-clicking an already-selected item. |

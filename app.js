@@ -1,4 +1,4 @@
-/* Timeline Studio v0.33.0 — Simple Auto Arrange Slider: New "Layout Style" slider (Compact ↔ Waterfall) that maps a single 0–100 value to the three advanced sliders (Spread, Padding, Date Weight) + Consider Labels toggle via piecewise linear interpolation. Advanced options collapsed behind a "▸ Advanced Options" panel with bidirectional sync. Added layout engine research item (F41) to backlog. */
+/* Timeline Studio v0.33.1 — Tab key panel glitch fix (B36): Pressing Tab while timeline focused (no selection) no longer opens a broken empty properties pane. Tab is now intercepted in the keydown handler and prevented from focusing offscreen panel elements when not in a form field. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -1031,6 +1031,8 @@ const App={
     // Keyboard — dispatch via shortcut map
     document.addEventListener('keydown',e=>{
       const combo=this._normalizeKey(e);if(!combo)return;
+      // B36: Prevent Tab from focusing offscreen panel elements
+      if(e.key==='Tab'){const inp=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);if(!inp){e.preventDefault();return}}
       const actionId=this._scMap[combo.toLowerCase()];if(!actionId)return;
       const action=SHORTCUT_ACTIONS.find(a=>a.id===actionId);if(!action)return;
       const inp=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);
