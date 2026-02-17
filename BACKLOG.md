@@ -88,7 +88,7 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
-| | *No open bugs* | | | | |
+| B36 | **Tab key opens glitched empty properties pane** | Pressing Tab while the timeline is focused (with no item selected) opens the properties pane in a broken all-black state. The Tab handler should check for an active selection and do nothing if nothing is selected. | XS | :orange_circle: P1 | :white_circle: Open |
 
 ---
 
@@ -98,6 +98,9 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
+| F36 | **Collapsible properties pane** | Pin-close the properties pane with a slim vertical tab (matching the hidden-swimlane curved-tab design) that shows centered vertical text like "Properties — click to expand." Clicking the tab re-opens the pane. Add a configurable keyboard shortcut (default binding TBD). Use this mechanism to auto-hide during Data View editing and smartly close/reopen based on user selection context. | M | :orange_circle: P1 | :white_circle: Open |
+| F37 | **Header bar state indicators** | Redesign the top toolbar to clearly surface item states: Auto vs Manual scheduling (current toggle is non-obvious — auto mode should be visually prominent), Hidden vs Visible, and Locked vs Unlocked. These are mutually exclusive states that need distinct visual cues (e.g., colored pills, icons with labels, or segmented toggles). Same design pattern should extend to showing active filter state in Data View. | M | :orange_circle: P1 | :white_circle: Open |
+| F38 | **Data View status dropdown** | Add a dropdown selector for the Status column in Data View (currently requires properties pane or context menu). Dropdown should list all `statusDefs` with color swatches, matching the properties pane status picker UX. | S | :orange_circle: P1 | :white_circle: Open |
 | F19 | **Swimlane header font size** | Per-swimlane font size for header labels. Configurable in swimlane edit modal with bulk propagation. Must flow through `_svgText()` for export. | S | :yellow_circle: P2 | :white_circle: Open |
 | F4 | **Days scale option** | Add "Days" to the timescale options (currently: Weeks, Months, Quarters, Years). | L | :yellow_circle: P2 | :white_circle: Open |
 | F13 | **Keyboard shortcut discoverability** | Surface keyboard shortcuts and power-user actions in the UI for new users. Options include a cheatsheet panel, tooltip hints, or help modal section. | M | :yellow_circle: P2 | :white_circle: Open |
@@ -120,7 +123,10 @@
 _All P0 items resolved in v0.14.0._
 
 ### :orange_circle: P1 — High Priority for V1
-_All P1 items resolved in v0.30.0._
+- **B36** — Tab key opens glitched empty properties pane (XS)
+- **F36** — Collapsible properties pane (M)
+- **F37** — Header bar state indicators (M)
+- **F38** — Data View status dropdown (S)
 
 ### :yellow_circle: P2 — Nice to Have for V1
 - **F19** — Swimlane header font size (S)
