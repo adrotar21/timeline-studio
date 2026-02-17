@@ -128,6 +128,12 @@ body.theme-midnight #props-panel{box-shadow:-4px 0 20px rgba(0,0,0,.4)}
 .modal.modal-live .modal-content{position:absolute;cursor:default;box-shadow:0 8px 32px rgba(0,0,0,.45);border:1.5px solid var(--acc)}
 .modal.modal-live .modal-header{cursor:grab;user-select:none}
 .modal.modal-live .modal-header:active{cursor:grabbing}
+/* Auto Arrange: collapsible advanced panel */
+.arr-adv-toggle{font-size:10px;font-weight:600;color:var(--tx2);cursor:pointer;padding:3px 0;user-select:none;display:flex;align-items:center;gap:4px}
+.arr-adv-toggle:hover{color:var(--acc)}
+.arr-adv-arrow{display:inline-block;font-size:9px;transition:transform .15s ease}
+.arr-adv-arrow.open{transform:rotate(90deg)}
+.arr-adv-panel{padding:6px 0 0 0;border-left:2px solid var(--bdr);margin-left:4px;padding-left:10px}
 
 /* Timeline */
 #tl-container{flex-direction:column;overflow:hidden;position:relative;background:#fff}

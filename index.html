@@ -268,36 +268,56 @@
               <button class="btn btn-secondary" id="btn-arrange-reset" type="button" style="font-size:9px;padding:2px 8px">Reset Defaults</button>
             </div>
             <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4;margin-bottom:6px">Controls how Auto Arrange and imported items are distributed across rows. Imported items are always auto-arranged when no Row column is mapped.</div>
+            <!-- Simple slider -->
             <div class="form-group">
-              <label>Row Spread</label>
+              <label>Layout Style</label>
               <div style="display:flex;align-items:center;gap:6px">
                 <span style="font-size:9px;color:var(--tx3)">Compact</span>
-                <input type="range" id="s-arrange-spread" min="10" max="100" value="50" style="width:140px">
-                <span style="font-size:9px;color:var(--tx3)">Spread</span>
-                <span id="s-arrange-spread-val" style="font-size:10px;color:var(--tx3);min-width:28px">50</span>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Label Padding</label>
-              <div style="display:flex;align-items:center;gap:6px">
-                <span style="font-size:9px;color:var(--tx3)">Tight</span>
-                <input type="range" id="s-arrange-padding" min="0" max="100" value="50" style="width:140px">
-                <span style="font-size:9px;color:var(--tx3)">Roomy</span>
-                <span id="s-arrange-padding-val" style="font-size:10px;color:var(--tx3);min-width:28px">50</span>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Date Weight</label>
-              <div style="display:flex;align-items:center;gap:6px">
-                <span style="font-size:9px;color:var(--tx3)">Pack</span>
-                <input type="range" id="s-arrange-dateweight" min="0" max="100" value="20" style="width:140px">
+                <input type="range" id="s-arrange-simple" min="0" max="100" value="50" style="width:160px">
                 <span style="font-size:9px;color:var(--tx3)">Waterfall</span>
-                <span id="s-arrange-dateweight-val" style="font-size:10px;color:var(--tx3);min-width:28px">20</span>
+                <span id="s-arrange-simple-val" style="font-size:10px;color:var(--tx3);min-width:28px">50</span>
               </div>
+              <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">Adjusts row spread, padding, and date weight together. Move left for tight packing, right for a cascading waterfall layout.</div>
             </div>
-            <div class="form-group">
-              <label><input type="checkbox" id="s-arrange-labels"> Consider label width</label>
-              <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">When enabled, label text width is included in collision detection so labels don't overlap. Disable for tighter packing, then adjust label positions (center, left, etc.) as needed.</div>
+            <!-- Collapsible Advanced Options -->
+            <div class="form-group" style="margin-top:4px">
+              <div id="arr-adv-toggle" class="arr-adv-toggle">
+                <span id="arr-adv-arrow" class="arr-adv-arrow">▸</span> Advanced Options
+              </div>
+              <div id="arr-adv-panel" class="arr-adv-panel hidden">
+                <div style="font-size:9.5px;color:var(--tx3);margin-bottom:6px;line-height:1.4">Fine-tune individual parameters. Changing these will update the simple slider to match, and vice versa.</div>
+                <div class="form-group">
+                  <label>Row Spread</label>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <span style="font-size:9px;color:var(--tx3)">Compact</span>
+                    <input type="range" id="s-arrange-spread" min="10" max="100" value="50" style="width:140px">
+                    <span style="font-size:9px;color:var(--tx3)">Spread</span>
+                    <span id="s-arrange-spread-val" style="font-size:10px;color:var(--tx3);min-width:28px">50</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Label Padding</label>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <span style="font-size:9px;color:var(--tx3)">Tight</span>
+                    <input type="range" id="s-arrange-padding" min="0" max="100" value="50" style="width:140px">
+                    <span style="font-size:9px;color:var(--tx3)">Roomy</span>
+                    <span id="s-arrange-padding-val" style="font-size:10px;color:var(--tx3);min-width:28px">50</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Date Weight</label>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <span style="font-size:9px;color:var(--tx3)">Pack</span>
+                    <input type="range" id="s-arrange-dateweight" min="0" max="100" value="20" style="width:140px">
+                    <span style="font-size:9px;color:var(--tx3)">Waterfall</span>
+                    <span id="s-arrange-dateweight-val" style="font-size:10px;color:var(--tx3);min-width:28px">20</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label><input type="checkbox" id="s-arrange-labels"> Consider label width</label>
+                  <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">When enabled, label text width is included in collision detection so labels don't overlap. Disable for tighter packing, then adjust label positions (center, left, etc.) as needed.</div>
+                </div>
+              </div>
             </div>
             <div class="form-group">
               <label><input type="checkbox" id="s-arrange-live"> Live preview</label>

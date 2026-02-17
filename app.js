@@ -1,4 +1,4 @@
-/* Timeline Studio v0.32.0 — Data Table Context Menu (F40): Column-aware right-click bulk editing in Data View. Recognizes property type (text/status/lane/sub/color/row/progress/pin/hidden/type) and offers smart operations. Text fields: apply value, prepend, append, clear. Enum fields: dropdown picker applies to all selected. Pin/hidden: set/unset/toggle. Type: bulk convert with date rules. Delete with dependency cleanup. Single undo per operation. Restored inline status dropdown (F38). Fixed right-click collapsing multi-selection (B37). 173 new tests. */
+/* Timeline Studio v0.33.0 — Simple Auto Arrange Slider: New "Layout Style" slider (Compact ↔ Waterfall) that maps a single 0–100 value to the three advanced sliders (Spread, Padding, Date Weight) + Consider Labels toggle via piecewise linear interpolation. Advanced options collapsed behind a "▸ Advanced Options" panel with bidirectional sync. Added layout engine research item (F41) to backlog. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -90,7 +90,7 @@ const RESERVED_COMBOS=new Set(['Ctrl+v','Ctrl+c','Ctrl+x']);
 const BROWSER_RESERVED=new Set(['Ctrl+t','Ctrl+w','Ctrl+Tab','Ctrl+Shift+Tab','Ctrl+l','Ctrl+Shift+t','Ctrl+Shift+n','Ctrl+n','F5','Ctrl+F5','F12']);
 
 
-function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
+function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
 const App={
   proj:newProj(),sel:[],undoStack:[],redoStack:[],
@@ -254,7 +254,7 @@ const App={
     p.holidays.forEach(h=>{if(h.schedAround==null)h.schedAround=true});
     if(p.tttEnabled==null)p.tttEnabled=false;if(p.tttMilestoneId==null)p.tttMilestoneId='';
     if(p.showFloat==null)p.showFloat=false;if(p.schedulingMode==null)p.schedulingMode='manual';
-    if(p.labelWidth==null)p.labelWidth=160;if(p.autoSortSwimlanes==null)p.autoSortSwimlanes=false;if(p.arrangeSpread==null)p.arrangeSpread=50;if(p.arrangePadding==null)p.arrangePadding=50;if(p.arrangeDateWeight==null)p.arrangeDateWeight=20;if(p.arrangeLabels==null)p.arrangeLabels=false;
+    if(p.labelWidth==null)p.labelWidth=160;if(p.autoSortSwimlanes==null)p.autoSortSwimlanes=false;if(p.arrangeSpread==null)p.arrangeSpread=50;if(p.arrangePadding==null)p.arrangePadding=50;if(p.arrangeDateWeight==null)p.arrangeDateWeight=20;if(p.arrangeLabels==null)p.arrangeLabels=false;if(p.arrangeSimple==null)p.arrangeSimple=50;
     if(!Array.isArray(p.statusDefs))p.statusDefs=[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}];
     if(!p.statusDisplay)p.statusDisplay={show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''};
     /* Migrate colorOverride from mode dropdown to separate toggle */
@@ -1840,6 +1840,8 @@ const App={
     document.getElementById('s-hol-labels').checked=p.holidayLabels!==false;
     document.getElementById('s-sched-around').checked=p.scheduleAroundNonWorking!==false;
     document.getElementById('s-auto-sort-swim').checked=!!p.autoSortSwimlanes;
+    /* --- Auto Arrange: simple slider + advanced panel binding --- */
+    const arrSimEl=document.getElementById('s-arrange-simple'),arrSimVal=document.getElementById('s-arrange-simple-val');
     const arrSpEl=document.getElementById('s-arrange-spread'),arrSpVal=document.getElementById('s-arrange-spread-val');
     const arrPdEl=document.getElementById('s-arrange-padding'),arrPdVal=document.getElementById('s-arrange-padding-val');
     const arrDwEl=document.getElementById('s-arrange-dateweight'),arrDwVal=document.getElementById('s-arrange-dateweight-val');
@@ -1848,6 +1850,22 @@ const App={
     const settingsContent=settingsModal?.querySelector('.modal-content');
     const settingsHeader=settingsModal?.querySelector('.modal-header');
     const arrLabChk=document.getElementById('s-arrange-labels');
+    const arrAdvToggle=document.getElementById('arr-adv-toggle');
+    const arrAdvPanel=document.getElementById('arr-adv-panel');
+    const arrAdvArrow=document.getElementById('arr-adv-arrow');
+    /* Sync helpers: push values into advanced slider UI */
+    let _arrSyncing=false;/* prevent infinite loops during bidirectional sync */
+    const syncAdvFromSimple=(v)=>{
+      const m=this._arrangeSimpleToAdvanced(v);
+      if(arrSpEl){arrSpEl.value=m.spread;if(arrSpVal)arrSpVal.textContent=m.spread}
+      if(arrPdEl){arrPdEl.value=m.padding;if(arrPdVal)arrPdVal.textContent=m.padding}
+      if(arrDwEl){arrDwEl.value=m.dateWeight;if(arrDwVal)arrDwVal.textContent=m.dateWeight}
+      if(arrLabChk)arrLabChk.checked=m.labels;
+    };
+    const syncSimpleFromAdv=()=>{
+      const v=this._arrangeAdvancedToSimple(+arrSpEl.value,+arrPdEl.value,+arrDwEl.value);
+      if(arrSimEl){arrSimEl.value=v;if(arrSimVal)arrSimVal.textContent=v}
+    };
     /* Live preview state */
     let liveSnapped=false;
     const liveUpdate=()=>{
@@ -1856,6 +1874,7 @@ const App={
       p.arrangeSpread=+arrSpEl.value;p.arrangePadding=+arrPdEl.value;
       if(arrDwEl)p.arrangeDateWeight=+arrDwEl.value;
       if(arrLabChk)p.arrangeLabels=arrLabChk.checked;
+      if(arrSimEl)p.arrangeSimple=+arrSimEl.value;
       this._autoLayoutItems([...p.items]);this.sched()
     };
     /* Toggle live preview mode: make modal movable, overlay transparent */
@@ -1863,7 +1882,6 @@ const App={
       if(!settingsModal)return;
       settingsModal.classList.toggle('modal-live',on);
       if(on&&settingsContent){
-        /* Position modal to top-right so timeline is visible */
         const vw=window.innerWidth,vh=window.innerHeight;
         const rect=settingsContent.getBoundingClientRect();
         settingsContent.style.left=Math.max(8,vw-rect.width-24)+'px';
@@ -1881,19 +1899,25 @@ const App={
       const onUp=()=>{dragging=false;document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp)};
       settingsHeader.addEventListener('mousedown',e=>{
         if(!settingsModal.classList.contains('modal-live'))return;
-        if(e.target.closest('button'))return;/* don't drag from close btn */
+        if(e.target.closest('button'))return;
         dragging=true;dragX=e.clientX;dragY=e.clientY;
         const r=settingsContent.getBoundingClientRect();startL=r.left;startT=r.top;
         document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
         e.preventDefault()
       })
     }
-    if(arrSpEl){arrSpEl.value=p.arrangeSpread!=null?p.arrangeSpread:50;if(arrSpVal)arrSpVal.textContent=arrSpEl.value;arrSpEl.oninput=function(){if(arrSpVal)arrSpVal.textContent=this.value;liveUpdate()}}
-    if(arrPdEl){arrPdEl.value=p.arrangePadding!=null?p.arrangePadding:50;if(arrPdVal)arrPdVal.textContent=arrPdEl.value;arrPdEl.oninput=function(){if(arrPdVal)arrPdVal.textContent=this.value;liveUpdate()}}
-    if(arrDwEl){arrDwEl.value=p.arrangeDateWeight!=null?p.arrangeDateWeight:20;if(arrDwVal)arrDwVal.textContent=arrDwEl.value;arrDwEl.oninput=function(){if(arrDwVal)arrDwVal.textContent=this.value;liveUpdate()}}
-    if(arrLabChk){arrLabChk.checked=!!p.arrangeLabels;arrLabChk.onchange=function(){liveUpdate()}}
+    /* Simple slider: initialize from saved value, sync to advanced on drag */
+    if(arrSimEl){arrSimEl.value=p.arrangeSimple!=null?p.arrangeSimple:50;if(arrSimVal)arrSimVal.textContent=arrSimEl.value;arrSimEl.oninput=function(){if(arrSimVal)arrSimVal.textContent=this.value;if(!_arrSyncing){_arrSyncing=true;syncAdvFromSimple(+this.value);_arrSyncing=false}liveUpdate()}}
+    /* Advanced sliders: initialize from saved values, sync back to simple on drag */
+    if(arrSpEl){arrSpEl.value=p.arrangeSpread!=null?p.arrangeSpread:50;if(arrSpVal)arrSpVal.textContent=arrSpEl.value;arrSpEl.oninput=function(){if(arrSpVal)arrSpVal.textContent=this.value;if(!_arrSyncing){_arrSyncing=true;syncSimpleFromAdv();_arrSyncing=false}liveUpdate()}}
+    if(arrPdEl){arrPdEl.value=p.arrangePadding!=null?p.arrangePadding:50;if(arrPdVal)arrPdVal.textContent=arrPdEl.value;arrPdEl.oninput=function(){if(arrPdVal)arrPdVal.textContent=this.value;if(!_arrSyncing){_arrSyncing=true;syncSimpleFromAdv();_arrSyncing=false}liveUpdate()}}
+    if(arrDwEl){arrDwEl.value=p.arrangeDateWeight!=null?p.arrangeDateWeight:20;if(arrDwVal)arrDwVal.textContent=arrDwEl.value;arrDwEl.oninput=function(){if(arrDwVal)arrDwVal.textContent=this.value;if(!_arrSyncing){_arrSyncing=true;syncSimpleFromAdv();_arrSyncing=false}liveUpdate()}}
+    if(arrLabChk){arrLabChk.checked=!!p.arrangeLabels;arrLabChk.onchange=function(){if(!_arrSyncing){_arrSyncing=true;syncSimpleFromAdv();_arrSyncing=false}liveUpdate()}}
+    /* Advanced panel toggle */
+    if(arrAdvToggle&&arrAdvPanel){arrAdvToggle.onclick=()=>{const open=arrAdvPanel.classList.toggle('hidden');arrAdvArrow.classList.toggle('open',!open)}}
+    /* Reset: restores defaults for both simple + advanced */
     const btnArrReset=document.getElementById('btn-arrange-reset');
-    if(btnArrReset)btnArrReset.onclick=()=>{const d=newProj();if(arrSpEl){arrSpEl.value=d.arrangeSpread;if(arrSpVal)arrSpVal.textContent=d.arrangeSpread}if(arrPdEl){arrPdEl.value=d.arrangePadding;if(arrPdVal)arrPdVal.textContent=d.arrangePadding}if(arrDwEl){arrDwEl.value=d.arrangeDateWeight;if(arrDwVal)arrDwVal.textContent=d.arrangeDateWeight}if(arrLabChk)arrLabChk.checked=!!d.arrangeLabels;liveUpdate()};
+    if(btnArrReset)btnArrReset.onclick=()=>{const d=newProj();if(arrSimEl){arrSimEl.value=d.arrangeSimple!=null?d.arrangeSimple:50;if(arrSimVal)arrSimVal.textContent=arrSimEl.value}syncAdvFromSimple(+arrSimEl.value);liveUpdate()};
     document.getElementById('hol-import-box').classList.add('hidden');
     document.getElementById('hol-add-box')?.classList.add('hidden');
     document.getElementById('hol-paste-ta').value='';
@@ -1993,6 +2017,7 @@ const App={
     p.scheduleAroundNonWorking=document.getElementById('s-sched-around').checked;
     if(p.scheduleAroundNonWorking!==oldSchedAround)this._recalcNonWorkingDays();
     p.autoSortSwimlanes=document.getElementById('s-auto-sort-swim').checked;
+    const arrSimEl2=document.getElementById('s-arrange-simple');if(arrSimEl2)p.arrangeSimple=+arrSimEl2.value;
     const arrSpEl2=document.getElementById('s-arrange-spread');if(arrSpEl2)p.arrangeSpread=+arrSpEl2.value;
     const arrPdEl2=document.getElementById('s-arrange-padding');if(arrPdEl2)p.arrangePadding=+arrPdEl2.value;
     const arrDwEl2=document.getElementById('s-arrange-dateweight');if(arrDwEl2)p.arrangeDateWeight=+arrDwEl2.value;
@@ -2583,6 +2608,30 @@ const App={
      Computes a row budget from item density, distributes items using date-elapsed
      percentage for natural top-left → bottom-right waterfall, then compacts empties.
      Used by both import (newItems only) and autoArrange (any scope). */
+  /* Simple slider (0–100) → advanced parameter mapping.
+     Maps one slider to the three tunable parameters (spread, padding, dateWeight)
+     plus the labels toggle. Uses piecewise linear interpolation with control points
+     tuned for natural visual progression from compact packing to full waterfall. */
+  _arrangeSimpleToAdvanced(v){
+    /* Control points: [simpleVal, spread, padding, dateWeight, labels] */
+    const pts=[[0,10,0,0,false],[25,25,25,5,false],[50,50,50,20,false],[75,70,70,50,true],[100,100,85,100,true]];
+    let lo=pts[0],hi=pts[pts.length-1];
+    for(let i=0;i<pts.length-1;i++){if(v>=pts[i][0]&&v<=pts[i+1][0]){lo=pts[i];hi=pts[i+1];break}}
+    const t=lo[0]===hi[0]?0:(v-lo[0])/(hi[0]-lo[0]);
+    const lerp=(a,b)=>Math.round(a+(b-a)*t);
+    return{spread:lerp(lo[1],hi[1]),padding:lerp(lo[2],hi[2]),dateWeight:lerp(lo[3],hi[3]),labels:v>=63};
+  },
+  /* Reverse: given current advanced values, find the closest simple slider position */
+  _arrangeAdvancedToSimple(spread,padding,dateWeight){
+    /* Score each candidate from 0–100 against the mapping, return best match */
+    let best=50,bestDist=Infinity;
+    for(let v=0;v<=100;v++){
+      const m=this._arrangeSimpleToAdvanced(v);
+      const d=Math.abs(m.spread-spread)+Math.abs(m.padding-padding)+Math.abs(m.dateWeight-dateWeight);
+      if(d<bestDist){bestDist=d;best=v}
+    }
+    return best;
+  },
   _autoLayoutItems(items){
     if(!items||!items.length)return;
     const p=this.proj;
