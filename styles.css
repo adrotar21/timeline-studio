@@ -70,6 +70,32 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 #main-content.split-view #data-container{order:-1}
 .view-active{display:flex!important;flex:1}.view-hidden{display:none!important}
 
+/* Share Banner */
+.share-banner{display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fefce8;border-bottom:1px solid #fde68a;font-size:11.5px;color:#713f12;flex-shrink:0;z-index:90}
+.share-banner.hidden{display:none!important}
+.share-banner-text{flex:1;line-height:1.4}
+.share-banner-link{background:none;border:none;color:#92400e;cursor:pointer;font-size:11.5px;font-weight:600;text-decoration:underline;padding:0;font-family:inherit}
+.share-banner-link:hover{color:#78350f}
+.share-banner-dismiss{background:none;border:none;cursor:pointer;padding:2px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:3px;transition:background .12s}
+.share-banner-dismiss:hover{background:rgba(0,0,0,.06)}
+.share-timer-ring{transition:stroke-dashoffset .15s linear}
+@keyframes shareBannerFade{0%{opacity:1;max-height:40px;padding:5px 12px;border-bottom-width:1px}70%{opacity:0;max-height:40px;padding:5px 12px;border-bottom-width:1px}100%{opacity:0;max-height:0;padding:0 12px;border-bottom-width:0}}
+.share-banner.dismissing{animation:shareBannerFade .4s ease forwards;pointer-events:none}
+body.theme-claude .share-banner{background:#fef3ec;border-bottom-color:#f5d0b0;color:#6b3a1f}
+body.theme-claude .share-banner-link{color:#92400e}
+body.theme-midnight .share-banner{background:rgba(254,252,232,.08);border-bottom-color:rgba(253,230,138,.15);color:#fde68a}
+body.theme-midnight .share-banner-link{color:#fbbf24}
+body.theme-midnight .share-banner-dismiss svg path{stroke:var(--tx2)}
+.share-size-note{font-size:10px;color:var(--tx3);margin-top:4px}
+.share-size-warn{color:var(--warn,#f59e0b)!important}
+.share-warning-box{display:flex;gap:8px;padding:10px 12px;background:#fefce8;border:1px solid #fde68a;border-radius:6px;font-size:11px;line-height:1.5;color:#713f12}
+.share-warning-icon{font-size:16px;flex-shrink:0;line-height:1.3}
+.share-warning-text{flex:1}
+.share-warning-text strong{font-weight:600}
+#share-paste-preview{font-style:italic;color:#92400e}
+body.theme-midnight .share-warning-box{background:rgba(254,252,232,.06);border-color:rgba(253,230,138,.15);color:#fde68a}
+body.theme-midnight #share-paste-preview{color:#fbbf24}
+
 /* Panel */
 #props-panel{position:absolute;top:0;right:0;bottom:0;width:290px;z-index:50;background:var(--bg1);border-left:1px solid var(--brd);display:flex;flex-direction:column;overflow:hidden;box-shadow:-4px 0 16px rgba(0,0,0,.15);transition:transform .2s ease,opacity .2s ease}
 #props-panel.panel-hidden{transform:translateX(100%);opacity:0;pointer-events:none}
@@ -156,12 +182,12 @@ body.theme-midnight #props-panel{box-shadow:-4px 0 20px rgba(0,0,0,.4)}
 .th-row{display:flex;white-space:nowrap}
 .th-cell{display:flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:600;padding:3px 0;border-right:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
 #tl-body-wrap{display:flex;flex:1;overflow:hidden;position:relative}
-#tl-sl-labels{width:var(--sl-w);min-width:var(--sl-w);overflow-y:auto;overflow-x:hidden;z-index:10;scrollbar-width:none}
+#tl-sl-labels{width:var(--sl-w);min-width:var(--sl-w);overflow-y:auto;overflow-x:hidden;z-index:10;scrollbar-width:none;padding-bottom:18px}
 #tl-sl-labels::-webkit-scrollbar{display:none}
 #tl-watermark{position:absolute;font-size:11px;color:#888;font-style:italic;padding:4px 8px;z-index:15;pointer-events:none;display:block}
 /* body-scroll: flex column layout for tl-body growth */
 #tl-body-scroll{flex:1;overflow:auto;position:relative;display:flex;flex-direction:column}
-#tl-body{position:relative;min-height:100%;flex:1}
+#tl-body{position:relative;min-height:100%;flex:1;padding-bottom:18px;box-sizing:border-box}
 #tl-body.lasso-mode{cursor:crosshair}
 .tl-empty-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;font-size:13px;line-height:1.8;pointer-events:none;max-width:380px}
 .tl-empty-hint strong{font-weight:700}

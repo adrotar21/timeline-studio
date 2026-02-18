@@ -7,6 +7,13 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <meta property="og:title" content="Timeline Studio">
+  <meta property="og:description" content="Open this shared timeline in Timeline Studio — a free, no-install Gantt chart tool.">
+  <meta property="og:url" content="https://adrotar21.github.io/timeline-studio/">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Timeline Studio">
+  <meta name="twitter:description" content="Open this shared timeline in Timeline Studio — a free, no-install Gantt chart tool.">
 </head>
 <body>
 <div id="app">
@@ -29,6 +36,8 @@
           <div class="save-dd-item" id="btn-open"><span>📂</span> Open <span class="dd-shortcut">Ctrl+O</span></div>
           <div class="save-dd-item" id="btn-save"><span>💾</span> Save <span class="dd-shortcut">Ctrl+S</span></div>
           <div class="save-dd-item" id="btn-save-as"><span>💾</span> Save As… <span class="dd-shortcut">Ctrl+Shift+S</span></div>
+          <div style="border-top:1px solid var(--brd);margin:4px 0"></div>
+          <div class="save-dd-item" id="btn-share"><span>🔗</span> Share via Link</div>
         </div>
       </div>
       <div class="toolbar-separator"></div>
@@ -123,6 +132,10 @@
       <button class="toolbar-btn" id="btn-help" data-tooltip="Help">?</button>
     </div>
   </header>
+  <div id="share-banner" class="share-banner hidden">
+    <span class="share-banner-text">🔗 You're viewing a shared timeline — this is a local copy that won't sync back. <button class="share-banner-link" id="btn-share-banner-save">Save a copy to your machine</button></span>
+    <button class="share-banner-dismiss" id="btn-share-banner-dismiss" title="Dismiss"><svg width="18" height="18" viewBox="0 0 18 18"><circle class="share-timer-bg" cx="9" cy="9" r="7.5" fill="none" stroke="var(--tx3)" stroke-width="1.2" opacity=".25"/><circle id="share-timer-ring" class="share-timer-ring" cx="9" cy="9" r="7.5" fill="none" stroke="var(--tx2)" stroke-width="1.2" stroke-dasharray="47.12" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 9 9)"/><path d="M6.5 6.5l5 5M11.5 6.5l-5 5" stroke="var(--tx3)" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+  </div>
   <div id="main-content">
     <div id="tl-container" class="view-active">
       <div id="tl-scroll">
@@ -533,6 +546,30 @@
   </div>
   <!-- Project Name Modal -->
   <div id="pname-modal" class="modal hidden"><div class="modal-overlay"></div><div class="modal-content modal-sm"><div class="modal-header"><h2>Edit Project</h2><button class="modal-close" data-close-modal>&times;</button></div><div class="modal-body"><div class="form-group"><label>Project Name</label><input type="text" id="pn-name" class="form-input"></div></div><div class="modal-footer"><button class="btn btn-secondary" data-close-modal>Cancel</button><button class="btn btn-primary" id="btn-pn-save">Save</button></div></div></div>
+  <!-- Share Modal -->
+  <div id="share-modal" class="modal hidden"><div class="modal-overlay"></div>
+    <div class="modal-content" style="width:500px">
+      <div class="modal-header"><h2>Share via Link</h2><button class="modal-close" data-close-modal>&times;</button></div>
+      <div class="modal-body">
+        <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">Anyone with this link can open a copy of <strong id="share-proj-name"></strong> in their browser. No account or install needed.</p>
+        <div class="share-warning-box">
+          <span class="share-warning-icon">⚠</span>
+          <div class="share-warning-text">
+            <strong>The copied link will be very long</strong> because it contains the full project data. In most apps (Slack, Teams, email), it will paste as a clickable "<span id="share-paste-preview">Timeline Studio: Project Name</span>" link. In plain-text editors, the raw URL will appear instead.
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:12px">
+          <label>Shareable Link</label>
+          <textarea id="share-url-out" class="form-input" rows="3" readonly style="font-family:var(--mono);font-size:10px;resize:none;word-break:break-all"></textarea>
+        </div>
+        <div id="share-size-note" class="share-size-note"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal>Close</button>
+        <button class="btn btn-primary" id="btn-share-copy">Copy Link</button>
+      </div>
+    </div>
+  </div>
   <div id="tooltip" class="tooltip hidden"></div>
 </div>
 <input type="file" id="file-input" accept=".json,.tlproj" style="display:none">
