@@ -24,7 +24,7 @@
           <span>File</span>
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" style="margin-left:1px"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
         </button>
-        <div class="save-dropdown hidden" id="file-dropdown">
+        <div class="save-dropdown" id="file-dropdown">
           <div class="save-dd-item" id="btn-new"><span>📄</span> New <span class="dd-shortcut">Ctrl+Alt+N</span></div>
           <div class="save-dd-item" id="btn-open"><span>📂</span> Open <span class="dd-shortcut">Ctrl+O</span></div>
           <div class="save-dd-item" id="btn-save"><span>💾</span> Save <span class="dd-shortcut">Ctrl+S</span></div>
@@ -42,7 +42,7 @@
           <span>Add</span>
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" style="margin-left:1px"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
         </button>
-        <div class="save-dropdown hidden" id="add-dropdown">
+        <div class="save-dropdown" id="add-dropdown">
           <div class="save-dd-item" id="btn-add-ms"><span>⭐</span> Milestone</div>
           <div class="save-dd-item" id="btn-add-task"><span>📦</span> Task</div>
           <div class="save-dd-item" id="btn-add-sw"><span>🏊</span> Swimlane</div>
@@ -61,7 +61,7 @@
           <span>View</span>
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" style="margin-left:1px"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
         </button>
-        <div class="save-dropdown dd-wide hidden" id="view-dropdown">
+        <div class="save-dropdown dd-wide" id="view-dropdown">
           <div class="dd-section">
             <div class="dd-section-label">Scale</div>
             <div class="dd-inline"><select id="ts-sel" class="toolbar-select"><option value="weeks">Weeks</option><option value="months" selected>Months</option><option value="quarters">Quarters</option><option value="years">Years</option></select></div>
@@ -104,7 +104,7 @@
           <span>Tools</span>
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" style="margin-left:1px"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
         </button>
-        <div class="save-dropdown dd-wide hidden" id="tools-dropdown">
+        <div class="save-dropdown dd-wide" id="tools-dropdown">
           <div class="save-dd-item" id="btn-lock"><span>🔓</span> <span id="lock-label">Unlocked</span></div>
           <div class="save-dd-item" id="btn-hide"><span>👁</span> <span id="hide-label">Visible</span></div>
           <div class="save-dd-item" id="btn-crit-path"><span>🔥</span> Critical Path</div>
@@ -182,13 +182,13 @@
   <div id="ctx-menu" class="hidden">
     <div class="ctx-item" data-action="edit">Edit Properties</div>
     <div class="ctx-item" data-action="duplicate">Duplicate</div>
-    <div class="ctx-item" data-action="delete">Delete</div>
+    <div class="ctx-item" data-action="delete">Delete<span class="ctx-shortcut">Del</span></div>
     <div class="ctx-sep"></div>
     <div class="ctx-item" data-action="add-ms-here">+ Milestone Here</div>
     <div class="ctx-item" data-action="add-task-here">+ Task Here</div>
     <div class="ctx-sep"></div>
     <div class="ctx-item" id="ctx-link-dep" data-action="link-dep">🔗 Link Dependency</div>
-    <div class="ctx-item" id="ctx-propagate" data-action="propagate">🔀 Propagate to Successors</div>
+    <div class="ctx-item" id="ctx-propagate" data-action="propagate">🔀 Propagate to Successors<span class="ctx-shortcut">Ctrl+Shift+P</span></div>
     <div class="ctx-item hidden" id="ctx-sched-auto" style="color:var(--tx3);cursor:default;font-size:10px">📐 Schedule is automatic</div>
     <div class="ctx-item ctx-has-sub" id="ctx-status-parent">🚦 Set Status<span class="ctx-arrow">▸</span>
       <div class="ctx-submenu" id="ctx-status-sub"></div>
