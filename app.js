@@ -1,4 +1,4 @@
-/* Timeline Studio v0.34.1 — Panel UX Refinement: Simplified from three-button (📌/›/») to two-button (‹ Collapse / 🔒 Lock-Collapse) model. Panel never auto-collapses on deselect — always shows empty state. Lock state visible on collapsed tab (🔒 icon). Data view ALWAYS lock-collapses with auto-restore on return. Data toolbar and filter bar get paddingRight to avoid panel overlap. Removed panelPinOpen, panelOpen; simplified to panelCollapsed + panelLocked. */
+/* Timeline Studio v0.34.2 — Panel button polish: Corrected collapse chevron direction to › (toward panel edge), button order to [›🔒] [›] (lock-collapse left, collapse right), and lock-collapse icon to ›🔒 combining direction with lock. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
