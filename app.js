@@ -1,4 +1,4 @@
-/* Timeline Studio v0.35.0 — UI polish: Theme-aware tooltips, input focus glow, custom scrollbars, button hierarchy, alternating row shading, toast exit animation, context menu shortcut hints, modal entrance/exit animations, dropdown entrance animations. */
+/* Timeline Studio v0.34.2 — Panel button polish: Corrected collapse chevron direction to › (toward panel edge), button order to [›🔒] [›] (lock-collapse left, collapse right), and lock-collapse icon to ›🔒 combining direction with lock. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -182,7 +182,7 @@ const App={
   _handleEscape(){
     this.sel=[];this.editItem=null;this.closePanel();
     this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');
-    document.querySelectorAll('.modal:not(.hidden)').forEach(m=>this.hideModal(m));
+    document.querySelectorAll('.modal:not(.hidden)').forEach(m=>m.classList.add('hidden'));
     if(this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}
     if(this._panMode){this._panMode=false;document.getElementById('btn-pan')?.classList.remove('active')}
     this.sched();
@@ -341,7 +341,7 @@ const App={
   refreshPanel(){if(this.editItem&&this.sel.length===1){const it=this.gi(this.sel[0]);if(it){this.editItem=it;this.renderPanel(it)}}else if(this.sel.length>1)this.renderBulkPanel()},
   autoSave:U.deb(function(){try{localStorage.setItem('tls3',JSON.stringify(App.proj))}catch(e){}},400),
   loadAuto(){try{const s=localStorage.getItem('tls3');if(s)this.proj=JSON.parse(s)}catch(e){}},
-  toast(m,t='success',dur=2200){const el=document.createElement('div');el.className=`toast toast-${t}`;el.textContent=m;const active=document.querySelectorAll('.toast');const offset=active.length*40;el.style.bottom=(18+offset)+'px';document.body.appendChild(el);setTimeout(()=>{el.classList.add('toast-out');el.addEventListener('transitionend',()=>el.remove(),{once:true})},dur)},
+  toast(m,t='success',dur=2200){const el=document.createElement('div');el.className=`toast toast-${t}`;el.textContent=m;const active=document.querySelectorAll('.toast');const offset=active.length*40;el.style.bottom=(18+offset)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),dur)},
 
   async saveFile(saveAs=false){
     const data=JSON.stringify(this.proj,null,2);
@@ -363,7 +363,7 @@ const App={
   newProjAct(){this.showModal('new-proj-modal');this.$.np_name.value='New Timeline';document.getElementById('np-template').value='blank'},
   createFromTemplate(){
     const tpl=document.getElementById('np-template').value,name=this.$.np_name.value.trim()||'New Timeline';
-    if(tpl==='duplicate'){this.snap();const dup=U.deep(this.proj);dup.name=name+' (Copy)';this.proj=dup;this._fileHandle=null;this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markDirty();this.hideModal('new-proj-modal');this.toast('Duplicated!');return}
+    if(tpl==='duplicate'){this.snap();const dup=U.deep(this.proj);dup.name=name+' (Copy)';this.proj=dup;this._fileHandle=null;this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markDirty();document.getElementById('new-proj-modal').classList.add('hidden');this.toast('Duplicated!');return}
     if(this._unsaved&&!confirm('Unsaved changes will be lost.'))return;
     this.snap();
     if(tpl==='blank')this.proj=newProj();
@@ -371,7 +371,7 @@ const App={
     else if(tpl==='software-dev')this.proj=this.tplSoftwareDev();
     else this.proj=newProj();
     this.proj.name=name;this._fileHandle=null;this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();
-    this.hideModal('new-proj-modal');this.toast('Created!')
+    document.getElementById('new-proj-modal').classList.add('hidden');this.toast('Created!')
   },
   tplProductLaunch(){const p=newProj();p.name='Product Launch';const y=new Date().getFullYear();
     const sl1={id:U.id(),name:'Planning',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'},sl2={id:U.id(),name:'Development',color:'#1B7F6A',height:120,subSwimlanes:[],collapsed:'expanded'},sl3={id:U.id(),name:'Launch',color:'#C0392B',height:120,subSwimlanes:[],collapsed:'expanded'};
@@ -835,7 +835,7 @@ const App={
     // Wire checkbox to rebuild preview
     if(convertCb){convertCb.onchange=()=>buildPreview()}
     const trModal=document.getElementById('sched-transition-modal');
-    if(trModal){const mc=trModal.querySelector('.modal-content');if(mc){mc.style.position='';mc.style.margin='';mc.style.left='';mc.style.top='';mc.style.transform=''}this.showModal('sched-transition-modal')}
+    if(trModal){const mc=trModal.querySelector('.modal-content');if(mc){mc.style.position='';mc.style.margin='';mc.style.left='';mc.style.top='';mc.style.transform=''}trModal.classList.remove('hidden')}
     }catch(err){
       console.error('[Timeline Studio] showScheduleTransition error:',err);
       this.snap();this.proj.schedulingMode='scheduled';this.runSchedule();this.sched();this.autoSave();
@@ -865,7 +865,7 @@ const App={
     }
     this.proj.schedulingMode='scheduled';
     this.runSchedule();
-    this.hideModal('sched-transition-modal');
+    document.getElementById('sched-transition-modal').classList.add('hidden');
     this.sched();this.autoSave();
     const n=this._schedTransitionChanges?.length||0;
     const converted=this._schedConvertToWork?' (durations → working days)':'';
@@ -876,7 +876,7 @@ const App={
     this.snap();
     const ids=new Set(this._schedTransitionChanges.map(c=>c.id));
     this.proj.items.forEach(it=>{if(ids.has(it.id))it.pinned=true});
-    this.hideModal('sched-transition-modal');
+    document.getElementById('sched-transition-modal').classList.add('hidden');
     this.sched();this.autoSave();
     this.toast(`Pinned ${ids.size} items — unpin selectively, then switch modes`)
   },
@@ -895,48 +895,48 @@ const App={
   bind(){
     const on=(id,fn)=>{const e=document.getElementById(id);if(e)e.addEventListener('click',fn)};
     // File dropdown
-    on('btn-file-menu',()=>{this.closeAllDD();this.$.file_dropdown.classList.toggle('show');this.posDD(this.$.file_dropdown)});
-    on('btn-new',()=>{this.$.file_dropdown.classList.remove('show');this.newProjAct()});
-    on('btn-open',()=>{this.$.file_dropdown.classList.remove('show');this.openFile()});
-    on('btn-save',()=>{this.$.file_dropdown.classList.remove('show');this.saveFile()});
-    on('btn-save-as',()=>{this.$.file_dropdown.classList.remove('show');this.saveFile(true)});
+    on('btn-file-menu',()=>{this.closeAllDD();this.$.file_dropdown.classList.toggle('hidden');this.posDD(this.$.file_dropdown)});
+    on('btn-new',()=>{this.$.file_dropdown.classList.add('hidden');this.newProjAct()});
+    on('btn-open',()=>{this.$.file_dropdown.classList.add('hidden');this.openFile()});
+    on('btn-save',()=>{this.$.file_dropdown.classList.add('hidden');this.saveFile()});
+    on('btn-save-as',()=>{this.$.file_dropdown.classList.add('hidden');this.saveFile(true)});
     // Add dropdown
-    on('btn-add-menu',()=>{this.closeAllDD();this.$.add_dropdown.classList.toggle('show');this.posDD(this.$.add_dropdown)});
-    on('btn-add-ms',()=>{this.$.add_dropdown.classList.remove('show');this.addItem('milestone')});
-    on('btn-add-task',()=>{this.$.add_dropdown.classList.remove('show');this.addItem('task')});
-    on('btn-add-sw',()=>{this.$.add_dropdown.classList.remove('show');this.showSwM()});
+    on('btn-add-menu',()=>{this.closeAllDD();this.$.add_dropdown.classList.toggle('hidden');this.posDD(this.$.add_dropdown)});
+    on('btn-add-ms',()=>{this.$.add_dropdown.classList.add('hidden');this.addItem('milestone')});
+    on('btn-add-task',()=>{this.$.add_dropdown.classList.add('hidden');this.addItem('task')});
+    on('btn-add-sw',()=>{this.$.add_dropdown.classList.add('hidden');this.showSwM()});
     on('btn-undo',()=>this.undo());on('btn-redo',()=>this.redo());
     // View dropdown
-    on('btn-view-menu',()=>{this.closeAllDD();this.$.view_dropdown.classList.toggle('show');this.posDD(this.$.view_dropdown)});
-    on('btn-today',()=>{this.$.view_dropdown.classList.remove('show');this.goToday()});
-    on('btn-fullscreen',()=>{this.$.view_dropdown.classList.remove('show');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>this.toast('Fullscreen not supported','error'))});
-    on('btn-show-float',()=>{this.$.view_dropdown.classList.remove('show');this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')});
+    on('btn-view-menu',()=>{this.closeAllDD();this.$.view_dropdown.classList.toggle('hidden');this.posDD(this.$.view_dropdown)});
+    on('btn-today',()=>{this.$.view_dropdown.classList.add('hidden');this.goToday()});
+    on('btn-fullscreen',()=>{this.$.view_dropdown.classList.add('hidden');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>this.toast('Fullscreen not supported','error'))});
+    on('btn-show-float',()=>{this.$.view_dropdown.classList.add('hidden');this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')});
     on('btn-zoom100',()=>this.doZoomTo(100));
     on('btn-fit',()=>this.sel.length?this.fitToSelection():this.fitToContent());
     on('btn-expand-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')});
     on('btn-collapse-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')});
-    on('btn-autofit-heights',()=>{this.$.view_dropdown.classList.remove('show');this.autoFitHeights()});
+    on('btn-autofit-heights',()=>{this.$.view_dropdown.classList.add('hidden');this.autoFitHeights()});
     on('btn-zi',()=>this.doZoom(5));on('btn-zo',()=>this.doZoom(-5));
     this.$.zoom_lbl.addEventListener('wheel',e=>{e.preventDefault();this.doZoom(e.deltaY<0?5:-5)},{passive:false});
     /* Ctrl+Scroll zoom on timeline body: Ctrl=±5%, Ctrl+Shift=±1% */
     this.$.tl_body_scroll.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();const d=e.shiftKey?1:5;this.doZoom(e.deltaY<0?d:-d)},{passive:false});
     // Tools dropdown
-    on('btn-tools-menu',()=>{this.closeAllDD();this.$.tools_dropdown.classList.toggle('show');this.posDD(this.$.tools_dropdown)});
+    on('btn-tools-menu',()=>{this.closeAllDD();this.$.tools_dropdown.classList.toggle('hidden');this.posDD(this.$.tools_dropdown)});
     on('btn-settings',()=>this.showSettings());
     on('btn-help',()=>this.showHelp());
     on('btn-collapse',()=>this.collapsePanel(false));
     on('btn-lock-collapse',()=>this.collapsePanel(true));
     this.$.panel_tab.addEventListener('click',()=>this.expandPanel());
-    on('btn-lock',()=>{this.$.tools_dropdown.classList.remove('show');this.proj.locked=!this.proj.locked;this.proj.lockH=this.proj.locked;this.proj.lockV=this.proj.locked;this.sched();this.autoSave();this.toast(this.proj.locked?'Locked':'Unlocked')});
-    on('btn-hide',()=>{this.$.tools_dropdown.classList.remove('show');this.proj.hideMode=!this.proj.hideMode;this.sched();this.toast(this.proj.hideMode?'Hiding hidden':'Showing all')});
-    on('btn-crit-path',()=>{this.$.tools_dropdown.classList.remove('show');this.toggleCritPath()});
-    on('btn-propagate-sel',()=>{this.$.tools_dropdown.classList.remove('show');if(!this.sel.length){this.toast('Select items first','error');return}if(this.proj.schedulingMode==='scheduled'){this.toast('In Auto-Scheduled mode, dates update automatically','info');return}this.propagateFrom(this.sel)});
-    on('btn-toggle-sched',()=>{this.$.tools_dropdown.classList.remove('show');this.toggleSchedulingMode()});
-    on('btn-lasso',()=>{this.$.tools_dropdown.classList.remove('show');this._scDispatch.toggleLasso.call(this)});
-    on('btn-pan',()=>{this.$.tools_dropdown.classList.remove('show');this._scDispatch.togglePan.call(this)});
+    on('btn-lock',()=>{this.$.tools_dropdown.classList.add('hidden');this.proj.locked=!this.proj.locked;this.proj.lockH=this.proj.locked;this.proj.lockV=this.proj.locked;this.sched();this.autoSave();this.toast(this.proj.locked?'Locked':'Unlocked')});
+    on('btn-hide',()=>{this.$.tools_dropdown.classList.add('hidden');this.proj.hideMode=!this.proj.hideMode;this.sched();this.toast(this.proj.hideMode?'Hiding hidden':'Showing all')});
+    on('btn-crit-path',()=>{this.$.tools_dropdown.classList.add('hidden');this.toggleCritPath()});
+    on('btn-propagate-sel',()=>{this.$.tools_dropdown.classList.add('hidden');if(!this.sel.length){this.toast('Select items first','error');return}if(this.proj.schedulingMode==='scheduled'){this.toast('In Auto-Scheduled mode, dates update automatically','info');return}this.propagateFrom(this.sel)});
+    on('btn-toggle-sched',()=>{this.$.tools_dropdown.classList.add('hidden');this.toggleSchedulingMode()});
+    on('btn-lasso',()=>{this.$.tools_dropdown.classList.add('hidden');this._scDispatch.toggleLasso.call(this)});
+    on('btn-pan',()=>{this.$.tools_dropdown.classList.add('hidden');this._scDispatch.togglePan.call(this)});
     // Screenshot items
-    on('btn-snap-vp',()=>{this.$.tools_dropdown.classList.remove('show');this.copyScreenshot(true)});
-    on('btn-snap-full',()=>{this.$.tools_dropdown.classList.remove('show');this.copyScreenshot(false)});
+    on('btn-snap-vp',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(true)});
+    on('btn-snap-full',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(false)});
     document.querySelectorAll('.view-btn').forEach(b=>{b.onclick=()=>this.setView(b.dataset.view)});
     this.$.ts_sel.onchange=e=>{this.snap();this.proj.timescale=e.target.value;this.sched()};
     this.$.hl_sel.onchange=e=>{this.snap();this.proj.headerLayers=+e.target.value;this.sched()};
@@ -969,8 +969,8 @@ const App={
         document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
       })}}
     on('btn-status-impact-apply',()=>this.applyStatusChanges());
-    on('btn-status-impact-cancel',()=>{this.hideModal('status-impact-modal')});
-    on('btn-status-impact-close',()=>{this.hideModal('status-impact-modal')});
+    on('btn-status-impact-cancel',()=>{document.getElementById('status-impact-modal').classList.add('hidden')});
+    on('btn-status-impact-close',()=>{document.getElementById('status-impact-modal').classList.add('hidden')});
     on('btn-add-ssw',()=>this.addSubSw());on('btn-dt-paste',()=>this.showPaste());on('btn-do-paste',()=>this.doPaste());
     this.$.paste_ta.oninput=()=>this.previewPaste();
     on('imp-adv-toggle',()=>this.toggleAdvImport());
@@ -980,10 +980,10 @@ const App={
     on('btn-dt-add',()=>this.addItem('milestone'));on('btn-dt-del',()=>this.deleteSel());on('btn-dt-dup',()=>this.dupSel());
     on('btn-clr-sel-deps',()=>this.clearSelDeps());
     on('btn-clr-all-deps',()=>{if(confirm('Remove ALL deps?')){this.snap();this.proj.items.forEach(i=>i.deps=[]);this.sched();this.autoSave()}});
-    on('btn-exp-svg',()=>{this.hideModal('settings-modal');this.exportSVG()});
-    on('btn-exp-png',()=>{this.hideModal('settings-modal');this.exportPNG()});
-    on('btn-exp-csv',()=>{this.hideModal('settings-modal');this.exportDataCSV()});
-    on('btn-exp-json',()=>{this.hideModal('settings-modal');this.saveFile()});
+    on('btn-exp-svg',()=>{document.getElementById('settings-modal').classList.add('hidden');this.exportSVG()});
+    on('btn-exp-png',()=>{document.getElementById('settings-modal').classList.add('hidden');this.exportPNG()});
+    on('btn-exp-csv',()=>{document.getElementById('settings-modal').classList.add('hidden');this.exportDataCSV()});
+    on('btn-exp-json',()=>{document.getElementById('settings-modal').classList.add('hidden');this.saveFile()});
     on('btn-do-apply',()=>this.doApply());
     on('btn-np-create',()=>this.createFromTemplate());
     on('btn-dt-export',()=>this.showDataExport());
@@ -1006,7 +1006,7 @@ const App={
     on('btn-flt-clear',()=>{fltKeys.forEach(k=>{if(this.$[k])this.$[k].value=''});updateFltInd();this.sched(false,true)});
     // Settings toggles
     document.getElementById('project-name-display').addEventListener('dblclick',()=>{document.getElementById('pn-name').value=this.proj.name;this.showModal('pname-modal');document.getElementById('pn-name').focus()});
-    on('btn-pn-save',()=>{this.snap();this.proj.name=document.getElementById('pn-name').value.trim()||'Untitled';this.hideModal('pname-modal');this.sched();this.autoSave()});
+    on('btn-pn-save',()=>{this.snap();this.proj.name=document.getElementById('pn-name').value.trim()||'Untitled';document.getElementById('pname-modal').classList.add('hidden');this.sched();this.autoSave()});
     document.getElementById('s-watermark').onchange=function(){document.getElementById('watermark-opts').classList.toggle('hidden',!this.checked)};
     document.getElementById('s-show-weekends').onchange=function(){document.getElementById('weekend-opts').classList.toggle('hidden',!this.checked)};
     document.getElementById('s-show-holidays').onchange=function(){document.getElementById('holiday-opts').classList.toggle('hidden',!this.checked)};
@@ -1022,8 +1022,8 @@ const App={
     document.getElementById('hol-paste-ta').oninput=()=>{const r=this.parseHolidays(document.getElementById('hol-paste-ta').value);document.getElementById('hol-paste-prev').textContent=r.length?`Found ${r.length} holiday${r.length>1?'s':''}`:''};
     const opSlider=document.getElementById('s-wknd-opacity');if(opSlider)opSlider.oninput=function(){document.getElementById('s-wknd-opval').textContent=this.value+'%'};
     document.querySelectorAll('.theme-card').forEach(c=>{c.onclick=()=>{document.querySelectorAll('.theme-card').forEach(x=>x.classList.remove('active'));c.classList.add('active')}});
-    document.querySelectorAll('[data-close-modal]').forEach(b=>{b.onclick=e=>{const m=e.target.closest('.modal');if(m){this.hideModal(m);if(m.id==='settings-modal')this._resetSettingsLive()}}});
-    document.querySelectorAll('.modal-overlay').forEach(el=>{el.onclick=()=>{const m=el.closest('.modal');if(m){this.hideModal(m);if(m.id==='settings-modal')this._resetSettingsLive()}}});
+    document.querySelectorAll('[data-close-modal]').forEach(b=>{b.onclick=e=>{const m=e.target.closest('.modal');if(m){m.classList.add('hidden');if(m.id==='settings-modal')this._resetSettingsLive()}}});
+    document.querySelectorAll('.modal-overlay').forEach(el=>{el.onclick=()=>{const m=el.closest('.modal');if(m){m.classList.add('hidden');if(m.id==='settings-modal')this._resetSettingsLive()}}});
     document.addEventListener('click',e=>{
       if(!e.target.closest('#ctx-menu'))this.$.ctx_menu.classList.add('hidden');
       if(!e.target.closest('#dt-ctx-menu'))this.$.dt_ctx_menu.classList.add('hidden');
@@ -1147,7 +1147,7 @@ const App={
     requestAnimationFrame(()=>{const newTl=this.met();const newPx=this.dX(anchorDate,newTl);if(newPx!=null)bs.scrollLeft=Math.max(0,newPx-anchorScreenX)});
   },
   doZoomTo(t){this.doZoom(t-(this.proj.zoom||100))},
-  closeAllDD(){['file_dropdown','add_dropdown','view_dropdown','tools_dropdown'].forEach(k=>{if(this.$[k])this.$[k].classList.remove('show')})},
+  closeAllDD(){['file_dropdown','add_dropdown','view_dropdown','tools_dropdown'].forEach(k=>{if(this.$[k])this.$[k].classList.add('hidden')})},
   posDD(dd){
     if(!dd)return;
     dd.style.left='';dd.style.right='';
@@ -1367,8 +1367,7 @@ const App={
     this.toast(`Fit to selection (${fitItems.length} item${fitItems.length===1?'':'s'})`);
   },
   goToday(){const tl=this.met();const x=this.dX(U.iso(new Date()),tl);if(x!==null){const panelW=this.panelCollapsed?28:290;this.$.tl_body_scroll.scrollLeft=x-(this.$.tl_body_scroll.clientWidth-panelW)/2}},
-  showModal(id){const m=document.getElementById(id);if(!m)return;m.classList.remove('hidden');requestAnimationFrame(()=>requestAnimationFrame(()=>m.classList.add('visible')))},
-  hideModal(id){const m=typeof id==='string'?document.getElementById(id):id;if(!m)return;m.classList.remove('visible');const onEnd=()=>{m.classList.add('hidden');m.removeEventListener('transitionend',onEnd)};m.addEventListener('transitionend',onEnd);setTimeout(()=>{if(!m.classList.contains('hidden'))m.classList.add('hidden')},250)},
+  showModal(id){document.getElementById(id).classList.remove('hidden')},
   gi(id){return this.proj.items.find(i=>i.id===id)},
   gs(id){return this.proj.swimlanes.find(s=>s.id===id)},
   _findSubSwim(ssId){for(const sl of this.proj.swimlanes)for(const ss of sl.subSwimlanes||[])if(ss.id===ssId)return ss;return null},
@@ -1552,9 +1551,9 @@ const App={
     const subs=this._tmpSubs.filter(s=>s.name.trim()).map(s=>({id:s.id,name:s.name.trim(),height:s.height||0,collapsed:s.collapsed||'expanded'}));
     if(this._esl){this._esl.name=name;this._esl.color=color;this._esl.subSwimlanes=subs}
     else this.proj.swimlanes.push({id:U.id(),name,color,height:120,subSwimlanes:subs,collapsed:'expanded'});
-    this.hideModal('sw-modal');this.sched();this.autoSave()
+    document.getElementById('sw-modal').classList.add('hidden');this.sched();this.autoSave()
   },
-  delSwM(){if(!this._esl||!confirm(`Delete "${this._esl.name}"?`))return;this.snap();const sid=this._esl.id;this.proj.items=this.proj.items.filter(i=>i.swimlaneId!==sid);this.proj.swimlanes=this.proj.swimlanes.filter(s=>s.id!==sid);this.hideModal('sw-modal');this.sched();this.autoSave()},
+  delSwM(){if(!this._esl||!confirm(`Delete "${this._esl.name}"?`))return;this.snap();const sid=this._esl.id;this.proj.items=this.proj.items.filter(i=>i.swimlaneId!==sid);this.proj.swimlanes=this.proj.swimlanes.filter(s=>s.id!==sid);document.getElementById('sw-modal').classList.add('hidden');this.sched();this.autoSave()},
   reorderSw(dir){
     if(!this._esl)return;const idx=this.proj.swimlanes.indexOf(this._esl);
     const ni=idx+dir;if(ni<0||ni>=this.proj.swimlanes.length)return;
@@ -1818,8 +1817,8 @@ const App={
       blankColor:document.getElementById('s-status-blank-on')?.checked?document.getElementById('s-status-blank-color')?.value||'#6b7280':''
     };
     // Close impact modal, close settings
-    this.hideModal('status-impact-modal');
-    this.hideModal('settings-modal');
+    document.getElementById('status-impact-modal').classList.add('hidden');
+    document.getElementById('settings-modal').classList.add('hidden');
     this.sched();this.autoSave();this.toast('Status settings applied');
   },
 
@@ -2085,7 +2084,7 @@ const App={
     const oldMode=p.schedulingMode||'manual';
     if(newMode==='scheduled'&&oldMode==='manual'){
       if(p.autoRange)this.autoRange();this.applyTheme();
-      this.hideModal('settings-modal');
+      document.getElementById('settings-modal').classList.add('hidden');
       this.showScheduleTransition();
       return
     }
@@ -2095,7 +2094,7 @@ const App={
     }
     }catch(err){console.error('[Timeline Studio] Scheduling transition error:',err);this.toast('Scheduling error: '+err.message,'error')}
     if(p.autoRange)this.autoRange();this.applyTheme();
-    this.hideModal('settings-modal');this.sched();this.autoSave();this.toast('Settings applied')
+    document.getElementById('settings-modal').classList.add('hidden');this.sched();this.autoSave();this.toast('Settings applied')
   },
 
   autoRange(){
@@ -2111,7 +2110,7 @@ const App={
   showPaste(){this.$.paste_sw.innerHTML=this.proj.swimlanes.map(s=>`<option value="${s.id}">${U.esc(s.name)}</option>`).join('');this.$.paste_ta.value='';this.$.paste_prev.textContent='';this._impData=null;this._impMappings=[];this._impOverloads=[];this._impSelSrc=null;this._impStatusMap={};if(this.$.imp_file_name)this.$.imp_file_name.textContent='No file selected';if(this.$.imp_file_input)this.$.imp_file_input.value='';if(this.$.imp_map_area)this.$.imp_map_area.classList.add('hidden');if(this.$.imp_status_area)this.$.imp_status_area.classList.add('hidden');if(this.$.imp_perfect_match)this.$.imp_perfect_match.classList.add('hidden');if(this.$.imp_preview_wrap){this.$.imp_preview_wrap.classList.add('hidden');this.$.imp_preview_wrap.innerHTML=''}if(this.$.imp_overload_area){this.$.imp_overload_area.classList.add('hidden');this.$.imp_overload_area.innerHTML=''}if(this.$.imp_status)this.$.imp_status.textContent='';if(this.$.btn_imp_do)this.$.btn_imp_do.classList.add('hidden');if(this.$.imp_adv_toggle)this.$.imp_adv_toggle.classList.remove('open');if(this.$.imp_adv_body)this.$.imp_adv_body.classList.add('hidden');this.showModal('paste-modal');this.$.paste_ta.focus()},
   previewPaste(){const r=this.parsePaste(this.$.paste_ta.value);this.$.paste_prev.textContent=r.length?`Found ${r.length} items`:''},
   parsePaste(text){return text.trim().split('\n').filter(l=>l.trim()).map(line=>{const c=line.split('\t').map(s=>s.trim());if(c.length<2||!c[0])return null;if(c.length>=3){const d1=U.parseDate(c[1]),d2=U.parseDate(c[2]);if(d1&&d2)return{name:c[0],type:'task',startDate:U.iso(d1),endDate:U.iso(d2)};if(d1)return{name:c[0],type:'milestone',date:U.iso(d1)}}if(c.length>=2){const d=U.parseDate(c[1]);if(d)return{name:c[0],type:'milestone',date:U.iso(d)}}return null}).filter(Boolean)},
-  doPaste(){const rows=this.parsePaste(this.$.paste_ta.value);if(!rows.length){this.toast('No valid data','error');return}this.snap();const tgt=this.$.paste_sw.value;rows.forEach((r,i)=>{const it={id:U.id(),type:r.type,name:r.name,swimlaneId:tgt,subSwimId:'',subRow:i%3,color:COLORS[i%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:''};if(r.type==='milestone')it.date=r.date;else{it.startDate=r.startDate;it.endDate=r.endDate;it.duration=U.days(r.startDate,r.endDate)+1}this.proj.items.push(it)});if(this.proj.autoRange)this.autoRange();this.hideModal('paste-modal');this.sched();this.autoSave();this.toast(`Imported ${rows.length} items`)},
+  doPaste(){const rows=this.parsePaste(this.$.paste_ta.value);if(!rows.length){this.toast('No valid data','error');return}this.snap();const tgt=this.$.paste_sw.value;rows.forEach((r,i)=>{const it={id:U.id(),type:r.type,name:r.name,swimlaneId:tgt,subSwimId:'',subRow:i%3,color:COLORS[i%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:''};if(r.type==='milestone')it.date=r.date;else{it.startDate=r.startDate;it.endDate=r.endDate;it.duration=U.days(r.startDate,r.endDate)+1}this.proj.items.push(it)});if(this.proj.autoRange)this.autoRange();document.getElementById('paste-modal').classList.add('hidden');this.sched();this.autoSave();this.toast(`Imported ${rows.length} items`)},
 
   /* ===== ADVANCED IMPORT (F35) ===== */
   _IMP_TGT_FIELDS:['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Predecessors','Status','StatusDate','Progress','Notes','Color','Pinned','Hidden','LabelPos','FontSize','TextColor','DateFormat','ShowDate'],
@@ -2612,7 +2611,7 @@ const App={
     newItems.forEach(it=>this.proj.items.push(it));
     if(this.proj.autoSortSwimlanes)this._sortSwimlanesGravity();
     if(this.proj.autoRange)this.autoRange();
-    this.hideModal('paste-modal');
+    document.getElementById('paste-modal').classList.add('hidden');
     this.sched();this.autoSave();
     let msg=`Imported ${newItems.length} item${newItems.length!==1?'s':''}`;
     if(createdSl)msg+=`, created ${createdSl} swimlane${createdSl!==1?'s':''}`;
@@ -2968,7 +2967,7 @@ const App={
     const ck=id=>document.getElementById(id)?.checked;
     let tg;if(sc==='swimlane')tg=this.proj.items.filter(i=>i.swimlaneId===it.swimlaneId&&i.id!==it.id);else if(sc==='sub')tg=this.proj.items.filter(i=>i.swimlaneId===it.swimlaneId&&i.subSwimId===it.subSwimId&&i.id!==it.id);else tg=this.proj.items.filter(i=>i.id!==it.id);
     tg.forEach(t=>{if(ck('ap-color'))t.color=it.color;if(ck('ap-icon'))t.iconType=it.iconType;if(ck('ap-lp'))t.labelPosition=it.labelPosition;if(ck('ap-sd')){t.showDate=it.showDate;t.showDuration=it.showDuration;t.showOwner=it.showOwner}if(ck('ap-tc'))t.textColor=it.textColor;if(ck('ap-df'))t.dateFormat=it.dateFormat;if(ck('ap-fs'))t.fontSize=it.fontSize;if(ck('ap-hid'))t.hidden=it.hidden;if(ck('ap-dl'))t.pinned=it.pinned;if(ck('ap-status')){t.status=it.status;t.statusDate=t.status?U.iso(new Date()):''}});
-    this.hideModal('apply-modal');this.sched();this.autoSave();this.toast('Applied!')},
+    document.getElementById('apply-modal').classList.add('hidden');this.sched();this.autoSave();this.toast('Applied!')},
 
   renderPanel(it){
     const p=this.proj,sl=this.gs(it.swimlaneId),subSws=sl?.subSwimlanes||[];
@@ -4529,7 +4528,7 @@ const App={
     const getVal=(it,col)=>{const sl=this.gs(it.swimlaneId);switch(col){case'Name':return it.name;case'Owner':return it.owner||'';case'Type':return it.type;case'Start':return it.type==='milestone'?it.date:it.startDate;case'End':return it.endDate||'';case'Duration':return it.duration||'';case'Swimlane':return sl?.name||'';case'SubSwim':const ss=sl?.subSwimlanes?.find(s=>s.id===it.subSwimId);return ss?.name||'';case'Row':return it.subRow||0;case'Color':return it.color;case'Progress':return it.progress||0;case'Pinned':return it.pinned?'Y':'N';case'Hidden':return it.hidden?'Y':'N';case'Notes':return it.notes||'';case'Predecessors':return this._fmtPreds(it);case'Status':const sd=this._getStatusDef(it.status);return sd?sd.name:'';case'StatusDate':return it.statusDate||'';case'LabelPos':return it.labelPosition;case'FontSize':return it.fontSize||0;case'TextColor':return it.textColor||'';case'DateFormat':return it.dateFormat||'';case'ShowDate':return it.showDate!==false?'Y':'N';default:return''}};
     const rows=[cols];p.items.forEach(it=>rows.push(cols.map(c=>getVal(it,c))));
     const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join('\t')).join('\n');
-    this.hideModal('data-export-modal');
+    document.getElementById('data-export-modal').classList.add('hidden');
     if(target==='clipboard'){navigator.clipboard.writeText(csv).then(()=>this.toast('Copied to clipboard!')).catch(()=>this.toast('Copy failed','error'))}
     else{const b=new Blob([csv.replace(/\t/g,',')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(p.name||'data')+'.csv';a.click();URL.revokeObjectURL(a.href);this.toast('Exported!')}
   },

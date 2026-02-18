@@ -89,7 +89,7 @@ section('Button Registration');
 }
 {
   assertT('btn-autofit-heights handler in app.js',appSrc.includes("on('btn-autofit-heights'"));
-  assertT('handler closes view dropdown',appSrc.includes("btn-autofit-heights',()=>{this.$.view_dropdown.classList.remove('show');this.autoFitHeights()"));
+  assertT('handler closes view dropdown',appSrc.includes("btn-autofit-heights',()=>{this.$.view_dropdown.classList.add('hidden');this.autoFitHeights()"));
 }
 
 // ─── Basic: Single Swimlane, No Items ──────────────────────────────────
