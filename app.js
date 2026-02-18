@@ -1055,7 +1055,7 @@ const App={
     document.addEventListener('paste',e=>{if(this.view==='data'||this.view==='split'){const t=document.activeElement;if(t&&['INPUT','TEXTAREA','SELECT'].includes(t.tagName))return;const txt=e.clipboardData.getData('text/plain');if(txt.includes('\t')||txt.includes('\n')){e.preventDefault();this.showPaste();setTimeout(()=>{this.$.paste_ta.value=txt;this.previewPaste()},80)}}});
     window.addEventListener('beforeunload',e=>{if(this._unsaved){e.preventDefault();e.returnValue=''}});
     this.$.tl_body.addEventListener('mousedown',e=>this.onTlMD(e));
-    this.$.tl_body_scroll.addEventListener('mousedown',e=>{if(e.button===1){console.log('[PAN] capture-phase: middle-button preventDefault on tl_body_scroll');e.preventDefault()}},true);
+    this.$.tl_body_scroll.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault()},true);
     this.$.tl_body.addEventListener('contextmenu',e=>this.onTlCtx(e));
     this.$.tl_body.addEventListener('dblclick',e=>{const iEl=e.target.closest('.tl-item');if(iEl){const it=this.gi(iEl.dataset.iid);if(it)this.openPanel(it)}});
     this.$.tl_sl_labels.addEventListener('dblclick',e=>{const lbl=e.target.closest('.sl-lbl');if(lbl){const sl=this.gs(lbl.dataset.slId);if(sl)this.showSwM(sl)}});
@@ -1073,7 +1073,6 @@ const App={
     })}
     document.addEventListener('mouseover',e=>{const el=e.target.closest('[data-tooltip]');if(el)this.showTT(el,el.dataset.tooltip);else this.hideTT()});
     document.addEventListener('mouseout',e=>{if(e.target.closest('[data-tooltip]'))this.hideTT()});
-    document.addEventListener('mousedown',e=>{if(e.button===1)console.log('[PAN] document-level middle-click: target='+e.target.id+'|'+e.target.className.split(' ')[0]+' defaultPrevented='+e.defaultPrevented)});
   },
 
   /* Arrow key nudging */
@@ -3467,8 +3466,6 @@ const App={
     }}svg.innerHTML=L.join('')},
 
   onTlMD(e){
-    console.log('[PAN] onTlMD: button='+e.button+' type='+e.type+' target='+e.target.tagName+'.'+e.target.className.split(' ')[0]+' client='+e.clientX+','+e.clientY);
-    if(e.button===1&&!this._panDiagDone){this._panDiagDone=true;console.log('[PAN] ENV: userAgent='+navigator.userAgent);console.log('[PAN] ENV: platform='+navigator.platform);console.log('[PAN] ENV: pointerType='+(e.pointerType||'N/A'));console.log('[PAN] ENV: devicePixelRatio='+window.devicePixelRatio);console.log('[PAN] ENV: tl_body_scroll size='+this.$.tl_body_scroll.clientWidth+'x'+this.$.tl_body_scroll.clientHeight+' scroll='+this.$.tl_body_scroll.scrollWidth+'x'+this.$.tl_body_scroll.scrollHeight)}
     if(e.button===1){e.preventDefault();this.startPan(e);return}
     if(e.button===0&&this._panMode){this.startPan(e);return}
     if(e.button!==0)return;
@@ -4694,13 +4691,10 @@ const App={
     const bs=this.$.tl_body_scroll;
     const sx=e.clientX,sy=e.clientY;
     const sl=bs.scrollLeft,st=bs.scrollTop;
-    console.log('[PAN] startPan: clientX='+sx+' clientY='+sy+' scrollLeft='+sl+' scrollTop='+st+' scrollW='+bs.scrollWidth+' clientW='+bs.clientWidth+' scrollH='+bs.scrollHeight+' clientH='+bs.clientHeight);
     this._panning=true;
     this.$.tl_body.style.cursor='grabbing';
-    let moveCount=0;
-    const mv=ev=>{ev.preventDefault();const newSL=sl-(ev.clientX-sx),newST=st-(ev.clientY-sy);if(moveCount<5){console.log('[PAN] mousemove #'+(moveCount+1)+': deltaX='+(ev.clientX-sx)+' deltaY='+(ev.clientY-sy)+' scrollLeft: '+bs.scrollLeft+'→'+newSL+' scrollTop: '+bs.scrollTop+'→'+newST);moveCount++}bs.scrollLeft=newSL;bs.scrollTop=newST};
+    const mv=ev=>{ev.preventDefault();bs.scrollLeft=sl-(ev.clientX-sx);bs.scrollTop=st-(ev.clientY-sy)};
     const up=()=>{
-      console.log('[PAN] mouseup: final scrollLeft='+bs.scrollLeft+' scrollTop='+bs.scrollTop+' moveCount='+moveCount);
       document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);window.removeEventListener('blur',up);
       this._panning=false;
       this.$.tl_body.style.cursor=this._panMode?'grab':this._lassoMode?'crosshair':'';
