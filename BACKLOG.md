@@ -94,7 +94,7 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
-| | _No open bugs_ | | | | |
+| B38 | **Critical path not highlighting all branches through milestones** | With auto-scheduling on and the last task auto-scheduled, the critical path should highlight a complete path back through all predecessors. Currently appears to fail when tracing back from a milestone that has multiple predecessor milestones — only the last milestone in the timeline gets highlighted instead of the full branching path. Needs investigation: is the issue in the critical path calculation (`_calcCritPath` / float computation) or in the rendering/highlighting? May be related to how milestones with multiple incoming dependencies are handled in the topological sort or float pass. | S | :orange_circle: P1 | :white_circle: Open |
 
 ---
 
@@ -104,6 +104,8 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
+| F42 | **Format Painter** | Copy formatting properties from one item and apply to others. Toolbar icon on the main timeline bar (Office-style paint brush icon). **Single-click** = one-time copy (applies to next clicked item, then deactivates). **Double-click** = persistent mode (stays active until Escape or button re-clicked). Dropdown selector for which properties to copy (e.g., color, label position, font, status, duration mode — user picks which subset). **F4 shortcut** (same as Office "repeat last action") if capturable in browser. | M | :orange_circle: P1 | :white_circle: Open |
+| F43 | **Import scheduling options** | Expand the import flow with scheduling-aware options: (1) **Working vs Calendar days** toggle — determines how imported durations are interpreted. (2) **Manual vs Auto-Scheduled mode** selector with explanatory tooltip (e.g., "Auto for critical-path imports from other tools"). (3) **Same-day dependency start option** — accounts for the off-by-one issue where some tools (e.g., SmartSheet) allow a dependent milestone/task to start on the same end date as its predecessor rather than the next day. When enabled, applies a `-1` lag offset to imported FS dependencies. Research needed: what is the official name for this setting across tools (SmartSheet, MS Project, Primavera)? Does it apply only to milestone→task links or also task→task? This may be part of a broader "import strategy" configuration panel that surfaces the right options based on source tool conventions. | L | :orange_circle: P1 | :white_circle: Open |
 | F37 | **Header bar state indicators** | Redesign the top toolbar to clearly surface item states: Auto vs Manual scheduling (current toggle is non-obvious — auto mode should be visually prominent), Hidden vs Visible, and Locked vs Unlocked. These are mutually exclusive states that need distinct visual cues (e.g., colored pills, icons with labels, or segmented toggles). Same design pattern should extend to showing active filter state in Data View. | M | :orange_circle: P1 | :white_circle: Open |
 | F19 | **Swimlane header font size** | Per-swimlane font size for header labels. Configurable in swimlane edit modal with bulk propagation. Must flow through `_svgText()` for export. | S | :yellow_circle: P2 | :white_circle: Open |
 | F4 | **Days scale option** | Add "Days" to the timescale options (currently: Weeks, Months, Quarters, Years). | L | :yellow_circle: P2 | :white_circle: Open |
@@ -129,6 +131,9 @@
 _All P0 items resolved in v0.14.0._
 
 ### :orange_circle: P1 — High Priority for V1
+- **B38** — Critical path not highlighting all branches through milestones (S)
+- **F42** — Format Painter (M)
+- **F43** — Import scheduling options (L)
 - **F37** — Header bar state indicators (M)
 
 ### :yellow_circle: P2 — Nice to Have for V1
