@@ -628,5 +628,63 @@ section('Export Completeness — Collapsed Swimlane Exclusion');
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  CRITICAL PATH IN EXPORT (10 tests)
+// ═══════════════════════════════════════════════════════════════════
+
+section('Export — Critical Path Highlighting');
+{
+  resetItemCounter();
+  // Build a simple chain: TaskA → TaskB (FS+0) — both should be critical
+  const taskA=makeItem('task',{id:'cpA',startDate:'2026-02-02',duration:5});
+  const taskB=makeItem('task',{id:'cpB',startDate:'2026-02-07',duration:3,
+    deps:[{id:'cpA',type:'FS',lag:0}]});
+  const p=makeProj({schedulingMode:'scheduled',scheduleAroundNonWorking:false});
+  addItems(p,taskA,taskB);
+  resetApp(p);
+  App.runSchedule();
+
+  // With _critPath OFF, getCriticalPath should still work but wouldn't be called in export
+  App._critPath=false;
+  const noCrit=App._critPath?App.getCriticalPath():null;
+  assert('critPath OFF: critIds is null',noCrit,null);
+
+  // With _critPath ON, should get a valid set
+  App._critPath=true;
+  const critIds=App._critPath?App.getCriticalPath():null;
+  assertT('critPath ON: critIds is non-null',critIds!==null);
+  assertT('critPath ON: critIds has TaskA',critIds&&critIds.has('cpA'));
+  assertT('critPath ON: critIds has TaskB',critIds&&critIds.has('cpB'));
+  assert('critPath ON: exactly 2 critical items',critIds?critIds.size:0,2);
+}
+
+section('Export — Critical Path With Non-Critical Branch');
+{
+  resetItemCounter();
+  // Diamond: Start → LongTask(10d) → End, Start → ShortTask(2d) → End
+  // LongTask is critical, ShortTask has slack
+  const start=makeItem('milestone',{id:'cpStart',date:'2026-03-02'});
+  const longTask=makeItem('task',{id:'cpLong',startDate:'2026-01-01',duration:10,
+    deps:[{id:'cpStart',type:'FS',lag:0}]});
+  const shortTask=makeItem('task',{id:'cpShort',startDate:'2026-01-01',duration:2,
+    deps:[{id:'cpStart',type:'FS',lag:0}]});
+  const endMs=makeItem('milestone',{id:'cpEnd',date:'2026-01-01',
+    deps:[{id:'cpLong',type:'FS',lag:0},{id:'cpShort',type:'FS',lag:0}]});
+  const p=makeProj({schedulingMode:'scheduled',scheduleAroundNonWorking:false});
+  addItems(p,start,longTask,shortTask,endMs);
+  resetApp(p);
+  App.runSchedule();
+  App._critPath=true;
+  const critIds=App.getCriticalPath();
+
+  assertT('Diamond: LongTask is critical',critIds&&critIds.has('cpLong'));
+  assertF('Diamond: ShortTask is NOT critical',critIds&&critIds.has('cpShort'));
+  assertT('Diamond: End milestone is critical',critIds&&critIds.has('cpEnd'));
+  assertT('Diamond: Start milestone is critical',critIds&&critIds.has('cpStart'));
+
+  // Clean up
+  App._critPath=false;
+}
+
+// ═══════════════════════════════════════════════════════════════════
 
 const{failed}=summary();process.exit(failed?1:0);

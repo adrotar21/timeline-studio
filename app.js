@@ -3759,6 +3759,8 @@ const App={
     }
     const totalBodyH=sm.reduce((s,m)=>s+m.h,0);
     const lw=this.proj.labelWidth||160;
+    /* Critical path set (if toggled on) */
+    const critIds=this._critPath?this.getCriticalPath():null;
     /* For full export: fit to actual item extent with padding */
     let vpX=0,vpW=tl.tw,vpY=0,vpH=totalBodyH;
     if(viewportOnly){
@@ -3859,6 +3861,8 @@ const App={
           if(viewportOnly&&(renderX+w<lw-20||renderX>W+20)){continue}
           /* Task bar */
           svg+=`<rect x="${renderX}" y="${iy}" width="${w}" height="${barH}" rx="4" fill="${eRenderColor}" opacity="${0.85*itemOp}"/>`;
+          /* Critical path border */
+          if(critIds&&critIds.has(it.id))svg+=`<rect x="${renderX-4}" y="${iy-4}" width="${w+8}" height="${barH+8}" rx="6" fill="none" stroke="#fb8500" stroke-width="2" opacity="${itemOp}"/>`;
           svgItemXMap.set(it.id,{left:renderX,right:renderX+w,midY:iy+barH/2});
           /* Progress fill */
           if(it.progress>0){const pw=w*(it.progress/100);svg+=`<rect x="${renderX}" y="${iy}" width="${pw}" height="${barH}" rx="4" fill="${eRenderColor}" opacity="${0.45*itemOp}"/>`;if(w>30)svg+=`<text x="${renderX+w/2}" y="${iy+barH/2+4}" fill="#fff" font-size="8" font-weight="700" text-anchor="middle" opacity="${0.9*itemOp}">${it.progress}%</text>`}
@@ -3904,6 +3908,8 @@ const App={
           const renderX=lw+ix-vpX;
           if(viewportOnly&&(renderX<lw-80||renderX>W+80)){continue}
           svg+=`<g transform="translate(${renderX-8},${iy})" opacity="${itemOp}"><svg width="16" height="16" viewBox="0 0 24 24"><path d="${ic.p}" fill="${eRenderColor}"/></svg></g>`;
+          /* Critical path border */
+          if(critIds&&critIds.has(it.id))svg+=`<rect x="${renderX-12}" y="${iy-4}" width="24" height="24" rx="6" fill="none" stroke="#fb8500" stroke-width="2" opacity="${itemOp}"/>`;
           svgItemXMap.set(it.id,{left:renderX-8,right:renderX+8,midY:iy+iconH/2});
           /* Status badge (non-inline) for milestone */
           if(eSD&&eSDShow&&eSDPos!=='inline'){
