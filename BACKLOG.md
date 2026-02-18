@@ -8,6 +8,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.34.3** | 2026-02-18 | Critical path fix (B38): Fixed backward-pass float calculation for FS/FF constraints through milestones with working-day scheduling. `_addLagWorkingDays()` was non-invertible when starting from non-working days (weekends/holidays) — forward normalization (e.g. Sat→Mon) had no backward equivalent, producing spurious float. Fix anchors backward constraints to the forward pass's recomputed EF and replays forward-direction lag arithmetic with `_skipNonWorking`, eliminating the asymmetry. 46 new regression tests in `test_b38_critical_path.js`. |
 | **0.34.2** | 2026-02-17 | Panel button polish: Corrected collapse chevron direction to › (pointing toward panel edge), reordered buttons to [›🔒] [›] (lock-collapse left, collapse right nearest edge), lock-collapse icon now ›🔒 combining collapse direction with lock. |
 | **0.34.1** | 2026-02-17 | Panel UX Refinement: Simplified from three-button (📌/›/») to two-button (› Collapse / ›🔒 Lock-Collapse) model. Panel never auto-collapses on deselect — always shows empty state. Lock state visible on collapsed tab (🔒 icon vs ‹ chevron). Data view ALWAYS lock-collapses with `_wasExpandedBeforeDataView` boolean for auto-restore. Data toolbar and filter bar get `paddingRight` to prevent panel/tab overlap on search controls. Removed `panelPinOpen`/`panelOpen`/`_panelPreDataView`; simplified to `panelCollapsed` + `panelLocked`. |
 | **0.34.0** | 2026-02-17 | Collapsible Properties Panel (F36): Three-button panel system (📌 Pin Open, › Collapse, » Pin Collapse) replaces old auto-hide model. Pin Open keeps panel expanded on deselect (shows empty state); Collapse temporarily collapses to 28px tab (auto-reopens on next item click); Pin Collapse locks panel collapsed with gentle hint animation (1.2s glow, 4s cooldown) when items are clicked. Empty state with contextual hints when nothing selected. Data view auto-collapses with `_panelPreDataView` state memory for seamless restore. Both timeline and data table get `paddingRight` for collapsed 28px tab. Context menu "Edit Properties" overrides pin-collapse. Panel stays open during drag. Session persistence via `localStorage`. |
@@ -94,7 +95,7 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
-| B38 | **Critical path not highlighting all branches through milestones** | With auto-scheduling on and the last task auto-scheduled, the critical path should highlight a complete path back through all predecessors. Currently appears to fail when tracing back from a milestone that has multiple predecessor milestones — only the last milestone in the timeline gets highlighted instead of the full branching path. Needs investigation: is the issue in the critical path calculation (`_calcCritPath` / float computation) or in the rendering/highlighting? May be related to how milestones with multiple incoming dependencies are handled in the topological sort or float pass. | S | :orange_circle: P1 | :white_circle: Open |
+| | _No open bugs_ | | | | |
 
 ---
 
@@ -131,7 +132,6 @@
 _All P0 items resolved in v0.14.0._
 
 ### :orange_circle: P1 — High Priority for V1
-- **B38** — Critical path not highlighting all branches through milestones (S)
 - **F42** — Format Painter (M)
 - **F43** — Import scheduling options (L)
 - **F37** — Header bar state indicators (M)
@@ -174,6 +174,7 @@ _All P0 items resolved in v0.14.0._
 
 | # | Title | Size | Version | Notes |
 |---|-------|------|---------|-------|
+| B38 | **Critical path not highlighting all branches through milestones** | S | 0.34.3 | `_addLagWorkingDays()` non-invertible when starting from non-working days — forward normalization (Sat→Mon) had no backward equivalent in `calculateFloat()`. Backward FS/FF constraints now anchor to forward pass EF (`ef.get(id)`) and replay forward-direction `_addLagWorkingDays` + `_skipNonWorking`, eliminating asymmetry. 46 new tests in `test_b38_critical_path.js`. |
 | F36 | **Collapsible Properties Panel** | M | 0.34.0 | Three-button panel system (📌 Pin Open, › Collapse, » Pin Collapse). Pin Open keeps panel expanded on deselect (empty state). Collapse temporarily collapses to 28px tab (auto-reopens on next click). Pin Collapse locks collapsed with hint animation (1.2s glow, 4s cooldown). Data view auto-collapses with state memory (`_panelPreDataView`). Both views get `paddingRight` for 28px tab. Context menu "Edit" overrides pin-collapse. Panel stays open during drag. Session persistence via `localStorage`. |
 | B36 | **Tab key opens glitched empty properties pane** | XS | 0.33.1 | Pressing Tab while timeline focused (no selection) opened the properties pane in a broken all-black state. Tab's default browser focus-navigation reached offscreen panel buttons (hidden via `transform:translateX(100%)` but still focusable). Fix: added Tab key guard in the document keydown handler — `preventDefault()` when `activeElement` is not an input/textarea/select, preserving normal Tab navigation within form fields. |
 | F40 | **Data Table Context Menu** | L | 0.32.0 | Column-aware right-click bulk editing in Data View. Recognizes property type and offers smart operations: text fields (apply value, prepend, append, clear), enum fields (dropdown picker applies to all selected), pin/hidden (set/unset/toggle), type (bulk convert with date rules), delete with dep cleanup. `ctx-hint` headers show affected item count. Mini-input popover for prepend/append. Single `snap()` per operation. 173 new tests. |

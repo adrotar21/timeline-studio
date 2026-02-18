@@ -631,21 +631,27 @@ const App={
           const type=this.depType(link),lag=this.depLag(link);
           const sdm=s.type==='task'?(s.durMode||'cal'):'work';
           if(type==='FS'){
-            const cand=this._addLagWorkingDays(sls,-lag,sdm);
-            if(cand&&(!minLF||cand<minLF))minLF=cand;
+            const pEF=ef.get(id);
+            if(pEF){let fwdContrib=this._addLagWorkingDays(pEF,lag,sdm);
+              if(fwdContrib&&this.proj.scheduleAroundNonWorking&&sdm==='work')fwdContrib=this._skipNonWorking(fwdContrib);
+              const cand=fwdContrib?U.addDays(pEF,U.days(fwdContrib,sls)):null;
+              if(cand&&(!minLF||cand<minLF))minLF=cand}
           }else if(type==='SS'){
             // SS constrains pred START: LS(pred) = LS(succ) - lag
             const cand=this._addLagWorkingDays(sls,-lag,sdm);
             if(cand&&(!ssLS||cand<ssLS))ssLS=cand;
           }else if(type==='FF'){
-            const sDur=s.type==='task'?Math.max(0,s.duration||0):0;
-            let sLF;
-            if(s.type==='task'&&this.proj.scheduleAroundNonWorking&&(s.durMode||'cal')!=='cal'){
-              const sEndIncl=this._addWorkingDays(sls,sDur);
-              sLF=U.addDays(sEndIncl,1);
-            }else{sLF=U.addDays(sls,sDur)}
-            const cand=this._addLagWorkingDays(sLF,-lag,sdm);
-            if(cand&&(!minLF||cand<minLF))minLF=cand;
+            const pEF=ef.get(id);
+            if(pEF){let fwdContrib=this._addLagWorkingDays(pEF,lag,sdm);
+              if(fwdContrib&&this.proj.scheduleAroundNonWorking&&sdm==='work')fwdContrib=this._skipNonWorking(fwdContrib);
+              const sDur=s.type==='task'?Math.max(0,s.duration||0):0;
+              let sLF;
+              if(s.type==='task'&&this.proj.scheduleAroundNonWorking&&(s.durMode||'cal')!=='cal'){
+                const sEndIncl=this._addWorkingDays(sls,sDur);
+                sLF=U.addDays(sEndIncl,1);
+              }else{sLF=U.addDays(sls,sDur)}
+              const cand=fwdContrib?U.addDays(pEF,U.days(fwdContrib,sLF)):null;
+              if(cand&&(!minLF||cand<minLF))minLF=cand}
           }
         }
       }
