@@ -1,4 +1,4 @@
-/* Timeline Studio v0.34.0 — Collapsible Properties Panel (F36): Three-button panel system (📌 Pin Open, › Collapse, » Pin Collapse) replaces old auto-hide model. Collapsed state shows 28px vertical tab with hint animation. Empty state when nothing selected. Data view auto-collapses with state memory. Both timeline and data table account for panel/tab width. Session persistence via localStorage. */
+/* Timeline Studio v0.34.1 — Panel UX Refinement: Simplified from three-button (📌/›/») to two-button (‹ Collapse / 🔒 Lock-Collapse) model. Panel never auto-collapses on deselect — always shows empty state. Lock state visible on collapsed tab (🔒 icon). Data view ALWAYS lock-collapses with auto-restore on return. Data toolbar and filter bar get paddingRight to avoid panel overlap. Removed panelPinOpen, panelOpen; simplified to panelCollapsed + panelLocked. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -94,8 +94,8 @@ function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner
 
 const App={
   proj:newProj(),sel:[],undoStack:[],redoStack:[],
-  view:'timeline',panelOpen:false,panelCollapsed:false,panelPinCollapsed:false,panelPinOpen:false,editItem:null,
-  _panelHintCooldown:0,_panelPreDataView:null,
+  view:'timeline',panelCollapsed:false,panelLocked:false,editItem:null,
+  _panelHintCooldown:0,_wasExpandedBeforeDataView:false,
   _dirty:false,_dataDirty:false,_raf:null,_unsaved:false,
   _sortCol:null,_sortDir:'asc',
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
@@ -225,11 +225,11 @@ const App={
      'imp-adv-toggle','imp-adv-arrow','imp-adv-body','imp-file-input','imp-file-name',
      'imp-map-area','imp-status-area','imp-perfect-match','imp-preview-wrap','imp-status',
      'imp-overload-area','btn-imp-do',
-     'panel-tab','btn-pin-open','btn-collapse','btn-pin-collapse',
+     'panel-tab','panel-tab-icon','btn-collapse','btn-lock-collapse',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
     this.loadAuto();this.migrate();this._loadShortcuts();this._buildShortcutMap();
-    try{this.panelCollapsed=localStorage.getItem('tls3_panelCollapsed')==='1';this.panelPinCollapsed=localStorage.getItem('tls3_pinCollapsed')==='1'}catch(e){}
-    if(this.panelCollapsed){this.$.panel_tab.classList.remove('hidden');this.$.props_panel.classList.add('panel-hidden');this.panelOpen=false}else{this.panelOpen=true;this._renderEmptyPanel()}
+    try{this.panelCollapsed=localStorage.getItem('tls3_panelCollapsed')==='1';this.panelLocked=localStorage.getItem('tls3_panelLocked')==='1'}catch(e){}
+    if(this.panelCollapsed){this.$.panel_tab.classList.remove('hidden');this.$.props_panel.classList.add('panel-hidden');this._syncLockTab()}else{this._renderEmptyPanel()}
     this._syncPanelPad();this.applyTheme();this.bind();this.sched();if(this.proj.items.length)this._pendingFit=true;
     this.$.tl_body_scroll.addEventListener('scroll',()=>{
       this.$.tl_sl_labels.scrollTop=this.$.tl_body_scroll.scrollTop;
@@ -924,9 +924,8 @@ const App={
     on('btn-tools-menu',()=>{this.closeAllDD();this.$.tools_dropdown.classList.toggle('hidden');this.posDD(this.$.tools_dropdown)});
     on('btn-settings',()=>this.showSettings());
     on('btn-help',()=>this.showHelp());
-    on('btn-pin-open',()=>{this.panelPinOpen=!this.panelPinOpen;this._syncPinOpenBtn()});
     on('btn-collapse',()=>this.collapsePanel(false));
-    on('btn-pin-collapse',()=>this.collapsePanel(true));
+    on('btn-lock-collapse',()=>this.collapsePanel(true));
     this.$.panel_tab.addEventListener('click',()=>this.expandPanel());
     on('btn-lock',()=>{this.$.tools_dropdown.classList.add('hidden');this.proj.locked=!this.proj.locked;this.proj.lockH=this.proj.locked;this.proj.lockV=this.proj.locked;this.sched();this.autoSave();this.toast(this.proj.locked?'Locked':'Unlocked')});
     on('btn-hide',()=>{this.$.tools_dropdown.classList.add('hidden');this.proj.hideMode=!this.proj.hideMode;this.sched();this.toast(this.proj.hideMode?'Hiding hidden':'Showing all')});
@@ -1106,12 +1105,13 @@ const App={
     if(v==='timeline'||v==='split'){
       tc.classList.add('view-active');
       if(v==='split'){mc.classList.add('split-view');dc.classList.add('view-active')}else{dc.classList.add('view-hidden')}
-      if(this._panelPreDataView!==null){const saved=this._panelPreDataView;this._panelPreDataView=null;if(!saved.collapsed){this.panelPinCollapsed=saved.pinCollapsed;this._savePanelState()}};
+      if(this._wasExpandedBeforeDataView){this._wasExpandedBeforeDataView=false;this.expandPanel()}
       if(this.panelCollapsed)this.$.panel_tab.classList.remove('hidden')
     }else if(v==='data'){
       tc.classList.add('view-hidden');dc.classList.add('view-active');
-      if(!this.panelCollapsed){this._panelPreDataView={collapsed:false,pinCollapsed:this.panelPinCollapsed};this.collapsePanel(true)}
-      else{this._panelPreDataView={collapsed:true,pinCollapsed:this.panelPinCollapsed}}
+      this._wasExpandedBeforeDataView=!this.panelCollapsed;
+      if(!this.panelCollapsed)this.collapsePanel(true);
+      else if(!this.panelLocked){this.panelLocked=true;this._syncLockTab();this._savePanelState()}
     }
     this._syncPanelPad();this.sched()
   },
@@ -1134,7 +1134,7 @@ const App={
     const oldZ=this.proj.zoom||100;
     const newZ=U.clamp(oldZ+d,30,300);
     if(newZ===oldZ)return;
-    const panelW=this.panelOpen?290:28;
+    const panelW=this.panelCollapsed?28:290;
     const vpW=bs.clientWidth-panelW;
     const tl=this.met();
     const cDate=this._selCentroidDate();
@@ -1248,7 +1248,7 @@ const App={
   },
   fitToContent(){
     const bs=this.$.tl_body_scroll;if(!bs)return;
-    const panelW=this.panelOpen?290:28;
+    const panelW=this.panelCollapsed?28:290;
     const vpW=bs.clientWidth-panelW;
     const p=this.proj;
     const collapsedSlIds=new Set(p.swimlanes.filter(sl=>sl.collapsed!=='expanded').map(sl=>sl.id));
@@ -1316,7 +1316,7 @@ const App={
     const selItems=this.sel.map(id=>this.gi(id)).filter(Boolean);
     if(!selItems.length){this.fitToContent();return}
     const bs=this.$.tl_body_scroll;if(!bs)return;
-    const panelW=this.panelOpen?290:28;
+    const panelW=this.panelCollapsed?28:290;
     const vpW=bs.clientWidth-panelW;
     const p=this.proj;
     const fitItems=p.hideMode?selItems.filter(i=>!i.hidden):selItems;
@@ -1366,7 +1366,7 @@ const App={
     });
     this.toast(`Fit to selection (${fitItems.length} item${fitItems.length===1?'':'s'})`);
   },
-  goToday(){const tl=this.met();const x=this.dX(U.iso(new Date()),tl);if(x!==null){const panelW=this.panelOpen?290:28;this.$.tl_body_scroll.scrollLeft=x-(this.$.tl_body_scroll.clientWidth-panelW)/2}},
+  goToday(){const tl=this.met();const x=this.dX(U.iso(new Date()),tl);if(x!==null){const panelW=this.panelCollapsed?28:290;this.$.tl_body_scroll.scrollLeft=x-(this.$.tl_body_scroll.clientWidth-panelW)/2}},
   showModal(id){document.getElementById(id).classList.remove('hidden')},
   gi(id){return this.proj.items.find(i=>i.id===id)},
   gs(id){return this.proj.swimlanes.find(s=>s.id===id)},
@@ -2847,7 +2847,7 @@ const App={
         minL=Math.min(minL,iL);maxR=Math.max(maxR,iR);
       }
       if(minL===Infinity)return;
-      const clearRight=bs.scrollLeft+bs.clientWidth-(this.panelOpen?290:28)-20;/* 20px margin */
+      const clearRight=bs.scrollLeft+bs.clientWidth-(this.panelCollapsed?28:290)-20;/* 20px margin */
       const clearLeft=bs.scrollLeft+20;
       if(maxR>clearRight){
         bs.scrollTo({left:bs.scrollLeft+(maxR-clearRight),behavior:'smooth'});
@@ -2858,28 +2858,27 @@ const App={
   },
   openPanel(it){
     this.editItem=it;this.$.panel_title.textContent=it.type==='milestone'?'Milestone':'Task';this.renderPanel(it);
-    if(this.panelCollapsed){if(this.panelPinCollapsed){this._hintCollapsedTab();return}this.expandPanel();return}
-    this.panelOpen=true;this.$.props_panel.classList.remove('panel-hidden');this._syncPanelPad();this._scrollItemClear(it)
+    if(this.panelCollapsed){if(this.panelLocked){this._hintCollapsedTab();return}this.expandPanel();return}
+    this.$.props_panel.classList.remove('panel-hidden');this._syncPanelPad();this._scrollItemClear(it)
   },
   openBulkPanel(){
     this.$.panel_title.textContent=`Bulk Edit (${this.sel.length})`;this.renderBulkPanel();
-    if(this.panelCollapsed){if(this.panelPinCollapsed){this._hintCollapsedTab();return}this.expandPanel();return}
-    this.panelOpen=true;this.$.props_panel.classList.remove('panel-hidden');this._syncPanelPad();this._scrollItemClear()
+    if(this.panelCollapsed){if(this.panelLocked){this._hintCollapsedTab();return}this.expandPanel();return}
+    this.$.props_panel.classList.remove('panel-hidden');this._syncPanelPad();this._scrollItemClear()
   },
   closePanel(){
     if(this.panelCollapsed){this.editItem=null;return}
-    if(this.panelPinOpen){this._renderEmptyPanel();return}
-    this.collapsePanel(false)
+    this._renderEmptyPanel()
   },
-  collapsePanel(pinned){
-    this.panelCollapsed=true;this.panelPinCollapsed=!!pinned;this.panelOpen=false;
+  collapsePanel(locked){
+    this.panelCollapsed=true;this.panelLocked=!!locked;
     this.$.props_panel.classList.add('panel-hidden');this.$.panel_tab.classList.remove('hidden');
-    this._syncPanelPad();this._savePanelState()
+    this._syncLockTab();this._syncPanelPad();this._savePanelState()
   },
   expandPanel(){
-    this.panelCollapsed=false;this.panelPinCollapsed=false;this.panelOpen=true;
+    this.panelCollapsed=false;this.panelLocked=false;
     this.$.props_panel.classList.remove('panel-hidden');this.$.panel_tab.classList.add('hidden');
-    this._syncPanelPad();this._savePanelState();this._syncPinOpenBtn();
+    this._syncPanelPad();this._savePanelState();
     if(this.sel.length===1){const it=this.gi(this.sel[0]);if(it){this.editItem=it;this.$.panel_title.textContent=it.type==='milestone'?'Milestone':'Task';this.renderPanel(it);this._scrollItemClear(it)}}
     else if(this.sel.length>1){this.$.panel_title.textContent=`Bulk Edit (${this.sel.length})`;this.renderBulkPanel();this._scrollItemClear()}
     else{this._renderEmptyPanel()}
@@ -2896,12 +2895,19 @@ const App={
     tab.addEventListener('animationend',()=>tab.classList.remove('hint'),{once:true})
   },
   _syncPanelPad(){
-    const w=this.panelOpen?290:28;
+    const w=this.panelCollapsed?28:290;
     this.$.tl_body.style.width=(this._tlTW||0)+w+'px';
-    if(this.$.data_table_wrap)this.$.data_table_wrap.style.paddingRight=w+'px'
+    if(this.$.data_table_wrap)this.$.data_table_wrap.style.paddingRight=w+'px';
+    const dtb=document.getElementById('data-toolbar');if(dtb)dtb.style.paddingRight=w+'px';
+    const dfb=this.$.data_filter_bar;if(dfb)dfb.style.paddingRight=w+'px'
   },
-  _syncPinOpenBtn(){const btn=this.$.btn_pin_open;if(btn)btn.classList.toggle('active',this.panelPinOpen)},
-  _savePanelState(){try{localStorage.setItem('tls3_panelCollapsed',this.panelCollapsed?'1':'0');localStorage.setItem('tls3_pinCollapsed',this.panelPinCollapsed?'1':'0')}catch(e){}},
+  _syncLockTab(){
+    const tab=this.$.panel_tab;if(!tab)return;
+    const icon=this.$.panel_tab_icon;
+    if(this.panelLocked){tab.classList.add('locked');if(icon)icon.textContent='🔒'}
+    else{tab.classList.remove('locked');if(icon)icon.textContent='‹'}
+  },
+  _savePanelState(){try{localStorage.setItem('tls3_panelCollapsed',this.panelCollapsed?'1':'0');localStorage.setItem('tls3_panelLocked',this.panelLocked?'1':'0')}catch(e){}},
 
   renderBulkPanel(){
     const items=this.sel.map(id=>this.gi(id)).filter(Boolean);if(!items.length)return;
@@ -3053,7 +3059,7 @@ const App={
     q('pp-notes').oninput=function(){it.notes=this.value;App.autoSave()};
     q('pp-sl').onchange=function(){up(()=>{it.swimlaneId=this.value;it.subSwimId=''});App.renderPanel(it)};
     q('pp-ssw')?.addEventListener('change',function(){up(()=>it.subSwimId=this.value)});
-    q('pp-date')?.addEventListener('change',function(){if(App.proj.autoRange){App.snap();it.date=this.value;App.autoRange();App.sched();App.autoSave();if(App.panelOpen)App._scrollItemClear(it)}else{up(()=>it.date=this.value)}});
+    q('pp-date')?.addEventListener('change',function(){if(App.proj.autoRange){App.snap();it.date=this.value;App.autoRange();App.sched();App.autoSave();if(!App.panelCollapsed)App._scrollItemClear(it)}else{up(()=>it.date=this.value)}});
     if(it.type==='task'){
       const recalc=(changed)=>{
         const isWork=App.proj.scheduleAroundNonWorking&&(it.durMode||'cal')==='work';
@@ -3085,7 +3091,7 @@ const App={
           if(isWork)cdf.value=(U.days(it.startDate,it.endDate)+1)+'d';
         }
         if(App.proj.autoRange)App.autoRange();App.sched();App.autoSave();
-        if(App.panelOpen)App._scrollItemClear(it)
+        if(!App.panelCollapsed)App._scrollItemClear(it)
       };
       q('pp-start').onchange=function(){up(()=>{it.startDate=this.value;recalc('start')})};
       q('pp-end').onchange=function(){up(()=>{it.endDate=this.value;recalc('end')})};
@@ -3354,7 +3360,7 @@ const App={
       else if(v.direction==='up'){bot=vl.slY+vl.iy+16}
       bodyH+=`<div style="position:absolute;left:${vl.x}px;top:${top}px;height:${bot-top}px;${dash};pointer-events:none;z-index:2;opacity:0.6"></div>`}
     bodyH+=`<svg id="dep-svg" style="width:${tl.tw}px;height:100%"></svg>`;
-    this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this._tlTW=tl.tw;this.$.tl_body.style.width=tl.tw+(this.panelOpen?290:28)+'px';
+    this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this._tlTW=tl.tw;this.$.tl_body.style.width=tl.tw+(this.panelCollapsed?28:290)+'px';
     /* Empty-state hint for new users */
     if(p.items.length===0){const _hc=th.tlTx,_hc2=th.tlTx2;this.$.tl_body.innerHTML+=`<div class="tl-empty-hint" style="color:${_hc}"><div style="font-size:28px;margin-bottom:8px">📋</div><div>Click <strong>+ Task</strong> or <strong>+ Milestone</strong> in the toolbar to add your first item.</div><div style="margin-top:6px;font-size:11px;color:${_hc2}">Or choose a template from <strong style="color:${_hc}">New</strong> (📄).<br>Right-click the timeline to add at a specific date.</div></div>`}
 
