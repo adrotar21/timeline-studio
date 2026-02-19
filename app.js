@@ -3755,7 +3755,7 @@ const App={
     if((e.altKey||this._lassoMode||(e.ctrlKey&&!e.target.closest('.tl-item')))&&!this.proj.locked){e.preventDefault();e.stopPropagation();this.startLasso(e);return}
     const rh=e.target.closest('.tl-task-rs');if(rh&&!this.proj.locked){this.startTR(e,rh);return}const iEl=e.target.closest('.tl-item');if(iEl){const id=iEl.dataset.iid;if(e.ctrlKey||e.metaKey){const idx=this.sel.indexOf(id);if(idx>=0)this.sel.splice(idx,1);else this.sel.push(id)}else if(!this.sel.includes(id))this.sel=[id];
     if(this.sel.length===1){const it=this.gi(this.sel[0]);if(it)this.openPanel(it)}else if(this.sel.length>1)this.openBulkPanel();
-    const it=this.gi(id);if(it&&!this.proj.locked){this.startDrag(e,it,iEl);return}if(it&&this.proj.locked)this._hintLockPill();this.sched();return}
+    const it=this.gi(id);if(it&&!this.proj.locked){this.startDrag(e,it,iEl);return}if(it&&this.proj.locked){if(!this._lockToastT||Date.now()-this._lockToastT>2000){this.toast('🔒 Locked — unlock to move items','info',1500);this._lockToastT=Date.now()}this._hintLockPill()}this.sched();return}
     if(!e.target.closest('.sl-rh')&&!e.ctrlKey&&!e.metaKey){this.sel=[];this.closePanel();this.sched()}},
   onTlCtx(e){const iEl=e.target.closest('.tl-item');if(iEl)this.showCtx(e,iEl.dataset.iid);else{e.preventDefault();this.sel=[];this.showCtx(e,null)}},
 
