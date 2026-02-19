@@ -98,7 +98,7 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
-| | _No open bugs_ | | | | |
+| B39 | **Data table status dropdown dismissed on row select** | Clicking a status cell dropdown in Data View when the row is not already the sole selection causes the dropdown to flash open then immediately close, because the click first triggers row selection via `_dtSelect()`, which re-renders the table and destroys the dropdown. User must click a second time to actually edit the status. | S | :orange_circle: P1 | :white_circle: Open |
 
 ---
 
