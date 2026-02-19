@@ -61,17 +61,19 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 /* Mode indicator pills — absolutely positioned so expansion grows rightward without shifting the view toggle */
 .pill-group{display:flex;align-items:center;gap:3px;position:absolute;left:100%;margin-left:6px;top:50%;transform:translateY(-50%)}
 .pill{display:flex;align-items:center;justify-content:center;gap:0;padding:4px 4px;border-radius:5px;font-size:10px;font-weight:600;letter-spacing:.3px;cursor:default;white-space:nowrap;overflow:hidden;max-width:26px;height:28px;box-sizing:border-box;transition:max-width .25s ease,padding .25s ease}
-.pill-icon{font-size:12px;flex-shrink:0;line-height:1}
+.pill-icon{font-size:12px;flex-shrink:0;line-height:1;width:100%;text-align:center}
 .pill-count{font-size:9px;margin-left:3px;flex-shrink:0;transition:opacity .15s ease .05s,max-width .2s ease}
 .pill-hide.has-count{max-width:44px;justify-content:flex-start;padding:4px 6px}
-.pill-text,.pill-x{opacity:0;max-width:0;overflow:hidden;transition:opacity .2s ease,max-width .25s ease;pointer-events:none}
-.pill-text{font-size:10px;margin-left:5px;white-space:nowrap}
-.pill-x{background:none;border:none;cursor:pointer;font-size:14px;font-weight:400;line-height:1;padding:0 0 0 5px;flex-shrink:0;color:inherit}
+.pill-hide.has-count .pill-icon{width:auto;text-align:left}
+.pill-text,.pill-x{opacity:0;max-width:0;overflow:hidden;margin:0;padding:0;transition:opacity .2s ease,max-width .25s ease;pointer-events:none}
+.pill-text{font-size:10px;white-space:nowrap}
+.pill-x{background:none;border:none;cursor:pointer;font-size:14px;font-weight:400;line-height:1;flex-shrink:0;color:inherit}
 .pill-x:hover{opacity:1!important}
 /* Hover expansion — .pill-hover class adds 200ms collapse delay via JS */
 .pill-group:hover .pill,.pill-group.pill-hover .pill{max-width:170px;justify-content:flex-start;padding:4px 7px}
-.pill-group:hover .pill-text,.pill-group.pill-hover .pill-text{opacity:1;max-width:110px;pointer-events:auto}
-.pill-group:hover .pill-x,.pill-group.pill-hover .pill-x{opacity:.5;max-width:20px;pointer-events:auto}
+.pill-group:hover .pill-icon,.pill-group.pill-hover .pill-icon{width:auto;text-align:left}
+.pill-group:hover .pill-text,.pill-group.pill-hover .pill-text{opacity:1;max-width:110px;margin-left:5px;pointer-events:auto}
+.pill-group:hover .pill-x,.pill-group.pill-hover .pill-x{opacity:.5;max-width:20px;padding:0 0 0 5px;pointer-events:auto}
 .pill-group:hover .pill-count,.pill-group.pill-hover .pill-count{opacity:0;max-width:0;margin:0}
 /* Color variants */
 .pill-lock{background:rgba(234,179,8,.15);color:#b45309}
