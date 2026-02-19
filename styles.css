@@ -58,6 +58,38 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .dep-conflict-btn{background:rgba(229,83,75,.15)!important;color:var(--danger)!important;font-weight:600;animation:pulse-warn 1.5s infinite}
 @keyframes pulse-warn{0%,100%{opacity:1}50%{opacity:.7}}
 
+/* Mode indicator pills */
+.pill-group{display:flex;align-items:center;gap:3px;margin-left:6px}
+.pill{display:flex;align-items:center;gap:0;padding:4px 7px;border-radius:5px;font-size:10px;font-weight:600;letter-spacing:.3px;cursor:default;white-space:nowrap;overflow:hidden;max-width:42px;height:28px;box-sizing:border-box;transition:max-width .25s ease,padding .25s ease}
+.pill-icon{font-size:12px;flex-shrink:0;line-height:1}
+.pill-count{font-size:9px;margin-left:3px;flex-shrink:0;transition:opacity .15s ease .05s,max-width .2s ease}
+.pill-text,.pill-x{opacity:0;max-width:0;overflow:hidden;transition:opacity .2s ease,max-width .25s ease;pointer-events:none}
+.pill-text{font-size:10px;margin-left:5px;white-space:nowrap}
+.pill-x{background:none;border:none;cursor:pointer;font-size:14px;font-weight:400;line-height:1;padding:0 0 0 5px;flex-shrink:0;color:inherit}
+.pill-x:hover{opacity:1!important}
+/* Hover expansion — .pill-hover class adds 200ms collapse delay via JS */
+.pill-group:hover .pill,.pill-group.pill-hover .pill{max-width:170px}
+.pill-group:hover .pill-text,.pill-group.pill-hover .pill-text{opacity:1;max-width:110px;pointer-events:auto}
+.pill-group:hover .pill-x,.pill-group.pill-hover .pill-x{opacity:.5;max-width:20px;pointer-events:auto}
+.pill-group:hover .pill-count,.pill-group.pill-hover .pill-count{opacity:0;max-width:0;margin:0}
+/* Color variants */
+.pill-lock{background:rgba(234,179,8,.15);color:#b45309}
+.pill-hide{background:rgba(239,68,68,.15);color:#dc2626}
+.pill-auto{background:rgba(46,134,171,.15);color:#2E86AB}
+/* Glow hint animations */
+@keyframes pill-glow-lock{0%{box-shadow:0 0 0 0 rgba(234,179,8,0)}30%{box-shadow:0 0 8px 3px rgba(234,179,8,.5)}100%{box-shadow:0 0 0 0 rgba(234,179,8,0)}}
+@keyframes pill-glow-hide{0%{box-shadow:0 0 0 0 rgba(239,68,68,0)}30%{box-shadow:0 0 8px 3px rgba(239,68,68,.5)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+.pill-lock.pill-hint{animation:pill-glow-lock 1s ease-out}
+.pill-hide.pill-hint{animation:pill-glow-hide 1s ease-out}
+/* Theme: Light */
+body.theme-light .pill-lock{background:rgba(234,179,8,.12);color:#92400e}
+body.theme-light .pill-hide{background:rgba(239,68,68,.1);color:#b91c1c}
+body.theme-light .pill-auto{background:rgba(46,134,171,.1);color:#1e6f8f}
+/* Theme: Midnight */
+body.theme-midnight .pill-lock{background:rgba(251,191,36,.12);color:#fbbf24}
+body.theme-midnight .pill-hide{background:rgba(248,113,113,.12);color:#f87171}
+body.theme-midnight .pill-auto{background:rgba(103,197,227,.12);color:#67c5e3}
+
 /* Fit split button */
 .fit-split-btn{display:flex;flex-direction:column;gap:0;border:1px solid var(--brd);border-radius:4px;overflow:hidden}
 .fit-split-btn .toolbar-btn{padding:1px 6px;border-radius:0;font-size:9px;line-height:1.2}

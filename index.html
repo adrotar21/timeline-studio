@@ -60,7 +60,11 @@
     </div>
     <div class="toolbar-center">
       <div class="view-toggle"><button class="view-btn active" data-view="timeline">Timeline</button><button class="view-btn" data-view="data">Data</button><button class="view-btn" data-view="split">Split</button></div>
-      <span id="sched-mode-badge" class="hidden" style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(46,134,171,.15);color:#2E86AB;font-weight:600;letter-spacing:.3px;cursor:pointer" title="Auto-Scheduled mode active — click to open Settings">📐 AUTO</span>
+      <div class="pill-group hidden" id="pill-group">
+        <div class="pill pill-lock hidden" id="pill-lock" data-tooltip="Timeline is locked — click ✕ to unlock"><span class="pill-icon">🔒</span><span class="pill-text">Locked</span><button class="pill-x" data-pill="lock">&times;</button></div>
+        <div class="pill pill-hide hidden" id="pill-hide" data-tooltip="Hidden items are concealed — click ✕ to show all"><span class="pill-icon">👁</span><span class="pill-count"></span><span class="pill-text">Hidden (<span class="pill-hide-ct">0</span>)</span><button class="pill-x" data-pill="hide">&times;</button></div>
+        <div class="pill pill-auto hidden" id="pill-auto" data-tooltip="Auto-Scheduled mode — click ✕ to switch to Manual"><span class="pill-icon">📐</span><span class="pill-text">Auto</span><button class="pill-x" data-pill="auto">&times;</button></div>
+      </div>
     </div>
     <div class="toolbar-right">
       <!-- View dropdown -->
