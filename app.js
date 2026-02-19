@@ -530,14 +530,14 @@ const App={
       if(copyBtn)copyBtn.disabled=false;
       if(sizeEl){
         const kb=Math.round(chars/1024*10)/10;
-        if(chars<=3500){
+        if(chars<=10000){
           sizeEl.innerHTML='<span class="share-size-ok">✓</span> Link: '+kb+' KB — fits within Slack and Teams limits';
           sizeEl.className='share-size-note share-size-ok';
-        }else if(chars<=4000){
-          sizeEl.innerHTML='<span class="share-size-near">⚠</span> Link: '+kb+' KB — near Slack\'s 4,000-character limit';
+        }else if(chars<=11500){
+          sizeEl.innerHTML='<span class="share-size-near">⚠</span> Link: '+kb+' KB — approaching Slack\'s message limit';
           sizeEl.className='share-size-note share-size-near';
         }else{
-          sizeEl.innerHTML='<span class="share-size-warn">⚠</span> Link: '+kb+' KB — exceeds Slack\'s limit. Consider sharing a .tlproj file instead.';
+          sizeEl.innerHTML='<span class="share-size-warn">⚠</span> Link: '+kb+' KB — may exceed Slack\'s message limit. Consider sharing a .tlproj file instead.';
           sizeEl.className='share-size-note share-size-warn';
         }
       }
