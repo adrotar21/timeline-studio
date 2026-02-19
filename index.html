@@ -218,6 +218,23 @@
     <div class="ctx-lbl">Label Position</div>
     <div class="ctx-row"><div class="ctx-sm" data-action="lp-left">L</div><div class="ctx-sm" data-action="lp-right">R</div><div class="ctx-sm" data-action="lp-top">T</div><div class="ctx-sm" data-action="lp-bottom">B</div><div class="ctx-sm" data-action="lp-center">M</div></div>
   </div>
+  <!-- Swimlane format popover (F19) -->
+  <div id="sl-fmt-popover" class="hidden">
+    <div class="sl-fmt-header">Format Label</div>
+    <div class="sl-fmt-row">
+      <label class="sl-fmt-label">Font Size</label>
+      <div class="sl-fmt-stepper">
+        <button class="sl-fmt-step" id="sl-fmt-dec">&minus;</button>
+        <input type="number" id="sl-fmt-fs" class="sl-fmt-input" min="7" max="24" step="0.5">
+        <button class="sl-fmt-step" id="sl-fmt-inc">+</button>
+        <span class="sl-fmt-unit">px</span>
+      </div>
+    </div>
+    <div class="sl-fmt-row">
+      <label class="sl-fmt-label">Apply to</label>
+      <select id="sl-fmt-scope" class="sl-fmt-select"></select>
+    </div>
+  </div>
   <!-- Settings Modal -->
   <div id="settings-modal" class="modal hidden"><div class="modal-overlay"></div>
     <div class="modal-content modal-lg settings-modal-content"><div class="modal-header"><h2>Project Settings</h2><button class="modal-close" data-close-modal>&times;</button></div>
@@ -432,6 +449,7 @@
       <div class="modal-body">
         <div class="form-group"><label>Swimlane Name</label><input type="text" id="sw-name" class="form-input"></div>
         <div class="form-group"><label>Color</label><div class="color-picker-row"><input type="color" id="sw-color" class="form-input-color" value="#2C5F7C"><div class="color-presets color-presets-h" id="sw-color-pre"></div></div></div>
+        <div class="form-group"><label>Label Font Size</label><div style="display:flex;align-items:center;gap:6px"><input type="number" id="sw-fontsize" class="form-input" style="width:60px" min="7" max="24" step="0.5"><span style="font-size:10px;color:var(--tx3)">px (empty = default)</span></div></div>
         <div class="form-group"><label>Order</label><div style="display:flex;gap:6px"><button class="btn btn-secondary" id="btn-sw-up" style="padding:3px 10px">↑ Up</button><button class="btn btn-secondary" id="btn-sw-dn" style="padding:3px 10px">↓ Down</button></div></div>
         <div class="form-group"><label>Sub-Swimlanes <button class="btn btn-secondary" id="btn-add-ssw" style="padding:2px 8px;font-size:11px;margin-left:8px">+ Add</button></label><div id="ssw-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div></div>
       </div>

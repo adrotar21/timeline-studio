@@ -82,6 +82,9 @@ const MOUSE_REFS=[
   {combo:'Alt+Drag',desc:'Lasso select area'},
   {combo:'Ctrl+Scroll',desc:'Zoom ±5%'},
   {combo:'Ctrl+Shift+Scroll',desc:'Fine zoom ±1%'},
+  {combo:'Click label',desc:'Select swimlane / sub-swimlane'},
+  {combo:'Ctrl+Click label',desc:'Multi-select swimlane labels'},
+  {combo:'Right-click label',desc:'Format swimlane label'},
   {combo:'Double-click',desc:'Edit item / swimlane'},
   {combo:'Right-click',desc:'Context menu'},
   {combo:'Middle-drag',desc:'Pan / scroll timeline'},
@@ -145,7 +148,7 @@ function _skDec(o){
 function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
 const App={
-  proj:newProj(),sel:[],undoStack:[],redoStack:[],
+  proj:newProj(),sel:[],slSel:[],undoStack:[],redoStack:[],
   view:'timeline',panelCollapsed:false,panelLocked:false,editItem:null,
   _panelHintCooldown:0,_wasExpandedBeforeDataView:false,_lockPillHintCD:0,_hidePillHintCD:0,_pillHoverTimer:null,
   _dirty:false,_dataDirty:false,_raf:null,_unsaved:false,_shareMode:false,
@@ -232,7 +235,7 @@ const App={
     snapFull(){this.copyScreenshot(false)},
   },
   _handleEscape(){
-    this.sel=[];this.editItem=null;this.closePanel();
+    this.sel=[];this.slSel=[];this._hideSlFmtPopover();this.editItem=null;this.closePanel();
     this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');
     document.querySelectorAll('.modal:not(.hidden)').forEach(m=>m.classList.add('hidden'));
     if(this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}
@@ -319,7 +322,7 @@ const App={
     if(p.statusDisplay.mode==='colorOverride'){p.statusDisplay.mode='emoji';p.statusDisplay.colorOverride=true}
     if(p.statusDisplay.colorOverride==null)p.statusDisplay.colorOverride=false;
     if(p.statusDisplay.blankColor==null)p.statusDisplay.blankColor='';
-    p.swimlanes.forEach(sl=>{if(!sl.subSwimlanes)sl.subSwimlanes=[];if(!sl.height)sl.height=120;if(sl.collapsed===true)sl.collapsed='minimized';else if(!sl.collapsed||sl.collapsed===false)sl.collapsed='expanded';sl.subSwimlanes.forEach(ss=>{if(ss.height==null)ss.height=0;if(!ss.collapsed)ss.collapsed='expanded'})});
+    p.swimlanes.forEach(sl=>{if(!sl.subSwimlanes)sl.subSwimlanes=[];if(!sl.height)sl.height=120;if(sl.collapsed===true)sl.collapsed='minimized';else if(!sl.collapsed||sl.collapsed===false)sl.collapsed='expanded';if(sl.fontSize==null)sl.fontSize=0;sl.subSwimlanes.forEach(ss=>{if(ss.height==null)ss.height=0;if(!ss.collapsed)ss.collapsed='expanded';if(ss.fontSize==null)ss.fontSize=0})});
     p.items.forEach(it=>{
       if(!it.deps&&it.dependencies){it.deps=it.dependencies;delete it.dependencies}
       if(!it.deps)it.deps=[];
@@ -474,11 +477,13 @@ const App={
     if(p.swimlanes)for(const sl of p.swimlanes){
       if(sl.collapsed==='expanded')delete sl.collapsed;
       if(sl.height===120)delete sl.height;
+      if(!sl.fontSize)delete sl.fontSize;
       if(Array.isArray(sl.subSwimlanes)){
         if(!sl.subSwimlanes.length){delete sl.subSwimlanes}
         else for(const ss of sl.subSwimlanes){
           if(ss.collapsed==='expanded')delete ss.collapsed;
           if(ss.height===0||ss.height==null)delete ss.height;
+          if(!ss.fontSize)delete ss.fontSize;
         }
       }
     }
@@ -1296,6 +1301,7 @@ const App={
       if(!e.target.closest('#dt-ctx-menu'))this.$.dt_ctx_menu.classList.add('hidden');
       if(!e.target.closest('#dt-ctx-input')){const dci=document.getElementById('dt-ctx-input');if(dci)dci.classList.add('hidden')}
       if(!e.target.closest('.save-btn-group')){this.closeAllDD()}
+      if(!e.target.closest('#sl-fmt-popover')&&!e.target.closest('.sl-lbl'))this._hideSlFmtPopover();
     });
     this.$.ctx_menu.addEventListener('click',e=>{const a=e.target.closest('[data-action]')?.dataset.action;if(a&&!e.target.closest('.ctx-disabled'))this.ctxAct(a);this.$.ctx_menu.classList.add('hidden')});
     // DT context menu
@@ -1327,7 +1333,13 @@ const App={
     this.$.tl_body.addEventListener('dblclick',e=>{const iEl=e.target.closest('.tl-item');if(iEl){const it=this.gi(iEl.dataset.iid);if(it)this.openPanel(it)}});
     this.$.tl_sl_labels.addEventListener('dblclick',e=>{const lbl=e.target.closest('.sl-lbl');if(lbl){const sl=this.gs(lbl.dataset.slId);if(sl)this.showSwM(sl)}});
     // Hidden indicator click — expand collapsed swimlane
-    this.$.tl_sl_labels.addEventListener('click',e=>{const ind=e.target.closest('.sl-hidden-indicator');if(ind){e.stopPropagation();const sl=this.gs(ind.dataset.slId);if(sl){this.snap();sl.collapsed='expanded';this.sched();this.autoSave()}return}const ssBtn=e.target.closest('.ss-collapse-btn');if(ssBtn){e.stopPropagation();const sl=this.gs(ssBtn.dataset.slId);if(!sl)return;const ss=sl.subSwimlanes.find(s=>s.id===ssBtn.dataset.ssId);if(!ss)return;this.snap();ss.collapsed=ss.collapsed==='minimized'?'expanded':'minimized';if(ss.collapsed==='expanded'&&sl.collapsed!=='expanded')sl.collapsed='expanded';if(sl.subSwimlanes.every(s=>s.collapsed==='minimized'))sl.collapsed='minimized';this.sched();this.autoSave();return}const btn=e.target.closest('.sl-collapse-btn');if(btn){e.stopPropagation();const sl=this.gs(btn.dataset.slId);if(sl){this.snap();const action=btn.dataset.action;if(action==='expand')sl.collapsed='expanded';else if(action==='hide')sl.collapsed='collapsed';else sl.collapsed='minimized';this.sched();this.autoSave()}}});
+    this.$.tl_sl_labels.addEventListener('click',e=>{const ind=e.target.closest('.sl-hidden-indicator');if(ind){e.stopPropagation();const sl=this.gs(ind.dataset.slId);if(sl){this.snap();sl.collapsed='expanded';this.sched();this.autoSave()}return}const ssBtn=e.target.closest('.ss-collapse-btn');if(ssBtn){e.stopPropagation();const sl=this.gs(ssBtn.dataset.slId);if(!sl)return;const ss=sl.subSwimlanes.find(s=>s.id===ssBtn.dataset.ssId);if(!ss)return;this.snap();ss.collapsed=ss.collapsed==='minimized'?'expanded':'minimized';if(ss.collapsed==='expanded'&&sl.collapsed!=='expanded')sl.collapsed='expanded';if(sl.subSwimlanes.every(s=>s.collapsed==='minimized'))sl.collapsed='minimized';this.sched();this.autoSave();return}const btn=e.target.closest('.sl-collapse-btn');if(btn){e.stopPropagation();const sl=this.gs(btn.dataset.slId);if(sl){this.snap();const action=btn.dataset.action;if(action==='expand')sl.collapsed='expanded';else if(action==='hide')sl.collapsed='collapsed';else sl.collapsed='minimized';this.sched();this.autoSave()}return}/* Swimlane label selection (F19) */const subLbl=e.target.closest('.sl-sub-lbl');const mainLbl=e.target.closest('.sl-lbl');if(!mainLbl)return;const slId=mainLbl.dataset.slId;if(subLbl){const ssId=subLbl.dataset.ssId||'';if(ssId){const entry={slId,ssId};if(e.ctrlKey||e.metaKey){const idx=this.slSel.findIndex(s=>s.slId===slId&&s.ssId===ssId);if(idx>=0)this.slSel.splice(idx,1);else this.slSel.push(entry)}else this.slSel=[entry];this.sched()}}else{const entry={slId,ssId:''};if(e.ctrlKey||e.metaKey){const idx=this.slSel.findIndex(s=>s.slId===slId&&!s.ssId);if(idx>=0)this.slSel.splice(idx,1);else this.slSel.push(entry)}else this.slSel=[entry];this.sched()}});
+    // Swimlane label right-click — format popover (F19)
+    this.$.tl_sl_labels.addEventListener('contextmenu',e=>{if(e.target.closest('.sl-collapse-btn')||e.target.closest('.ss-collapse-btn'))return;e.preventDefault();const subLbl=e.target.closest('.sl-sub-lbl');const mainLbl=e.target.closest('.sl-lbl');if(!mainLbl)return;const slId=mainLbl.dataset.slId;let ssId='';if(subLbl)ssId=subLbl.dataset.ssId||'';if(!this._isSlSel(slId,ssId)){this.slSel=[{slId,ssId}];this.sched()}this._showSlFmtPopover(e.clientX,e.clientY)});
+    // Swimlane format popover stepper (F19)
+    document.getElementById('sl-fmt-dec')?.addEventListener('click',()=>this._adjustSlFs(-0.5));
+    document.getElementById('sl-fmt-inc')?.addEventListener('click',()=>this._adjustSlFs(0.5));
+    const slFmtFs=document.getElementById('sl-fmt-fs');if(slFmtFs){slFmtFs.addEventListener('change',()=>{const v=parseFloat(slFmtFs.value);if(!isNaN(v))this._applySlFs(v)});slFmtFs.addEventListener('input',()=>{const v=parseFloat(slFmtFs.value);if(!isNaN(v)&&v>=7&&v<=24)this._applySlFs(v)})}
     // Column resize handle
     const colRH=this.$.sl_col_rh;
     if(colRH){colRH.addEventListener('mousedown',e=>{
@@ -1638,6 +1650,43 @@ const App={
   gi(id){return this.proj.items.find(i=>i.id===id)},
   gs(id){return this.proj.swimlanes.find(s=>s.id===id)},
   _findSubSwim(ssId){for(const sl of this.proj.swimlanes)for(const ss of sl.subSwimlanes||[])if(ss.id===ssId)return ss;return null},
+  _isSlSel(slId,ssId){ssId=ssId||'';return this.slSel.some(s=>s.slId===slId&&s.ssId===ssId)},
+  _clearSlSel(){if(this.slSel.length){this.slSel=[];this._hideSlFmtPopover();this.sched()}},
+  _hideSlFmtPopover(){const p=document.getElementById('sl-fmt-popover');if(p)p.classList.add('hidden')},
+  _showSlFmtPopover(x,y){
+    const pop=document.getElementById('sl-fmt-popover');if(!pop||!this.slSel.length)return;
+    const first=this.slSel[0];let curFs;
+    if(first.ssId){const ss=this._findSubSwim(first.ssId);curFs=(ss&&ss.fontSize)||9.5}else{const sl=this.gs(first.slId);curFs=(sl&&sl.fontSize)||12}
+    document.getElementById('sl-fmt-fs').value=curFs;
+    /* Build scope options */
+    const scope=document.getElementById('sl-fmt-scope');const hasSubs=this.slSel.some(s=>s.ssId);const hasMain=this.slSel.some(s=>!s.ssId);
+    let opts='<option value="selected">Selected</option>';
+    if(hasMain&&!hasSubs)opts+='<option value="all-swim">All Swimlanes</option>';
+    if(hasSubs&&!hasMain){
+      const lanes=new Set(this.slSel.filter(s=>s.ssId).map(s=>s.slId));
+      if(lanes.size===1)opts+='<option value="subs-in-lane">Subs in This Lane</option>';
+      opts+='<option value="all-sub">All Sub-Swimlanes</option>';
+    }
+    if(hasMain&&hasSubs){opts+='<option value="all-swim">All Swimlanes</option><option value="all-sub">All Sub-Swimlanes</option>'}
+    scope.innerHTML=opts;
+    pop.classList.remove('hidden');
+    const pw=pop.offsetWidth,ph=pop.offsetHeight;
+    pop.style.left=Math.min(x,window.innerWidth-pw-8)+'px';
+    pop.style.top=Math.min(y,window.innerHeight-ph-8)+'px';
+  },
+  _adjustSlFs(delta){
+    const inp=document.getElementById('sl-fmt-fs');const cur=parseFloat(inp.value)||12;
+    const next=Math.max(7,Math.min(24,cur+delta));inp.value=next;this._applySlFs(next);
+  },
+  _applySlFs(size){
+    this.snap();size=Math.max(7,Math.min(24,size));
+    const scope=document.getElementById('sl-fmt-scope')?.value||'selected';
+    if(scope==='selected'){for(const s of this.slSel){if(s.ssId){const ss=this._findSubSwim(s.ssId);if(ss)ss.fontSize=size}else{const sl=this.gs(s.slId);if(sl)sl.fontSize=size}}}
+    else if(scope==='all-swim'){this.proj.swimlanes.forEach(sl=>{sl.fontSize=size})}
+    else if(scope==='all-sub'){this.proj.swimlanes.forEach(sl=>{(sl.subSwimlanes||[]).forEach(ss=>{ss.fontSize=size})})}
+    else if(scope==='subs-in-lane'){const lanes=new Set(this.slSel.filter(s=>s.ssId).map(s=>s.slId));lanes.forEach(slId=>{const sl=this.gs(slId);if(sl)(sl.subSwimlanes||[]).forEach(ss=>{ss.fontSize=size})})}
+    this.sched();this.autoSave();
+  },
 
   getTargetSl(){
     if(this.sel.length){const it=this.gi(this.sel[0]);if(it)return this.gs(it.swimlaneId)}
@@ -1796,6 +1845,7 @@ const App={
     this._tmpSubs=sl?sl.subSwimlanes.map(s=>({...s})):[];this.renderSSW();
     const pe=document.getElementById('sw-color-pre');
     if(pe){pe.innerHTML=COLORS.slice(0,10).map(c=>`<div class="cs" style="background:${c}" data-c="${c}"></div>`).join('');pe.querySelectorAll('.cs').forEach(s=>{s.onclick=()=>this.$.sw_color.value=s.dataset.c})}
+    const fsEl=document.getElementById('sw-fontsize');if(fsEl)fsEl.value=sl&&sl.fontSize?sl.fontSize:'';
     this.showModal('sw-modal');this.$.sw_name.focus()
   },
   renderSSW(){
@@ -1815,9 +1865,10 @@ const App={
   },
   saveSwM(){
     this.snap();const name=this.$.sw_name.value.trim()||'Untitled';const color=this.$.sw_color.value;
-    const subs=this._tmpSubs.filter(s=>s.name.trim()).map(s=>({id:s.id,name:s.name.trim(),height:s.height||0,collapsed:s.collapsed||'expanded'}));
-    if(this._esl){this._esl.name=name;this._esl.color=color;this._esl.subSwimlanes=subs}
-    else this.proj.swimlanes.push({id:U.id(),name,color,height:120,subSwimlanes:subs,collapsed:'expanded'});
+    const fs=parseFloat(document.getElementById('sw-fontsize')?.value)||0;
+    const subs=this._tmpSubs.filter(s=>s.name.trim()).map(s=>({id:s.id,name:s.name.trim(),height:s.height||0,collapsed:s.collapsed||'expanded',fontSize:s.fontSize||0}));
+    if(this._esl){this._esl.name=name;this._esl.color=color;this._esl.fontSize=fs;this._esl.subSwimlanes=subs}
+    else this.proj.swimlanes.push({id:U.id(),name,color,height:120,subSwimlanes:subs,collapsed:'expanded',fontSize:fs});
     document.getElementById('sw-modal').classList.add('hidden');this.sched();this.autoSave()
   },
   delSwM(){if(!this._esl||!confirm(`Delete "${this._esl.name}"?`))return;this.snap();const sid=this._esl.id;this.proj.items=this.proj.items.filter(i=>i.swimlaneId!==sid);this.proj.swimlanes=this.proj.swimlanes.filter(s=>s.id!==sid);document.getElementById('sw-modal').classList.add('hidden');this.sched();this.autoSave()},
@@ -3523,10 +3574,11 @@ const App={
       labelsH+=`<div class="sl-lbl sl-hidden-indicator" data-sl-id="${sl.id}" style="background:${sl.color};height:8px" title="${U.esc(sl.name)} (click to expand)"></div>`;
       bodyH+=`<div class="sw-row sl-hidden-indicator" data-sl-id="${sl.id}" style="height:8px"></div>`;
       }else{
-      labelsH+=`<div class="sl-lbl${isMinimized?' collapsed':''}" data-sl-id="${sl.id}" style="background:${sl.color};height:${totalH}px" title="Double-click to edit">`;
+      const slSelCls=this._isSlSel(sl.id,'')?'sl-selected':'';
+      labelsH+=`<div class="sl-lbl${isMinimized?' collapsed':''}${slSelCls?' '+slSelCls:''}" data-sl-id="${sl.id}" style="background:${sl.color};height:${totalH}px" title="Double-click to edit">`;
       if(isMinimized){labelsH+=`<button class="sl-collapse-btn sl-btn-expand" data-sl-id="${sl.id}" data-action="expand" title="Expand">▶</button>`;labelsH+=`<button class="sl-collapse-btn sl-btn-hide" data-sl-id="${sl.id}" data-action="hide" title="Hide">✕</button>`}else{labelsH+=`<button class="sl-collapse-btn" data-sl-id="${sl.id}" title="Minimize">▼</button>`}
-      if(!isCollapsed&&hasSubs){const mainW=Math.min(60,(p.labelWidth||160)/2);const availH=totalH-12;let mfs=12;const tw=this._mt(sl.name,12,'700');if(tw>availH&&availH>0){mfs=Math.max(8,Math.floor(12*availH/tw))}labelsH+=`<div class="sl-lbl-main" style="width:${mainW}px;min-width:${mainW}px;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-size:${mfs}px">${U.esc(sl.name)}</div><div class="sl-lbl-subs">`;for(let smi=0;smi<subMeta.length;smi++){const{ssId,h,minimized}=subMeta[smi];const ss=sl.subSwimlanes.find(s=>s.id===ssId);const nm=ss?U.esc(ss.name):'';const icon=minimized?'&#9654;':'&#9660;';labelsH+=`<div class="sl-sub-lbl${minimized?' ss-minimized':''}" style="height:${h}px"><span class="ss-name">${nm}</span><button class="ss-collapse-btn" data-sl-id="${sl.id}" data-ss-id="${ssId}" title="${minimized?'Expand':'Minimize'}">${icon}</button></div>`}labelsH+=`</div>`}
-      else labelsH+=`<div class="sl-lbl-main" style="flex:1;padding-left:20px">${U.esc(sl.name)}</div>`;
+      if(!isCollapsed&&hasSubs){const mainW=Math.min(60,(p.labelWidth||160)/2);const availH=totalH-12;const baseMfs=sl.fontSize||12;let mfs=baseMfs;const tw=this._mt(sl.name,baseMfs,'700');if(tw>availH&&availH>0){mfs=Math.max(8,Math.floor(baseMfs*availH/tw))}labelsH+=`<div class="sl-lbl-main" style="width:${mainW}px;min-width:${mainW}px;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-size:${mfs}px">${U.esc(sl.name)}</div><div class="sl-lbl-subs">`;for(let smi=0;smi<subMeta.length;smi++){const{ssId,h,minimized}=subMeta[smi];const ss=sl.subSwimlanes.find(s=>s.id===ssId);const nm=ss?U.esc(ss.name):'';const icon=minimized?'&#9654;':'&#9660;';const ssSelCls=this._isSlSel(sl.id,ssId)?' sl-selected':'';const ssFs=ss&&ss.fontSize?ss.fontSize:9.5;labelsH+=`<div class="sl-sub-lbl${minimized?' ss-minimized':''}${ssSelCls}" data-ss-id="${ssId}" style="height:${h}px;font-size:${ssFs}px"><span class="ss-name">${nm}</span><button class="ss-collapse-btn" data-sl-id="${sl.id}" data-ss-id="${ssId}" title="${minimized?'Expand':'Minimize'}">${icon}</button></div>`}labelsH+=`</div>`}
+      else{const mainFs=sl.fontSize||12;labelsH+=`<div class="sl-lbl-main" style="flex:1;padding-left:20px;font-size:${mainFs}px">${U.esc(sl.name)}</div>`}
       labelsH+=`</div>`;
 
       bodyH+=`<div class="sw-row${isMinimized?' collapsed':''}" data-sl-id="${sl.id}" style="height:${totalH}px">`;
@@ -3754,10 +3806,10 @@ const App={
     if(e.button!==0)return;
     this.closeAllDD();this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');
     if((e.altKey||this._lassoMode||(e.ctrlKey&&!e.target.closest('.tl-item')))&&!this.proj.locked){e.preventDefault();e.stopPropagation();this.startLasso(e);return}
-    const rh=e.target.closest('.tl-task-rs');if(rh&&!this.proj.locked){this.startTR(e,rh);return}const iEl=e.target.closest('.tl-item');if(iEl){const id=iEl.dataset.iid;if(e.ctrlKey||e.metaKey){const idx=this.sel.indexOf(id);if(idx>=0)this.sel.splice(idx,1);else this.sel.push(id)}else if(!this.sel.includes(id))this.sel=[id];
+    const rh=e.target.closest('.tl-task-rs');if(rh&&!this.proj.locked){this.startTR(e,rh);return}const iEl=e.target.closest('.tl-item');if(iEl){const id=iEl.dataset.iid;if(e.ctrlKey||e.metaKey){const idx=this.sel.indexOf(id);if(idx>=0)this.sel.splice(idx,1);else this.sel.push(id)}else if(!this.sel.includes(id))this.sel=[id];this._clearSlSel();
     if(this.sel.length===1){const it=this.gi(this.sel[0]);if(it)this.openPanel(it)}else if(this.sel.length>1)this.openBulkPanel();
     const it=this.gi(id);if(it&&!this.proj.locked){this.startDrag(e,it,iEl);return}if(it&&this.proj.locked){if(!this._lockToastT||Date.now()-this._lockToastT>2000){this.toast('🔒 Locked — unlock to move items','info',1500);this._lockToastT=Date.now()}this._hintLockPill()}this.sched();return}
-    if(!e.target.closest('.sl-rh')&&!e.ctrlKey&&!e.metaKey){this.sel=[];this.closePanel();this.sched()}},
+    if(!e.target.closest('.sl-rh')&&!e.ctrlKey&&!e.metaKey){this.sel=[];this._clearSlSel();this.closePanel();this.sched()}},
   onTlCtx(e){const iEl=e.target.closest('.tl-item');if(iEl)this.showCtx(e,iEl.dataset.iid);else{e.preventDefault();this.sel=[];this.showCtx(e,null)}},
 
   startDrag(e,it,el){const tl=this.met(),sx=e.clientX,sy=e.clientY;
@@ -4296,17 +4348,17 @@ const App={
       const hasSubs=!collapsed&&sl.subSwimlanes?.length>0&&subs.length>1;
       if(hasSubs){
         const mainW=60,subW=lw-mainW;
-        const availH=h-12;const wrapLines=this._wrapText(sl.name,availH>0?availH:h,11,'600');const nLines=wrapLines.length||1;let mfs=11;if(nLines===1){const tw=this._mt(sl.name,11,'600');if(tw>availH&&availH>0)mfs=Math.max(8,Math.round(11*availH/tw))}
+        const availH=h-12;const expMainFs=sl.fontSize||11;const wrapLines=this._wrapText(sl.name,availH>0?availH:h,expMainFs,'600');const nLines=wrapLines.length||1;let mfs=expMainFs;if(nLines===1){const tw=this._mt(sl.name,expMainFs,'600');if(tw>availH&&availH>0)mfs=Math.max(8,Math.round(expMainFs*availH/tw))}
         const lh=mfs*1.2;const totalTH=nLines*lh;const cx=mainW/2,cy=rowTop+h/2;
         let vtxt=`<g transform="rotate(-90,${cx},${cy})"><text fill="#fff" font-size="${mfs}" font-weight="600" text-anchor="middle">`;
         for(let li=0;li<nLines;li++){const ly=cy-totalTH/2+lh/2+li*lh;vtxt+=`<tspan x="${cx}" y="${ly}" dominant-baseline="central">${U.esc(wrapLines[li])}</tspan>`}
         vtxt+=`</text></g>`;svg+=vtxt;
         let subY=0;for(let si=0;si<subs.length;si++){const sub=subs[si];
           const ss=sl.subSwimlanes.find(s=>s.id===sub.ssId);
-          if(ss){if(sub.minimized){svg+=`<text x="${mainW+subW/2}" fill="#fff" font-size="8" font-weight="500" text-anchor="middle" opacity="0.5"><tspan x="${mainW+subW/2}" y="${rowTop+subY+10}" dominant-baseline="central">${U.esc(ss.name)}</tspan></text>`}else{svg+=this._svgText(ss.name,mainW+subW/2,rowTop+subY,subW,sub.h,9.5,'500','opacity="0.85"')}}
+          if(ss){const expSubFs=ss.fontSize||9.5;if(sub.minimized){svg+=`<text x="${mainW+subW/2}" fill="#fff" font-size="${Math.min(8,expSubFs)}" font-weight="500" text-anchor="middle" opacity="0.5"><tspan x="${mainW+subW/2}" y="${rowTop+subY+10}" dominant-baseline="central">${U.esc(ss.name)}</tspan></text>`}else{svg+=this._svgText(ss.name,mainW+subW/2,rowTop+subY,subW,sub.h,expSubFs,'500','opacity="0.85"')}}
           subY+=sub.h}
       }else{
-        svg+=this._svgText(sl.name,lw/2,rowTop,lw,h,12,'600','')}
+        svg+=this._svgText(sl.name,lw/2,rowTop,lw,h,sl.fontSize||12,'600','')}
     }yO+=h}
     /* Header rows */
     let hdrY=0;
