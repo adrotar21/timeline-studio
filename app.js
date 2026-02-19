@@ -1,6 +1,4 @@
-/* Timeline Studio v0.35.0 — Share via Link: compress project into URL hash (#p=...) with LZString, rich-text clipboard copy (pastes as "Timeline Studio: Project Name" hyperlink), shared-project banner with 30s countdown timer, autoSave guard. Scroll fixes: bottom padding for horizontal scrollbar (18px) and bottom watermark (42px) on both timeline body and labels column. OG meta tags for link previews. */
-/* LZString v1.5.0 — MIT License — https://github.com/pieroxy/lz-string */
-var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();
+/* Timeline Studio v0.36.0 — Share via Link v2: native CompressionStream (deflate-raw) + default-stripping + short-key encoding replaces LZString, reducing share links ~3x (11.5K→~3.4K chars for 30-item project). Slack/Teams character limit warnings. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -91,6 +89,58 @@ const MOUSE_REFS=[
 const RESERVED_COMBOS=new Set(['Ctrl+v','Ctrl+c','Ctrl+x']);
 const BROWSER_RESERVED=new Set(['Ctrl+t','Ctrl+w','Ctrl+Tab','Ctrl+Shift+Tab','Ctrl+l','Ctrl+Shift+t','Ctrl+Shift+n','Ctrl+n','F5','Ctrl+F5','F12']);
 
+/* ── Short-key map for share-link compression ── */
+const SK={
+  /* project-level */
+  version:'V',name:'n',owner:'o',dateFormat:'df',timescale:'ts',headerLayers:'hl',
+  timelineStart:'a',timelineEnd:'b',autoRange:'ar',showToday:'st',showDeps:'sd',
+  locked:'lk',lockH:'lh',lockV:'lv',hideMode:'hm',theme:'th',bgColor:'bc',
+  headerColor:'hc',zoom:'z',fontSize:'fs',watermark:'wm',wmDate:'wd',wmPos:'wp',
+  wmShowOwner:'wo',showWeekends:'sw',weekendOpacity:'wO',weekendAutoHide:'wA',
+  holidays:'H',showHolidays:'sH',holidayOpacity:'hO',holidayColor:'hC',
+  holidayLabels:'hL',scheduleAroundNonWorking:'sN',defaultFolder:'dF',
+  tttEnabled:'tE',tttMilestoneId:'tM',showFloat:'sF',schedulingMode:'sM',
+  labelWidth:'lw',autoSortSwimlanes:'aS',arrangeSimple:'rS',arrangeSpread:'rP',
+  arrangePadding:'rD',arrangeDateWeight:'rW',arrangeLabels:'rL',
+  statusDefs:'sD',statusDisplay:'sY',swimlanes:'S',items:'I',
+  /* item-level */
+  id:'i',type:'t',color:'c',textColor:'tc',edgeTextColor:'ec',iconType:'ic',
+  startDate:'sa',endDate:'eb',date:'d',duration:'du',durMode:'dm',durationFmt:'dU',
+  showDate:'xd',showStartDate:'xs',showEndDate:'xe',showDuration:'xD',showOwner:'xo',
+  labelPosition:'lp',progress:'p',status:'su',statusDate:'sU',notes:'nt',
+  pinned:'pk',hidden:'hi',deps:'D',vLine:'vL',subRow:'sr',
+  swimlaneId:'si',subSwimId:'ui',
+  /* swimlane / sub-swimlane */
+  height:'h',subSwimlanes:'sS',collapsed:'co',
+  /* dependency */
+  lag:'lg',
+  /* holiday */
+  start:'A',end:'B',schedAround:'sA',
+  /* statusDefs fields */
+  desc:'de',shortName:'sn',emoji:'em',
+  /* statusDisplay fields */
+  show:'sh',mode:'m',badgePos:'bp',colorOverride:'cO',blankColor:'bC',
+  /* vLine fields */
+  enabled:'en',style:'sy',direction:'di',extent:'ex',
+};
+const SK_R=Object.fromEntries(Object.entries(SK).map(([k,v])=>[v,k]));
+console.assert(new Set(Object.values(SK)).size===Object.keys(SK).length,
+  'SK short-key collision detected!');
+
+function _skEnc(o){
+  if(Array.isArray(o))return o.map(_skEnc);
+  if(o&&typeof o==='object'){
+    const r={};for(const k in o)r[SK[k]||k]=_skEnc(o[k]);return r;
+  }
+  return o;
+}
+function _skDec(o){
+  if(Array.isArray(o))return o.map(_skDec);
+  if(o&&typeof o==='object'){
+    const r={};for(const k in o)r[SK_R[k]||k]=_skDec(o[k]);return r;
+  }
+  return o;
+}
 
 function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
@@ -201,7 +251,7 @@ const App={
     setTimeout(()=>{const sc=document.getElementById('sect-shortcuts');if(sc)sc.scrollIntoView({behavior:'smooth',block:'start'})},100);
   },
 
-  init(){
+  async init(){
     this.$={};
     ['toolbar','main-content','props-panel','panel-body','panel-title',
      'tl-container','tl-scroll','tl-hdr-wrap','tl-hdr-corner','tl-hdr-scroll','tl-hdr',
@@ -229,7 +279,7 @@ const App={
      'imp-overload-area','btn-imp-do',
      'panel-tab','panel-tab-icon','btn-collapse','btn-lock-collapse',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
-    if(!this._loadFromHash())this.loadAuto();this.migrate();this._loadShortcuts();this._buildShortcutMap();
+    if(!await this._loadFromHash())this.loadAuto();this.migrate();this._loadShortcuts();this._buildShortcutMap();
     try{this.panelCollapsed=localStorage.getItem('tls3_panelCollapsed')==='1';this.panelLocked=localStorage.getItem('tls3_panelLocked')==='1'}catch(e){}
     if(this.panelCollapsed){this.$.panel_tab.classList.remove('hidden');this.$.props_panel.classList.add('panel-hidden');this._syncLockTab()}else{this._renderEmptyPanel()}
     this._syncPanelPad();this.applyTheme();this.bind();this.sched();if(this.proj.items.length)this._pendingFit=true;
@@ -344,13 +394,15 @@ const App={
   refreshPanel(){if(this.editItem&&this.sel.length===1){const it=this.gi(this.sel[0]);if(it){this.editItem=it;this.renderPanel(it)}}else if(this.sel.length>1)this.renderBulkPanel()},
   autoSave:U.deb(function(){if(App._shareMode)return;try{localStorage.setItem('tls3',JSON.stringify(App.proj))}catch(e){}},400),
   loadAuto(){try{const s=localStorage.getItem('tls3');if(s)this.proj=JSON.parse(s)}catch(e){}},
-  _loadFromHash(){
+  async _loadFromHash(){
     try{
       const h=location.hash;
       if(!h.startsWith('#p='))return false;
-      const json=LZString.decompressFromEncodedURIComponent(h.slice(3));
+      const raw=h.slice(3);
+      const json=await this._decompress(raw);
       if(!json)throw new Error('decompress failed');
-      this.proj=JSON.parse(json);
+      const parsed=JSON.parse(json);
+      this.proj=_skDec(parsed);
       this._shareMode=true;
       this._fileHandle=null;
       history.replaceState(null,'',location.pathname+location.search);
@@ -365,26 +417,135 @@ const App={
     if(window.showSaveFilePicker){try{const prevHandle=saveAs?this._fileHandle:null;const h=await window.showSaveFilePicker({suggestedName:(this.proj.name||'timeline')+'.tlproj',types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}]});const w=await h.createWritable();await w.write(data);await w.close();this._fileHandle=saveAs&&prevHandle?prevHandle:h;this.markClean();this.toast(saveAs?'Saved copy!':'Saved!');this.autoSave();return}catch(e){if(e.name==='AbortError')return}}
     const b=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.tlproj';a.click();URL.revokeObjectURL(a.href);this.markClean();this.toast('Downloaded!');this.autoSave()
   },
-  shareProject(){
-    const json=JSON.stringify(this.proj);
-    const compressed=LZString.compressToEncodedURIComponent(json);
-    const url=location.origin+location.pathname+'#p='+compressed;
-    const byteLen=url.length;
-    const kb=Math.round(byteLen/1024*10)/10;
+  /* ── Share-link compression pipeline ── */
+  _packProj(){
+    const p=U.deep(this.proj);
+    const def=newProj();
+    /* project-level: strip fields matching defaults */
+    const projStrip=['owner','dateFormat','timescale','headerLayers','autoRange','showToday','showDeps',
+      'locked','lockH','lockV','hideMode','theme','bgColor','headerColor','zoom','fontSize',
+      'watermark','wmDate','wmPos','wmShowOwner','showWeekends','weekendOpacity','weekendAutoHide',
+      'showHolidays','holidayOpacity','holidayColor','holidayLabels','scheduleAroundNonWorking',
+      'defaultFolder','tttEnabled','tttMilestoneId','showFloat','schedulingMode','labelWidth',
+      'autoSortSwimlanes','arrangeSimple','arrangeSpread','arrangePadding','arrangeDateWeight','arrangeLabels'];
+    for(const k of projStrip)if(JSON.stringify(p[k])===JSON.stringify(def[k]))delete p[k];
+    /* holidays — strip if empty */
+    if(Array.isArray(p.holidays)&&!p.holidays.length)delete p.holidays;
+    /* statusDefs — strip if all 7 match canonical defaults */
+    if(Array.isArray(p.statusDefs)&&p.statusDefs.length===7){
+      const canon=def.statusDefs;
+      const match=p.statusDefs.every((s,i)=>s.id===canon[i].id&&s.name===canon[i].name&&s.color===canon[i].color&&s.shortName===canon[i].shortName&&s.emoji===canon[i].emoji);
+      if(match)delete p.statusDefs;
+    }
+    /* statusDisplay — strip if matches default */
+    if(p.statusDisplay&&JSON.stringify(p.statusDisplay)===JSON.stringify(def.statusDisplay))delete p.statusDisplay;
+    /* items */
+    if(p.items)for(const it of p.items){
+      if(it.showDate===true)delete it.showDate;
+      if(it.hidden===false)delete it.hidden;
+      if(it.progress===0)delete it.progress;
+      if(it.durMode==='cal')delete it.durMode;
+      if(!it.textColor)delete it.textColor;
+      if(!it.edgeTextColor)delete it.edgeTextColor;
+      if(!it.dateFormat)delete it.dateFormat;
+      if(it.fontSize===0||it.fontSize==null)delete it.fontSize;
+      if(it.pinned===false)delete it.pinned;
+      if(Array.isArray(it.deps)&&!it.deps.length)delete it.deps;
+      if(!it.notes)delete it.notes;
+      if(!it.owner)delete it.owner;
+      if(!it.status)delete it.status;
+      if(!it.statusDate)delete it.statusDate;
+      if(!it.subSwimId)delete it.subSwimId;
+      if(it.showStartDate===false)delete it.showStartDate;
+      if(it.showEndDate===false)delete it.showEndDate;
+      if(it.showDuration===false)delete it.showDuration;
+      if(it.showOwner===false)delete it.showOwner;
+      if(!it.iconType||it.iconType==='diamond')delete it.iconType;
+      if(!it.durationFmt||it.durationFmt==='days')delete it.durationFmt;
+      if(!it.labelPosition||it.labelPosition==='right')delete it.labelPosition;
+      if(it.vLine){
+        const v=it.vLine;
+        if(!v.enabled&&v.style==='dashed'&&v.color===it.color&&v.direction==='both'&&v.extent==='swim')delete it.vLine;
+      }
+      delete it._float;
+    }
+    /* swimlanes */
+    if(p.swimlanes)for(const sl of p.swimlanes){
+      if(sl.collapsed==='expanded')delete sl.collapsed;
+      if(sl.height===120)delete sl.height;
+      if(Array.isArray(sl.subSwimlanes)){
+        if(!sl.subSwimlanes.length){delete sl.subSwimlanes}
+        else for(const ss of sl.subSwimlanes){
+          if(ss.collapsed==='expanded')delete ss.collapsed;
+          if(ss.height===0||ss.height==null)delete ss.height;
+        }
+      }
+    }
+    return p;
+  },
+  async _compress(str){
+    const blob=new Blob([str]);
+    const cs=new CompressionStream('deflate-raw');
+    const out=blob.stream().pipeThrough(cs);
+    const buf=await new Response(out).arrayBuffer();
+    const bytes=new Uint8Array(buf);
+    /* base64url encode — chunked to avoid stack overflow */
+    let b64='';const chunk=8192;
+    for(let i=0;i<bytes.length;i+=chunk)b64+=String.fromCharCode(...bytes.subarray(i,i+chunk));
+    return btoa(b64).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  },
+  async _decompress(b64url){
+    const b64=b64url.replace(/-/g,'+').replace(/_/g,'/');
+    const bin=atob(b64);
+    const bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    const blob=new Blob([bytes]);
+    const ds=new DecompressionStream('deflate-raw');
+    const out=blob.stream().pipeThrough(ds);
+    return await new Response(out).text();
+  },
+  async shareProject(){
+    const projName=this.proj.name||'Untitled';
+    /* show modal immediately with placeholder */
     const urlEl=document.getElementById('share-url-out');
     const sizeEl=document.getElementById('share-size-note');
     const nameEl=document.getElementById('share-proj-name');
-    if(urlEl)urlEl.value=url;
-    const projName=this.proj.name||'Untitled';
-    if(nameEl)nameEl.textContent=projName;
     const previewEl=document.getElementById('share-paste-preview');
+    const copyBtn=document.getElementById('btn-share-copy');
+    if(nameEl)nameEl.textContent=projName;
     if(previewEl)previewEl.textContent='Timeline Studio: '+projName;
-    if(sizeEl){
-      const warn=byteLen>50000;
-      sizeEl.textContent='Link size: '+kb+' KB'+(warn?' — Large link: some apps may truncate long URLs':'');
-      sizeEl.className='share-size-note'+(warn?' share-size-warn':'');
-    }
+    if(urlEl)urlEl.value='Generating link…';
+    if(copyBtn)copyBtn.disabled=true;
+    if(sizeEl){sizeEl.textContent='Compressing…';sizeEl.className='share-size-note'}
     this.showModal('share-modal');
+    /* compress pipeline: pack → short-key → JSON → deflate → base64url */
+    try{
+      const packed=this._packProj();
+      const encoded=_skEnc(packed);
+      const json=JSON.stringify(encoded);
+      const compressed=await this._compress(json);
+      const url=location.origin+location.pathname+'#p='+compressed;
+      const chars=url.length;
+      if(urlEl)urlEl.value=url;
+      if(copyBtn)copyBtn.disabled=false;
+      if(sizeEl){
+        const kb=Math.round(chars/1024*10)/10;
+        if(chars<=3500){
+          sizeEl.innerHTML='<span class="share-size-ok">✓</span> Link: '+kb+' KB — fits within Slack and Teams limits';
+          sizeEl.className='share-size-note share-size-ok';
+        }else if(chars<=4000){
+          sizeEl.innerHTML='<span class="share-size-near">⚠</span> Link: '+kb+' KB — near Slack\'s 4,000-character limit';
+          sizeEl.className='share-size-note share-size-near';
+        }else{
+          sizeEl.innerHTML='<span class="share-size-warn">⚠</span> Link: '+kb+' KB — exceeds Slack\'s limit. Consider sharing a .tlproj file instead.';
+          sizeEl.className='share-size-note share-size-warn';
+        }
+      }
+    }catch(e){
+      if(urlEl)urlEl.value='Error generating link';
+      if(sizeEl){sizeEl.textContent='Compression failed: '+e.message;sizeEl.className='share-size-note share-size-warn'}
+      if(copyBtn)copyBtn.disabled=false;
+    }
   },
   _shareBannerTimer:null,
   _showShareBanner(){
