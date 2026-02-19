@@ -648,6 +648,7 @@ const App={
         const ctEl=ph.querySelector('.pill-hide-ct');
         if(countEl)countEl.textContent=ct||'';
         if(ctEl)ctEl.textContent=ct;
+        ph.classList.toggle('has-count',ct>0);
       }
     }
   },

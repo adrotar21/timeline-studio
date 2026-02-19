@@ -60,10 +60,10 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 
 /* Mode indicator pills — absolutely positioned so expansion grows rightward without shifting the view toggle */
 .pill-group{display:flex;align-items:center;gap:3px;position:absolute;left:100%;margin-left:6px;top:50%;transform:translateY(-50%)}
-.pill{display:flex;align-items:center;justify-content:center;gap:0;padding:4px 5px;border-radius:5px;font-size:10px;font-weight:600;letter-spacing:.3px;cursor:default;white-space:nowrap;overflow:hidden;max-width:32px;height:28px;box-sizing:border-box;transition:max-width .25s ease,padding .25s ease}
+.pill{display:flex;align-items:center;justify-content:center;gap:0;padding:4px 4px;border-radius:5px;font-size:10px;font-weight:600;letter-spacing:.3px;cursor:default;white-space:nowrap;overflow:hidden;max-width:26px;height:28px;box-sizing:border-box;transition:max-width .25s ease,padding .25s ease}
 .pill-icon{font-size:12px;flex-shrink:0;line-height:1}
 .pill-count{font-size:9px;margin-left:3px;flex-shrink:0;transition:opacity .15s ease .05s,max-width .2s ease}
-.pill-hide{max-width:48px;justify-content:flex-start;padding:4px 7px}
+.pill-hide.has-count{max-width:44px;justify-content:flex-start;padding:4px 6px}
 .pill-text,.pill-x{opacity:0;max-width:0;overflow:hidden;transition:opacity .2s ease,max-width .25s ease;pointer-events:none}
 .pill-text{font-size:10px;margin-left:5px;white-space:nowrap}
 .pill-x{background:none;border:none;cursor:pointer;font-size:14px;font-weight:400;line-height:1;padding:0 0 0 5px;flex-shrink:0;color:inherit}
