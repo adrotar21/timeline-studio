@@ -98,7 +98,9 @@ body.theme-midnight .pill-auto{background:rgba(103,197,227,.12);color:#67c5e3}
 
 /* Swimlane format popover (F19) */
 #sl-fmt-popover{position:fixed;z-index:5000;background:var(--bg2);border:1px solid var(--brd);border-radius:7px;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.4);padding:8px 0;user-select:none}
-.sl-fmt-header{padding:4px 12px 6px;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--tx3);letter-spacing:.5px;border-bottom:1px solid var(--brd);margin-bottom:4px}
+.sl-fmt-header{padding:4px 12px 6px;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--tx3);letter-spacing:.5px;border-bottom:1px solid var(--brd);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+.sl-fmt-close{background:none;border:none;color:var(--tx3);font-size:14px;cursor:pointer;padding:0 2px;line-height:1;opacity:.6;transition:opacity .1s}
+.sl-fmt-close:hover{opacity:1;color:var(--tx1)}
 .sl-fmt-row{padding:5px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .sl-fmt-label{font-size:11px;color:var(--tx2);white-space:nowrap}
 .sl-fmt-stepper{display:flex;align-items:center;gap:2px}

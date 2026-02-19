@@ -1337,6 +1337,7 @@ const App={
     // Swimlane label right-click — format popover (F19)
     this.$.tl_sl_labels.addEventListener('contextmenu',e=>{if(e.target.closest('.sl-collapse-btn')||e.target.closest('.ss-collapse-btn'))return;e.preventDefault();const subLbl=e.target.closest('.sl-sub-lbl');const mainLbl=e.target.closest('.sl-lbl');if(!mainLbl)return;const slId=mainLbl.dataset.slId;let ssId='';if(subLbl)ssId=subLbl.dataset.ssId||'';if(!this._isSlSel(slId,ssId)){this.slSel=[{slId,ssId}];this.sched()}this._showSlFmtPopover(e.clientX,e.clientY)});
     // Swimlane format popover stepper (F19)
+    document.getElementById('sl-fmt-close')?.addEventListener('click',()=>this._hideSlFmtPopover());
     document.getElementById('sl-fmt-dec')?.addEventListener('click',()=>this._adjustSlFs(-0.5));
     document.getElementById('sl-fmt-inc')?.addEventListener('click',()=>this._adjustSlFs(0.5));
     const slFmtFs=document.getElementById('sl-fmt-fs');if(slFmtFs){slFmtFs.addEventListener('change',()=>{const v=parseFloat(slFmtFs.value);if(!isNaN(v))this._applySlFs(v)});slFmtFs.addEventListener('input',()=>{const v=parseFloat(slFmtFs.value);if(!isNaN(v)&&v>=7&&v<=24)this._applySlFs(v)})}
