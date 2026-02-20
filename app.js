@@ -3969,13 +3969,23 @@ const App={
     if(e.button===0&&this._panMode){this.startPan(e);return}
     if(e.button!==0)return;
     this.closeAllDD();this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');
-    if((e.altKey||this._lassoMode||(e.ctrlKey&&!e.target.closest('.tl-item')))&&!this.proj.locked){e.preventDefault();e.stopPropagation();this.startLasso(e);return}
+    if(e.altKey||this._lassoMode||(e.ctrlKey&&!e.target.closest('.tl-item'))){e.preventDefault();e.stopPropagation();this.startLasso(e);return}
     if(this._fpMode){const fpEl=e.target.closest('.tl-item');if(fpEl){e.preventDefault();e.stopPropagation();this.fpApply(fpEl.dataset.iid)}return}
     const rh=e.target.closest('.tl-task-rs');if(rh&&!this.proj.locked){this.startTR(e,rh);return}const iEl=e.target.closest('.tl-item');if(iEl){const id=iEl.dataset.iid;if(e.ctrlKey||e.metaKey){const idx=this.sel.indexOf(id);if(idx>=0)this.sel.splice(idx,1);else this.sel.push(id)}else if(!this.sel.includes(id))this.sel=[id];this._clearSlSel();
     if(this.sel.length===1){const it=this.gi(this.sel[0]);if(it)this.openPanel(it)}else if(this.sel.length>1)this.openBulkPanel();
-    const it=this.gi(id);if(it&&!this.proj.locked){this.startDrag(e,it,iEl);return}if(it&&this.proj.locked){if(!this._lockToastT||Date.now()-this._lockToastT>2000){this.toast('🔒 Locked — unlock to move items','info',1500);this._lockToastT=Date.now()}this._hintLockPill()}this.sched();return}
+    const it=this.gi(id);if(it&&!this.proj.locked){this.startDrag(e,it,iEl);return}if(it&&this.proj.locked){this._startLockedDragDetect(e)}this.sched();return}
     if(!e.target.closest('.sl-rh')&&!e.ctrlKey&&!e.metaKey){this.sel=[];this._clearSlSel();this.closePanel();this.sched()}},
   onTlCtx(e){const iEl=e.target.closest('.tl-item');if(iEl)this.showCtx(e,iEl.dataset.iid);else{e.preventDefault();this.sel=[];this.showCtx(e,null)}},
+
+  /* Detect drag intent while locked — only show toast when user actually tries to move */
+  _startLockedDragDetect(e){
+    const sx=e.clientX,sy=e.clientY;
+    const mv=ev=>{if(Math.abs(ev.clientX-sx)>3||Math.abs(ev.clientY-sy)>3){cleanup();if(!this._lockToastT||Date.now()-this._lockToastT>2000){this.toast('🔒 Locked — unlock to move items','info',1500);this._lockToastT=Date.now()}this._hintLockPill()}};
+    const up=()=>{cleanup()};
+    const cleanup=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up)};
+    document.addEventListener('mousemove',mv);
+    document.addEventListener('mouseup',up);
+  },
 
   startDrag(e,it,el){const tl=this.met(),sx=e.clientX,sy=e.clientY;
     // Orphan cleanup: remove any leftover feedback from prior aborted drags
