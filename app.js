@@ -69,7 +69,7 @@ const SHORTCUT_ACTIONS=[
   {id:'toggleLasso',cat:'Tools',label:'Toggle Lasso Mode',defaults:[],ctx:'tl'},
   {id:'togglePan',cat:'Tools',label:'Toggle Pan Mode',defaults:[],ctx:'tl'},
   {id:'formatPainter',cat:'Tools',label:'Format Painter',defaults:[],ctx:'sel'},
-  {id:'repeatFP',cat:'Tools',label:'Repeat Format Paint',defaults:['F4'],ctx:'sel'},
+  {id:'repeatFP',cat:'Tools',label:'Format Painter (\u00d72 for multi)',defaults:['F4'],ctx:'sel'},
   // Tier 2 — Customizable: Items
   {id:'addMilestone',cat:'Items',label:'Add Milestone',defaults:[],ctx:'tl'},
   {id:'addTask',cat:'Items',label:'Add Task',defaults:[],ctx:'tl'},
@@ -95,7 +95,6 @@ const MOUSE_REFS=[
   {combo:'Ctrl+Click label',desc:'Multi-select swimlane labels'},
   {combo:'Right-click label',desc:'Format swimlane label'},
   {combo:'Click in paint mode',desc:'Apply format to item'},
-  {combo:'Double-click 🖌',desc:'Persistent Format Painter'},
   {combo:'Double-click',desc:'Edit item / swimlane'},
   {combo:'Right-click',desc:'Context menu'},
   {combo:'Middle-drag',desc:'Pan / scroll timeline'},
@@ -166,7 +165,7 @@ const App={
   _sortCol:null,_sortDir:'asc',
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
   _fileHandle:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
-  _lassoMode:false,_panMode:false,_panning:false,_fpMode:false,_fpPersist:false,_fpSourceId:null,_fpSourceData:null,_fpClickTimer:null,_fpClickCount:0,_collapsedSl:new Set(),_pendingFit:false,
+  _lassoMode:false,_panMode:false,_panning:false,_fpMode:false,_fpPersist:false,_fpStaged:false,_fpSourceId:null,_fpSourceData:null,_collapsedSl:new Set(),_pendingFit:false,
   _impData:null,_impMappings:[],_impOverloads:[],_impSelSrc:null,_impStatusMap:{},_impLinkColors:['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'],
   _scMap:{},_scOverrides:null,_scRecording:null,_nudgeSnapped:false,_nudgeSnapTimer:null,_scMsgTimer:null,
 
@@ -237,10 +236,10 @@ const App={
     toggleLock(){this.proj.locked=!this.proj.locked;this.proj.lockH=this.proj.locked;this.proj.lockV=this.proj.locked;this.sched();this.autoSave();this.toast(this.proj.locked?'Locked':'Unlocked')},
     toggleHide(){this.proj.hideMode=!this.proj.hideMode;this.sched();this.toast(this.proj.hideMode?'Hiding hidden':'Showing all')},
     toggleCritPath(){this.toggleCritPath()},
-    toggleLasso(){if(this._fpMode)this.deactivateFP();this._lassoMode=!this._lassoMode;if(this._lassoMode&&this._panMode){this._panMode=false;document.getElementById('btn-pan')?.classList.remove('active')}document.getElementById('btn-lasso')?.classList.toggle('active',this._lassoMode);this.$.tl_body.classList.toggle('lasso-mode',this._lassoMode);this.toast(this._lassoMode?'Lasso mode ON — click and drag':'Lasso mode OFF')},
-    togglePan(){if(this._fpMode)this.deactivateFP();this._panMode=!this._panMode;if(this._panMode&&this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}document.getElementById('btn-pan')?.classList.toggle('active',this._panMode);this.sched();this.toast(this._panMode?'Pan mode ON — click and drag to scroll':'Pan mode OFF')},
-    formatPainter(){this.toggleFP()},
-    repeatFP(){if(!this._fpSourceData){this.toast('No format to repeat');return}if(!this.sel.length)return;this.snap();const d=this._fpSourceData;this.sel.forEach(id=>{const t=this.gi(id);if(!t)return;for(const[k,v]of Object.entries(d)){t[k]=(typeof v==='object'&&v!==null)?JSON.parse(JSON.stringify(v)):v}});this.sched();this.autoSave();this.toast(`Format applied to ${this.sel.length} item${this.sel.length>1?'s':''}`)},
+    toggleLasso(){if(this._fpMode||this._fpStaged)this.deactivateFP();this._lassoMode=!this._lassoMode;if(this._lassoMode&&this._panMode){this._panMode=false;document.getElementById('btn-pan')?.classList.remove('active')}document.getElementById('btn-lasso')?.classList.toggle('active',this._lassoMode);this.$.tl_body.classList.toggle('lasso-mode',this._lassoMode);this.toast(this._lassoMode?'Lasso mode ON — click and drag':'Lasso mode OFF')},
+    togglePan(){if(this._fpMode||this._fpStaged)this.deactivateFP();this._panMode=!this._panMode;if(this._panMode&&this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}document.getElementById('btn-pan')?.classList.toggle('active',this._panMode);this.sched();this.toast(this._panMode?'Pan mode ON — click and drag to scroll':'Pan mode OFF')},
+    formatPainter(){if(this._fpMode||this._fpStaged)this.deactivateFP();else this.stageFP()},
+    repeatFP(){if(!this._fpMode&&!this._fpStaged){this.stageFP();this.activateFP(false)}else if(this._fpStaged&&!this._fpMode){this.activateFP(false)}else if(this._fpMode&&!this._fpPersist){this._fpPersist=true;const b=document.getElementById('btn-fp');if(b)b.classList.add('fp-locked');this.sched();this.toast('Upgraded to multi-apply')}},
     addMilestone(){this.addItem('milestone')},
     addTask(){this.addItem('task')},
     addSwimlane(){this.showSwM()},
@@ -253,7 +252,7 @@ const App={
     document.querySelectorAll('.modal:not(.hidden)').forEach(m=>m.classList.add('hidden'));
     if(this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}
     if(this._panMode){this._panMode=false;document.getElementById('btn-pan')?.classList.remove('active')}
-    if(this._fpMode){this.deactivateFP()}
+    if(this._fpStaged||this._fpMode){this.deactivateFP()}
     this.sched();
   },
   _handleNudgeKey(actionId,ctrl){
@@ -1219,29 +1218,27 @@ const App={
     // Screenshot items
     on('btn-snap-vp',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(true)});
     on('btn-snap-full',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(false)});
-    /* Format Painter button — single-click=one-shot, double-click=persistent */
+    /* Format Painter button — click to stage (open popover) or deactivate */
     {const fpBtn=document.getElementById('btn-fp');
     if(fpBtn){fpBtn.addEventListener('click',()=>{
-      this._fpClickCount++;
-      if(this._fpClickTimer)clearTimeout(this._fpClickTimer);
-      this._fpClickTimer=setTimeout(()=>{
-        const c=this._fpClickCount;this._fpClickCount=0;this._fpClickTimer=null;
-        if(c>=2)this.toggleFP(true);else this.toggleFP(false);
-      },250);
+      if(this._fpMode||this._fpStaged)this.deactivateFP();else this.stageFP();
     })}}
     /* Format Painter popover events */
     {const fpPop=document.getElementById('fp-popover');
     if(fpPop){
       fpPop.addEventListener('change',e=>{const cb=e.target.closest('[data-fp]');if(!cb)return;
         const all=[...fpPop.querySelectorAll('[data-fp]')];const sel=all.filter(c=>c.checked).map(c=>c.dataset.fp);
-        this._saveFPProps(sel);if(this._fpMode&&this._fpSourceId)this._fpSourceData=this._captureFPData(this.gi(this._fpSourceId));
+        this._saveFPProps(sel);
       });
-      fpPop.querySelector('.fp-pop-close')?.addEventListener('click',()=>this._hideFPPopover());
-      fpPop.querySelectorAll('.fp-pop-btn').forEach(b=>{b.addEventListener('click',()=>{
+      fpPop.querySelector('.fp-pop-close')?.addEventListener('click',()=>this.deactivateFP());
+      fpPop.querySelectorAll('.fp-pop-link').forEach(b=>{b.addEventListener('click',()=>{
         const mode=b.dataset.mode;fpPop.querySelectorAll('[data-fp]').forEach(cb=>{cb.checked=mode==='all'});
-        const sel=mode==='all'?FP_PROPS_DEF.map(p=>p.key):[];
-        this._saveFPProps(sel);if(this._fpMode&&this._fpSourceId)this._fpSourceData=this._captureFPData(this.gi(this._fpSourceId));
+        this._saveFPProps(mode==='all'?FP_PROPS_DEF.map(p=>p.key):[]);
       })});
+      const applyOnce=document.getElementById('fp-apply-once');
+      const applyMany=document.getElementById('fp-apply-many');
+      if(applyOnce)applyOnce.addEventListener('click',()=>this.activateFP(false));
+      if(applyMany)applyMany.addEventListener('click',()=>this.activateFP(true));
     }}
     document.querySelectorAll('.view-btn').forEach(b=>{b.onclick=()=>this.setView(b.dataset.view)});
     /* Mode indicator pill events */
@@ -1343,7 +1340,7 @@ const App={
       if(!e.target.closest('#dt-ctx-input')){const dci=document.getElementById('dt-ctx-input');if(dci)dci.classList.add('hidden')}
       if(!e.target.closest('.save-btn-group')){this.closeAllDD()}
       if(!e.target.closest('#sl-fmt-popover')&&!e.target.closest('.sl-lbl'))this._hideSlFmtPopover();
-      if(!e.target.closest('#fp-popover')&&!e.target.closest('#btn-fp'))this._hideFPPopover();
+      if(!e.target.closest('#fp-popover')&&!e.target.closest('#btn-fp')){if(this._fpStaged)this.deactivateFP();else this._hideFPPopover()}
     });
     this.$.ctx_menu.addEventListener('click',e=>{const a=e.target.closest('[data-action]')?.dataset.action;if(a&&!e.target.closest('.ctx-disabled'))this.ctxAct(a);this.$.ctx_menu.classList.add('hidden')});
     // DT context menu
@@ -1422,7 +1419,7 @@ const App={
   },
 
   setView(v){
-    if(this._fpMode&&v!=='timeline')this.deactivateFP();
+    if((this._fpStaged||this._fpMode)&&v!=='timeline')this.deactivateFP();
     this.view=v;document.querySelectorAll('.view-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
     const tc=this.$.tl_container,dc=this.$.data_container,mc=this.$.main_content;
     mc.classList.remove('split-view');tc.classList.remove('view-active','view-hidden');dc.classList.remove('view-active','view-hidden');
@@ -1749,22 +1746,30 @@ const App={
   },
 
   /* ===== FORMAT PAINTER ===== */
-  toggleFP(persistent){
-    if(this._fpMode){this.deactivateFP();return}
+  stageFP(){
     if(this.sel.length!==1){this.toast('Select one item to copy format from','error');return}
     if(this._lassoMode)this._scDispatch.toggleLasso.call(this);
     if(this._panMode)this._scDispatch.togglePan.call(this);
-    this._fpPersist=!!persistent;this._fpSourceId=this.sel[0];
+    this._fpSourceId=this.sel[0];
     this._fpSourceData=this._captureFPData(this.gi(this._fpSourceId));
     if(!this._fpSourceData){this.toast('Could not read source item','error');return}
-    this._fpMode=true;
-    this.$.tl_body.classList.add('fp-mode');
-    const btn=document.getElementById('btn-fp');if(btn){btn.classList.add('active');if(persistent)btn.classList.add('fp-locked')}
+    this._fpStaged=true;
+    const btn=document.getElementById('btn-fp');if(btn)btn.classList.add('active');
     this._showFPPopover();this.sched();
-    this.toast(persistent?'Format Painter ON — click items to apply (persistent)':'Format Painter ON — click an item to apply');
+  },
+  activateFP(persistent){
+    if(!this._fpSourceId)return;
+    /* Re-capture in case checkboxes changed while staged */
+    this._fpSourceData=this._captureFPData(this.gi(this._fpSourceId));
+    if(!this._fpSourceData){this.toast('Could not read source item','error');this.deactivateFP();return}
+    this._fpStaged=false;this._fpMode=true;this._fpPersist=!!persistent;
+    this.$.tl_body.classList.add('fp-mode');
+    const btn=document.getElementById('btn-fp');if(btn&&persistent)btn.classList.add('fp-locked');
+    this._hideFPPopover();this.sched();
+    this.toast(persistent?'Format Painter — click items to apply':'Format Painter — click an item to apply');
   },
   deactivateFP(){
-    this._fpMode=false;this._fpPersist=false;this._fpSourceId=null;
+    this._fpMode=false;this._fpPersist=false;this._fpStaged=false;this._fpSourceId=null;this._fpSourceData=null;
     this.$.tl_body.classList.remove('fp-mode');
     const btn=document.getElementById('btn-fp');if(btn){btn.classList.remove('active','fp-locked')}
     this._hideFPPopover();this.sched();
@@ -3869,7 +3874,7 @@ const App={
     if(sdShow&&sdColorOvr){if(sd)renderColor=sd.color;else if(sdCfg.blankColor)renderColor=sdCfg.blankColor}
     let x,w;if(isT){x=this.dX(it.startDate,tl);const x2=this.dXEnd(it.endDate,tl);w=Math.max(8,(x2||0)-(x||0))}else{x=this.dXMid(it.date,tl);w=16}
     if(x===null)return'';const y=yOff+6+(it.subRow||0)*rH,left=x-(isT?0:8);
-    let cls='tl-item';if(sel)cls+=' selected';if(it.pinned)cls+=' item-pinned';if(violatedIds.has(it.id))cls+=' dep-error';if(it.hidden)cls+=' item-hidden';if(critIds&&critIds.has(it.id))cls+=' crit-path';if(this._fpMode&&it.id===this._fpSourceId)cls+=' fp-source';
+    let cls='tl-item';if(sel)cls+=' selected';if(it.pinned)cls+=' item-pinned';if(violatedIds.has(it.id))cls+=' dep-error';if(it.hidden)cls+=' item-hidden';if(critIds&&critIds.has(it.id))cls+=' crit-path';if((this._fpStaged||this._fpMode)&&it.id===this._fpSourceId)cls+=' fp-source';
     let dateStr='';
     if(isT){const parts=[];const hasOwner=it.showOwner&&it.owner;const hasDur=it.showDuration;const durTxt=hasDur?this._fmtDurLabel(it):'';if(hasOwner&&hasDur)parts.push(it.owner+' ('+durTxt+')');else if(hasOwner)parts.push(it.owner);else if(hasDur)parts.push(durTxt);dateStr=parts.join(' ')||''}else if(it.showDate!==false){const hasOwner=it.showOwner&&it.owner;dateStr=U.fmt(it.date,fmt);if(hasOwner)dateStr=it.owner+(dateStr?' · '+dateStr:'')}
     let h=`<div class="${cls}" data-iid="${it.id}" style="left:${left}px;top:${y}px;${isT?'width:'+w+'px':''}">`;

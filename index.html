@@ -239,7 +239,7 @@
   </div>
   <!-- Format Painter popover (F42) -->
   <div id="fp-popover" class="hidden">
-    <div class="fp-pop-header">Copy Properties<button class="fp-pop-close" id="fp-pop-close">&times;</button></div>
+    <div class="fp-pop-header">Format Painter<button class="fp-pop-close" id="fp-pop-close">&times;</button></div>
     <div class="fp-pop-body">
       <label class="fp-chk"><input type="checkbox" data-fp="color" checked> Color</label>
       <label class="fp-chk"><input type="checkbox" data-fp="textColor" checked> Text Color</label>
@@ -254,9 +254,13 @@
       <label class="fp-chk"><input type="checkbox" data-fp="hiddenPinned"> Hidden / Pinned</label>
       <label class="fp-chk"><input type="checkbox" data-fp="vLine"> Vertical Line</label>
     </div>
-    <div class="fp-pop-foot">
-      <button class="fp-pop-btn" data-mode="all" id="fp-sel-all">All</button>
-      <button class="fp-pop-btn" data-mode="none" id="fp-sel-none">None</button>
+    <div class="fp-pop-util">
+      <button class="fp-pop-link" data-mode="all" id="fp-sel-all">All</button>
+      <button class="fp-pop-link" data-mode="none" id="fp-sel-none">None</button>
+    </div>
+    <div class="fp-pop-actions">
+      <button class="fp-act" id="fp-apply-once">Apply Once</button>
+      <button class="fp-act fp-act-multi" id="fp-apply-many">Apply to Many</button>
     </div>
   </div>
   <!-- Settings Modal -->

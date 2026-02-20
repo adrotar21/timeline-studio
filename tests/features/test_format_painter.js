@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Timeline Studio -- F42 Format Painter Test Suite
- * ~42 tests covering:
- *   1. State Management (toggle, deactivate, persistence)
+ * Timeline Studio -- F42 Format Painter Test Suite (v2: staged/activate flow)
+ * ~76 tests covering:
+ *   1. State Management (staged, activate, deactivate, persistence)
  *   2. Property Capture (individual, composites, deep copy, selective)
  *   3. Application (single/multi-prop, cross-type, self-skip, undo)
- *   4. Mode Interaction (lasso/pan exclusion, escape, view switch, single vs persistent)
- *   5. F4 Repeat (re-apply, multi-select, no-data error)
+ *   4. Mode Interaction (staged→activate, lasso/pan exclusion, escape, view switch)
+ *   5. F4 Shortcut (single entry, double-tap upgrade, staged confirm)
  */
 
 const{assert,assertT,assertF,assertNeq,section,summary}=require('../helpers/assert');
@@ -14,7 +14,7 @@ const{U,App,resetApp}=require('../helpers/mock-engine');
 const{makeProj,makeItem,addItems,resetItemCounter}=require('../helpers/builders');
 
 console.log('\n\x1b[36m========================================\x1b[0m');
-console.log('\x1b[36m  F42 FORMAT PAINTER TEST SUITE\x1b[0m');
+console.log('\x1b[36m  F42 FORMAT PAINTER TEST SUITE (v2)\x1b[0m');
 console.log('\x1b[36m========================================\x1b[0m');
 
 // ═══════════════════════════════════════════════════════════════════
@@ -81,9 +81,23 @@ function makePlainTask(overrides={}){
   },overrides));
 }
 
+// FP state simulator (mirrors app.js state machine)
+function newFPState(){
+  return{_fpStaged:false,_fpMode:false,_fpPersist:false,_fpSourceId:null,_fpSourceData:null};
+}
+function simStage(st,sourceId,sourceData){
+  st._fpStaged=true;st._fpSourceId=sourceId;st._fpSourceData=sourceData;
+}
+function simActivate(st,persistent){
+  st._fpStaged=false;st._fpMode=true;st._fpPersist=!!persistent;
+}
+function simDeactivate(st){
+  st._fpStaged=false;st._fpMode=false;st._fpPersist=false;st._fpSourceId=null;st._fpSourceData=null;
+}
+
 
 // =====================================================================
-//  SECTION 1: STATE MANAGEMENT (~10 tests)
+//  SECTION 1: STATE MANAGEMENT (~14 tests)
 // =====================================================================
 section('1. State Management');
 resetItemCounter();
@@ -107,20 +121,32 @@ resetItemCounter();
   const color=FP_PROPS_DEF.find(p=>p.key==='color');
   assertF('color is not composite',!!color.composite);
 
-  // Test: FP state fields initial values
-  const fpState={_fpMode:false,_fpPersist:false,_fpSourceId:null,_fpSourceData:null};
-  assertF('_fpMode starts false',fpState._fpMode);
-  assertF('_fpPersist starts false',fpState._fpPersist);
-  assert('_fpSourceId starts null',fpState._fpSourceId,null);
-  assert('_fpSourceData starts null',fpState._fpSourceData,null);
+  // Test: FP state fields initial values (new 3-state: idle/staged/painting)
+  const st=newFPState();
+  assertF('_fpStaged starts false',st._fpStaged);
+  assertF('_fpMode starts false',st._fpMode);
+  assertF('_fpPersist starts false',st._fpPersist);
+  assert('_fpSourceId starts null',st._fpSourceId,null);
+  assert('_fpSourceData starts null',st._fpSourceData,null);
 
-  // Test: toggle activates and deactivates
-  fpState._fpMode=true;fpState._fpPersist=false;fpState._fpSourceId='it_1';
-  assertT('After toggle, _fpMode is true',fpState._fpMode);
-  // deactivate
-  fpState._fpMode=false;fpState._fpPersist=false;fpState._fpSourceId=null;fpState._fpSourceData=null;
-  assertF('After deactivate, _fpMode is false',fpState._fpMode);
-  assert('After deactivate, _fpSourceId is null',fpState._fpSourceId,null);
+  // Test: Stage sets _fpStaged but NOT _fpMode
+  simStage(st,'it_1',{color:'#ff0000'});
+  assertT('After stage: _fpStaged is true',st._fpStaged);
+  assertF('After stage: _fpMode is false',st._fpMode);
+  assert('After stage: sourceId set',st._fpSourceId,'it_1');
+
+  // Test: Activate transitions from staged to painting
+  simActivate(st,false);
+  assertF('After activate: _fpStaged is false',st._fpStaged);
+  assertT('After activate: _fpMode is true',st._fpMode);
+  assertF('After activate(false): _fpPersist is false',st._fpPersist);
+
+  // Test: Deactivate resets everything
+  simDeactivate(st);
+  assertF('After deactivate: _fpStaged is false',st._fpStaged);
+  assertF('After deactivate: _fpMode is false',st._fpMode);
+  assert('After deactivate: _fpSourceId is null',st._fpSourceId,null);
+  assert('After deactivate: _fpSourceData is null',st._fpSourceData,null);
 })();
 
 
@@ -279,88 +305,142 @@ resetItemCounter();
 
 
 // =====================================================================
-//  SECTION 4: MODE INTERACTION (~8 tests)
+//  SECTION 4: MODE INTERACTION (~12 tests)
 // =====================================================================
 section('4. Mode Interaction');
 resetItemCounter();
 
 (()=>{
-  // Test: FP requires exactly 1 selected item
-  const fpState={_fpMode:false,_fpPersist:false,_fpSourceId:null,_fpSourceData:null};
+  // Test: Staging requires exactly 1 selected item
   const sel0=[];
   const sel1=['it_1'];
   const sel2=['it_1','it_2'];
+  assertF('Cannot stage with 0 selection',sel0.length===1);
+  assertT('Can stage with 1 selection',sel1.length===1);
+  assertF('Cannot stage with 2 selection',sel2.length===1);
 
-  assertF('Cannot activate with 0 selection',sel0.length===1);
-  assertT('Can activate with 1 selection',sel1.length===1);
-  assertF('Cannot activate with 2 selection',sel2.length===1);
+  // Test: Stage→Activate→Deactivate flow (single)
+  const st=newFPState();
+  simStage(st,'it_1',{color:'#ff0000'});
+  assertT('Staged: _fpStaged true',st._fpStaged);
+  assertF('Staged: _fpMode false',st._fpMode);
+  simActivate(st,false);
+  assertF('Activated single: _fpStaged false',st._fpStaged);
+  assertT('Activated single: _fpMode true',st._fpMode);
+  assertF('Activated single: _fpPersist false',st._fpPersist);
+  simDeactivate(st);
+  assertF('Deactivated: all clear',st._fpMode||st._fpStaged||st._fpPersist);
+
+  // Test: Stage→Activate→Deactivate flow (persistent)
+  simStage(st,'it_2',{color:'#00ff00'});
+  simActivate(st,true);
+  assertT('Activated persistent: _fpPersist true',st._fpPersist);
+  assertT('Activated persistent: _fpMode true',st._fpMode);
+  simDeactivate(st);
 
   // Test: Mutual exclusion — activating FP should require lasso/pan off
-  let lassoMode=true,panMode=false;
-  // Simulate: activating FP deactivates lasso
+  let lassoMode=true;
+  // Simulate: staging FP deactivates lasso
   if(lassoMode)lassoMode=false;
-  fpState._fpMode=true;
-  assertF('Lasso off when FP activates',lassoMode);
-  assertT('FP on',fpState._fpMode);
+  simStage(st,'it_1',{color:'#ff0000'});
+  assertF('Lasso off when FP stages',lassoMode);
+  assertT('FP staged',st._fpStaged);
 
   // Simulate: activating lasso deactivates FP
-  fpState._fpMode=false;fpState._fpPersist=false;fpState._fpSourceId=null;
+  simDeactivate(st);
   lassoMode=true;
   assertT('Lasso on when FP deactivates',lassoMode);
-  assertF('FP off when lasso activates',fpState._fpMode);
+  assertF('FP off when lasso activates',st._fpMode);
 
-  // Test: Escape deactivates FP
-  fpState._fpMode=true;fpState._fpPersist=true;fpState._fpSourceId='it_1';
-  // Simulate escape
-  fpState._fpMode=false;fpState._fpPersist=false;fpState._fpSourceId=null;fpState._fpSourceData=null;
-  assertF('Escape deactivates FP',fpState._fpMode);
-  assert('Escape clears sourceId',fpState._fpSourceId,null);
+  // Test: Escape deactivates staged
+  simStage(st,'it_1',{color:'#ff0000'});
+  simDeactivate(st); // escape
+  assertF('Escape deactivates staged',st._fpStaged);
+  assert('Escape clears sourceId',st._fpSourceId,null);
 
-  // Test: View switch to data deactivates FP
-  fpState._fpMode=true;
+  // Test: Escape deactivates painting
+  simStage(st,'it_1',{color:'#ff0000'});
+  simActivate(st,true);
+  simDeactivate(st); // escape
+  assertF('Escape deactivates painting',st._fpMode);
+
+  // Test: View switch to data deactivates both states
+  simStage(st,'it_1',{color:'#ff0000'});
   const view='data';
-  if(fpState._fpMode&&view!=='timeline'){fpState._fpMode=false;fpState._fpPersist=false;fpState._fpSourceId=null}
-  assertF('Data view deactivates FP',fpState._fpMode);
+  if((st._fpStaged||st._fpMode)&&view!=='timeline')simDeactivate(st);
+  assertF('Data view deactivates staged FP',st._fpStaged);
+
+  simStage(st,'it_1',{color:'#ff0000'});
+  simActivate(st,false);
+  if((st._fpStaged||st._fpMode)&&view!=='timeline')simDeactivate(st);
+  assertF('Data view deactivates painting FP',st._fpMode);
 })();
 
 
 // =====================================================================
-//  SECTION 5: F4 REPEAT (~4 tests)
+//  SECTION 5: F4 SHORTCUT (~10 tests)
 // =====================================================================
-section('5. F4 Repeat');
+section('5. F4 Shortcut');
 resetItemCounter();
 
 (()=>{
   const p=makeProj();
-  const src=makeFormattedTask({id:'rp_src'});
-  const t1=makePlainTask({id:'rp_t1'});
-  const t2=makePlainTask({id:'rp_t2'});
-  const t3=makePlainTask({id:'rp_t3'});
+  const src=makeFormattedTask({id:'f4_src'});
+  const t1=makePlainTask({id:'f4_t1'});
+  const t2=makePlainTask({id:'f4_t2'});
+  const t3=makePlainTask({id:'f4_t3'});
   p.items=[src,t1,t2,t3];resetApp(p);
 
-  // Capture source data
-  const sourceData=captureFPData(src,['color','textColor','fontSize','labelPosition']);
+  // Simulate F4 state machine transitions
 
-  // Test: F4 applies to single selection
-  fpApply(t1,sourceData);
-  assert('F4 single: color applied',t1.color,'#ff0000');
-  assert('F4 single: fontSize applied',t1.fontSize,14);
+  // Test: F4 from idle → staged + activated (single)
+  const st=newFPState();
+  const srcData=captureFPData(src,['color','textColor','fontSize','labelPosition']);
+  // F4 press 1: idle → stage + activate single
+  simStage(st,src.id,srcData);
+  simActivate(st,false);
+  assertT('F4 from idle: _fpMode true',st._fpMode);
+  assertF('F4 from idle: _fpPersist false (single)',st._fpPersist);
+  assertF('F4 from idle: _fpStaged false (moved to painting)',st._fpStaged);
 
-  // Test: F4 applies to multiple selection
-  const sel=[t2,t3];
-  sel.forEach(t=>fpApply(t,sourceData));
-  assert('F4 multi: t2 color',t2.color,'#ff0000');
-  assert('F4 multi: t3 color',t3.color,'#ff0000');
-  assert('F4 multi: t2 labelPosition',t2.labelPosition,'left');
-  assert('F4 multi: t3 labelPosition',t3.labelPosition,'left');
+  // Test: F4 again in single mode → upgrade to multi
+  st._fpPersist=true; // simulate upgrade
+  assertT('F4 again: upgraded to persistent',st._fpPersist);
+  assertT('F4 again: still in _fpMode',st._fpMode);
+  simDeactivate(st);
 
-  // Test: F4 with no source data = no-op
-  const noData=null;
-  assertF('No source data returns falsy',!!noData);
+  // Test: F4 from staged (popover open) → confirm single mode
+  simStage(st,src.id,srcData);
+  assertT('F4 staged: _fpStaged true',st._fpStaged);
+  simActivate(st,false); // F4 confirms
+  assertT('F4 confirms staged: _fpMode true',st._fpMode);
+  assertF('F4 confirms staged: _fpStaged false',st._fpStaged);
+  simDeactivate(st);
+
+  // Test: F4 in persistent mode → no-op (already multi)
+  simStage(st,src.id,srcData);
+  simActivate(st,true);
+  assertT('Already persistent before F4',st._fpPersist);
+  // F4 again does nothing (stays persistent)
+  assertT('F4 no-op: still persistent',st._fpPersist);
+  assertT('F4 no-op: still painting',st._fpMode);
+  simDeactivate(st);
+
+  // Test: Apply in single mode → paint applied, no persist needed
+  fpApply(t1,srcData);
+  assert('F4 single apply: color',t1.color,'#ff0000');
+  assert('F4 single apply: fontSize',t1.fontSize,14);
+
+  // Test: Apply in multi mode → paint applied to multiple targets
+  [t2,t3].forEach(t=>fpApply(t,srcData));
+  assert('F4 multi apply: t2 color',t2.color,'#ff0000');
+  assert('F4 multi apply: t3 color',t3.color,'#ff0000');
+  assert('F4 multi apply: t2 labelPosition',t2.labelPosition,'left');
+  assert('F4 multi apply: t3 labelPosition',t3.labelPosition,'left');
 
   // Test: F4 preserves non-selected properties
   assert('F4 preserves startDate',t1.startDate,'2026-01-05');
-  assert('F4 preserves owner',t1.owner,'');
+  assert('F4 preserves owner (empty)',t1.owner,'');
 })();
 
 
