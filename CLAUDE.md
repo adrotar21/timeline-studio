@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.36.0` — Share via Link v2: ultra compression (deflate-raw + default-stripping + short-keys), Slack/Teams character warnings. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.39.0` — Format Painter (F42): two-step popover wizard with "Apply Once" / "Apply to Many" action buttons, F4 keyboard shortcut with double-tap upgrade to multi mode. Live at `https://adrotar21.github.io/timeline-studio/`.
 - Version history tracked in `BACKLOG.md` under the Versioning table and via **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 
@@ -33,14 +33,14 @@ This is a non-negotiable design constraint. The three-file architecture is what 
 ```
 TimelineProject/
 ├── index.html                      # Complete DOM structure, modals, inline styles
-├── app.js                          # All application logic (~4400 lines)
+├── app.js                          # All application logic (~5200 lines)
 ├── styles.css                      # Theming via CSS custom properties, layout
 ├── Showcase.tlproj                 # Example project file (JSON)
 ├── CLAUDE.md                       # This file — project context for AI assistants
 ├── BACKLOG.md                      # Prioritized bugs/features with version history
 ├── dependency-prd.md               # Dependency engine PRD (Phase 1 + Phase 2)
 ├── screenshots/                    # README screenshots (5 PNGs)
-└── tests/                         # 2,285 tests across 19 files
+└── tests/                         # 2,489 tests across 22 files
     ├── helpers/                    # Shared assert lib, mock engine, builder factories
     ├── core/                       # Scheduling engine, dependency type tests
     ├── features/                   # Per-feature: status, shortcuts, swimlane, fit, data table, CSV, SVG
@@ -218,6 +218,7 @@ Output is color-coded (green pass / red fail) with summary stats. Tests mock eng
 - Themes: Default, Claude, Light, Midnight
 - Lasso selection for bulk operations
 - Project templates (Product Launch, Software Development)
+- Format Painter: two-step popover wizard (select properties → Apply Once / Apply to Many) with F4 keyboard shortcut (double-tap for multi mode)
 - Customizable keyboard shortcuts with 3-tier manager (Reserved / Customizable / Mouse Reference) in Settings → Shortcuts (Ctrl+Shift+K). Per-user overrides stored in localStorage.
 
 ## Known Issues & Backlog
