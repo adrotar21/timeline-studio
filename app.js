@@ -296,6 +296,8 @@ const App={
 
   migrate(){
     const p=this.proj;
+    if(!p.timescale||!['weeks','months','quarters','years'].includes(p.timescale))p.timescale='months';
+    if(!p.dateFormat)p.dateFormat='MMM D, YYYY';
     if(!p.theme)p.theme='default';if(p.autoRange==null)p.autoRange=true;
     if(p.locked==null)p.locked=false;if(p.hideMode==null)p.hideMode=false;
     if(p.headerLayers==null)p.headerLayers=2;if(p.fontSize==null)p.fontSize=11;
