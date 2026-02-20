@@ -294,7 +294,7 @@ const App={
      'imp-adv-toggle','imp-adv-arrow','imp-adv-body','imp-file-input','imp-file-name',
      'imp-map-area','imp-status-area','imp-perfect-match','imp-preview-wrap','imp-status',
      'imp-overload-area','btn-imp-do',
-     'pill-group','pill-lock','pill-hide','pill-auto','pill-fp',
+     'pill-group','pill-lock','pill-hide','pill-auto','pill-fp','pill-sel',
      'panel-tab','panel-tab-icon','btn-collapse','btn-lock-collapse',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
     if(!await this._loadFromHash())this.loadAuto();this.migrate();this._loadShortcuts();this._buildShortcutMap();
@@ -656,14 +656,17 @@ const App={
     const tsl=document.getElementById('toggle-sched-label');
     if(tsl)tsl.textContent=this.proj.schedulingMode==='scheduled'?'Switch to Manual':'Switch to Auto-Scheduled';
     /* Mode indicator pills */
-    const pg=this.$.pill_group,pl=this.$.pill_lock,ph=this.$.pill_hide,pa=this.$.pill_auto,pf=this.$.pill_fp;
+    const pg=this.$.pill_group,pl=this.$.pill_lock,ph=this.$.pill_hide,pa=this.$.pill_auto,pf=this.$.pill_fp,ps=this.$.pill_sel;
     if(pg){
-      const locked=!!this.proj.locked,hiding=!!this.proj.hideMode,auto=this.proj.schedulingMode==='scheduled',fp=!!this._fpMode;
+      const locked=!!this.proj.locked,hiding=!!this.proj.hideMode,auto=this.proj.schedulingMode==='scheduled',fp=!!this._fpMode,selCt=this.sel.length;
       if(pl)pl.classList.toggle('hidden',!locked);
       if(ph)ph.classList.toggle('hidden',!hiding);
       if(pa)pa.classList.toggle('hidden',!auto);
       if(pf)pf.classList.toggle('hidden',!fp);
-      pg.classList.toggle('hidden',!locked&&!hiding&&!auto&&!fp);
+      if(ps){ps.classList.toggle('hidden',selCt<2);
+        if(selCt>=2){const countEl=ps.querySelector('.pill-count');const ctEl=ps.querySelector('.pill-sel-ct');if(countEl)countEl.textContent=selCt;if(ctEl)ctEl.textContent=selCt;ps.classList.add('has-count')}
+      }
+      pg.classList.toggle('hidden',!locked&&!hiding&&!auto&&!fp&&selCt<2);
       if(hiding&&ph){
         const ct=this.proj.items.filter(i=>i.hidden).length;
         const countEl=ph.querySelector('.pill-count');
@@ -1265,7 +1268,7 @@ const App={
     /* Mode indicator pill events */
     if(this.$.pill_group){
       const pg=this.$.pill_group;
-      pg.addEventListener('click',e=>{const btn=e.target.closest('.pill-x');if(!btn)return;const p=btn.dataset.pill;if(p==='lock'){this.proj.locked=false;this.proj.lockH=false;this.proj.lockV=false;this.sched();this.autoSave();this.toast('Unlocked')}else if(p==='hide'){this.proj.hideMode=false;this.sched();this.toast('Showing all')}else if(p==='auto'){this.toggleSchedulingMode()}else if(p==='fp'){this.deactivateFP()}});
+      pg.addEventListener('click',e=>{const btn=e.target.closest('.pill-x');if(!btn)return;const p=btn.dataset.pill;if(p==='lock'){this.proj.locked=false;this.proj.lockH=false;this.proj.lockV=false;this.sched();this.autoSave();this.toast('Unlocked')}else if(p==='hide'){this.proj.hideMode=false;this.sched();this.toast('Showing all')}else if(p==='auto'){this.toggleSchedulingMode()}else if(p==='fp'){this.deactivateFP()}else if(p==='sel'){this.sel=[];this.closePanel();this.sched()}});
       pg.addEventListener('mouseenter',()=>{clearTimeout(this._pillHoverTimer);pg.classList.add('pill-hover')});
       pg.addEventListener('mouseleave',()=>{this._pillHoverTimer=setTimeout(()=>pg.classList.remove('pill-hover'),200)});
     }

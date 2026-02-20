@@ -95,6 +95,12 @@ body.theme-midnight .pill-auto{background:rgba(103,197,227,.12);color:#67c5e3}
 .pill-fp{background:rgba(139,92,246,.15);color:#7c3aed}
 body.theme-light .pill-fp{background:rgba(139,92,246,.1);color:#6d28d9}
 body.theme-midnight .pill-fp{background:rgba(167,139,250,.12);color:#a78bfa}
+/* Selection count pill — subtle, neutral tone */
+.pill-sel{background:rgba(148,163,184,.15);color:#64748b}
+.pill-sel.has-count{max-width:44px;justify-content:flex-start;padding:4px 6px}
+.pill-sel.has-count .pill-icon{width:auto;text-align:left}
+body.theme-light .pill-sel{background:rgba(100,116,139,.1);color:#475569}
+body.theme-midnight .pill-sel{background:rgba(148,163,184,.12);color:#94a3b8}
 
 /* Format Painter (F42) */
 #tl-body.fp-mode{cursor:copy}
