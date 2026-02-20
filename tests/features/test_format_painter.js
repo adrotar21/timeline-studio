@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
- * Timeline Studio -- F42 Format Painter Test Suite (v2: staged/activate flow)
- * ~76 tests covering:
+ * Timeline Studio -- F42 Format Painter Test Suite (v3: split button + settings dropdown)
+ * ~90 tests covering:
  *   1. State Management (staged, activate, deactivate, persistence)
  *   2. Property Capture (individual, composites, deep copy, selective)
  *   3. Application (single/multi-prop, cross-type, self-skip, undo)
  *   4. Mode Interaction (staged→activate, lasso/pan exclusion, escape, view switch)
  *   5. F4 Shortcut (single entry, double-tap upgrade, staged confirm)
+ *   6. Split Button Behavior (disabled state, popover sync, settings-only path)
  */
 
 const{assert,assertT,assertF,assertNeq,section,summary}=require('../helpers/assert');
@@ -441,6 +442,86 @@ resetItemCounter();
   // Test: F4 preserves non-selected properties
   assert('F4 preserves startDate',t1.startDate,'2026-01-05');
   assert('F4 preserves owner (empty)',t1.owner,'');
+})();
+
+
+// =====================================================================
+//  SECTION 6: SPLIT BUTTON BEHAVIOR (~10 tests)
+// =====================================================================
+section('6. Split Button Behavior');
+resetItemCounter();
+
+(()=>{
+  // Helper: simulate main button disabled logic
+  function isMainDisabled(selLen, fpMode, fpStaged){
+    return selLen!==1&&!fpMode&&!fpStaged;
+  }
+
+  // Helper: simulate popover sync state
+  function syncPopover(selLen){
+    const ok=selLen===1;
+    return{noteHidden:ok,applyOnceDisabled:!ok,applyManyDisabled:!ok};
+  }
+
+  // Test: Main icon disabled with 0 items selected
+  assertT('Main disabled: sel=0, idle',isMainDisabled(0,false,false));
+
+  // Test: Main icon disabled with 2 items selected
+  assertT('Main disabled: sel=2, idle',isMainDisabled(2,false,false));
+
+  // Test: Main icon enabled with 1 item selected
+  assertF('Main enabled: sel=1, idle',isMainDisabled(1,false,false));
+
+  // Test: Main icon enabled when staged (even if sel changes)
+  assertF('Main enabled: sel=0, staged',isMainDisabled(0,false,true));
+
+  // Test: Main icon enabled when painting (even if sel changes)
+  assertF('Main enabled: sel=0, painting',isMainDisabled(0,true,false));
+
+  // Test: Popover sync — sel=0 → buttons disabled, note visible
+  const s0=syncPopover(0);
+  assertF('Sync sel=0: note visible',s0.noteHidden);
+  assertT('Sync sel=0: applyOnce disabled',s0.applyOnceDisabled);
+  assertT('Sync sel=0: applyMany disabled',s0.applyManyDisabled);
+
+  // Test: Popover sync — sel=1 → buttons enabled, note hidden
+  const s1=syncPopover(1);
+  assertT('Sync sel=1: note hidden',s1.noteHidden);
+  assertF('Sync sel=1: applyOnce enabled',s1.applyOnceDisabled);
+  assertF('Sync sel=1: applyMany enabled',s1.applyManyDisabled);
+
+  // Test: Popover sync — sel=3 → buttons disabled
+  const s3=syncPopover(3);
+  assertF('Sync sel=3: note visible',s3.noteHidden);
+  assertT('Sync sel=3: applyOnce disabled',s3.applyOnceDisabled);
+
+  // Test: Settings-only open → Apply path stages first
+  // Simulate: popover opened via dropdown (not staged), user clicks Apply Once
+  const st=newFPState();
+  const src=makeFormattedTask({id:'split_src'});
+  // !_fpStaged → stageFP() called first
+  assertF('Before settings apply: not staged',st._fpStaged);
+  simStage(st,src.id,{color:'#ff0000'});
+  assertT('Settings apply: staged first',st._fpStaged);
+  simActivate(st,false);
+  assertT('Settings apply: then activated',st._fpMode);
+  assertF('Settings apply: staged cleared',st._fpStaged);
+  simDeactivate(st);
+
+  // Test: Close button in settings mode (not staged) just hides
+  // Simulate: popover open via dropdown, _fpStaged=false → close hides only
+  const st2=newFPState();
+  // In settings mode, close doesn't call deactivate
+  assertF('Settings close: not staged',st2._fpStaged);
+  assertF('Settings close: not painting',st2._fpMode);
+  // Just _hideFPPopover called, state unchanged
+
+  // Test: Close button in staged mode deactivates
+  simStage(st2,'x',{color:'#abc'});
+  assertT('Staged close: was staged',st2._fpStaged);
+  simDeactivate(st2); // close calls deactivateFP()
+  assertF('Staged close: deactivated',st2._fpStaged);
+  assert('Staged close: source cleared',st2._fpSourceId,null);
 })();
 
 

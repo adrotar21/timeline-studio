@@ -43,7 +43,7 @@
       <div class="toolbar-separator"></div>
       <button class="toolbar-btn" id="btn-undo" data-tooltip="Undo (Ctrl+Z)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 7v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6.69 2.97L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button class="toolbar-btn" id="btn-redo" data-tooltip="Redo (Ctrl+Y)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M21 7v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 17a9 9 0 019-9 9 9 0 016.69 2.97L21 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-      <button class="toolbar-btn" id="btn-fp" data-tooltip="Format Painter — select item, click to copy format"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="14" height="6" rx="1" stroke="currentColor" stroke-width="2"/><path d="M10 8v3a1 1 0 001 1h2a1 1 0 001-1V8" stroke="currentColor" stroke-width="2"/><path d="M12 12v3" stroke="currentColor" stroke-width="2"/><rect x="9" y="15" width="6" height="5" rx="1" stroke="currentColor" stroke-width="2"/></svg></button>
+      <div class="fp-split" id="fp-split"><button class="toolbar-btn fp-main" id="btn-fp" data-tooltip="Format Painter — select 1 item, click to copy format"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="14" height="6" rx="1" stroke="currentColor" stroke-width="2"/><path d="M10 8v3a1 1 0 001 1h2a1 1 0 001-1V8" stroke="currentColor" stroke-width="2"/><path d="M12 12v3" stroke="currentColor" stroke-width="2"/><rect x="9" y="15" width="6" height="5" rx="1" stroke="currentColor" stroke-width="2"/></svg></button><button class="toolbar-btn fp-dd-tog" id="btn-fp-dd" data-tooltip="Format Painter options"><svg width="8" height="8" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button></div>
       <div class="toolbar-separator"></div>
       <!-- Add Item dropdown -->
       <div class="save-btn-group">
@@ -258,10 +258,12 @@
       <button class="fp-pop-link" data-mode="all" id="fp-sel-all">All</button>
       <button class="fp-pop-link" data-mode="none" id="fp-sel-none">None</button>
     </div>
+    <div class="fp-pop-note hidden" id="fp-sel-note">Select 1 item to copy format</div>
     <div class="fp-pop-actions">
       <button class="fp-act" id="fp-apply-once">Apply Once</button>
       <button class="fp-act fp-act-multi" id="fp-apply-many">Apply to Many</button>
     </div>
+    <div class="fp-pop-hint">Tip: <kbd>F4</kbd> to paint · double-tap for multi</div>
   </div>
   <!-- Settings Modal -->
   <div id="settings-modal" class="modal hidden"><div class="modal-overlay"></div>

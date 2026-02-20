@@ -672,6 +672,10 @@ const App={
         ph.classList.toggle('has-count',ct>0);
       }
     }
+    /* FP split button: grey out main icon when sel!==1 (unless staged/painting) */
+    const fpBtn=document.getElementById('btn-fp');
+    if(fpBtn)fpBtn.classList.toggle('fp-disabled',this.sel.length!==1&&!this._fpMode&&!this._fpStaged);
+    this._syncFPPopoverState();
   },
 
   /* ===== DEPENDENCY ENGINE (Phase 1: Smart Defaults) ===== */
@@ -1218,10 +1222,18 @@ const App={
     // Screenshot items
     on('btn-snap-vp',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(true)});
     on('btn-snap-full',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(false)});
-    /* Format Painter button — click to stage (open popover) or deactivate */
-    {const fpBtn=document.getElementById('btn-fp');
-    if(fpBtn){fpBtn.addEventListener('click',()=>{
+    /* Format Painter split button */
+    {const fpMain=document.getElementById('btn-fp');
+    const fpDD=document.getElementById('btn-fp-dd');
+    if(fpMain){fpMain.addEventListener('click',()=>{
+      if(fpMain.classList.contains('fp-disabled'))return;
       if(this._fpMode||this._fpStaged)this.deactivateFP();else this.stageFP();
+    })}
+    if(fpDD){fpDD.addEventListener('click',e=>{
+      e.stopPropagation();
+      const pop=document.getElementById('fp-popover');
+      if(pop&&!pop.classList.contains('hidden')){this._hideFPPopover()}
+      else{this._showFPPopover()}
     })}}
     /* Format Painter popover events */
     {const fpPop=document.getElementById('fp-popover');
@@ -1230,15 +1242,23 @@ const App={
         const all=[...fpPop.querySelectorAll('[data-fp]')];const sel=all.filter(c=>c.checked).map(c=>c.dataset.fp);
         this._saveFPProps(sel);
       });
-      fpPop.querySelector('.fp-pop-close')?.addEventListener('click',()=>this.deactivateFP());
+      fpPop.querySelector('.fp-pop-close')?.addEventListener('click',()=>{if(this._fpStaged)this.deactivateFP();else this._hideFPPopover()});
       fpPop.querySelectorAll('.fp-pop-link').forEach(b=>{b.addEventListener('click',()=>{
         const mode=b.dataset.mode;fpPop.querySelectorAll('[data-fp]').forEach(cb=>{cb.checked=mode==='all'});
         this._saveFPProps(mode==='all'?FP_PROPS_DEF.map(p=>p.key):[]);
       })});
       const applyOnce=document.getElementById('fp-apply-once');
       const applyMany=document.getElementById('fp-apply-many');
-      if(applyOnce)applyOnce.addEventListener('click',()=>this.activateFP(false));
-      if(applyMany)applyMany.addEventListener('click',()=>this.activateFP(true));
+      if(applyOnce)applyOnce.addEventListener('click',()=>{
+        if(applyOnce.classList.contains('fp-act-disabled'))return;
+        if(!this._fpStaged)this.stageFP();
+        if(this._fpStaged)this.activateFP(false);
+      });
+      if(applyMany)applyMany.addEventListener('click',()=>{
+        if(applyMany.classList.contains('fp-act-disabled'))return;
+        if(!this._fpStaged)this.stageFP();
+        if(this._fpStaged)this.activateFP(true);
+      });
     }}
     document.querySelectorAll('.view-btn').forEach(b=>{b.onclick=()=>this.setView(b.dataset.view)});
     /* Mode indicator pill events */
@@ -1340,7 +1360,7 @@ const App={
       if(!e.target.closest('#dt-ctx-input')){const dci=document.getElementById('dt-ctx-input');if(dci)dci.classList.add('hidden')}
       if(!e.target.closest('.save-btn-group')){this.closeAllDD()}
       if(!e.target.closest('#sl-fmt-popover')&&!e.target.closest('.sl-lbl'))this._hideSlFmtPopover();
-      if(!e.target.closest('#fp-popover')&&!e.target.closest('#btn-fp')){if(this._fpStaged)this.deactivateFP();else this._hideFPPopover()}
+      if(!e.target.closest('#fp-popover')&&!e.target.closest('#fp-split')){if(this._fpStaged)this.deactivateFP();else this._hideFPPopover()}
     });
     this.$.ctx_menu.addEventListener('click',e=>{const a=e.target.closest('[data-action]')?.dataset.action;if(a&&!e.target.closest('.ctx-disabled'))this.ctxAct(a);this.$.ctx_menu.classList.add('hidden')});
     // DT context menu
@@ -1813,11 +1833,21 @@ const App={
     const sel=this._getFPSelectedProps();
     pop.querySelectorAll('[data-fp]').forEach(cb=>{cb.checked=sel.includes(cb.dataset.fp)});
     pop.classList.remove('hidden');
-    const btn=document.getElementById('btn-fp');
-    if(btn){const r=btn.getBoundingClientRect();pop.style.left=Math.min(r.left,window.innerWidth-pop.offsetWidth-8)+'px';pop.style.top=(r.bottom+4)+'px'}
+    const anchor=document.getElementById('fp-split');
+    if(anchor){const r=anchor.getBoundingClientRect();pop.style.left=Math.min(r.left,window.innerWidth-pop.offsetWidth-8)+'px';pop.style.top=(r.bottom+4)+'px'}
+    const ddBtn=document.getElementById('btn-fp-dd');if(ddBtn)ddBtn.classList.add('fp-dd-open');
+    this._syncFPPopoverState();
   },
   _hideFPPopover(){
     const pop=document.getElementById('fp-popover');if(pop)pop.classList.add('hidden');
+    const ddBtn=document.getElementById('btn-fp-dd');if(ddBtn)ddBtn.classList.remove('fp-dd-open');
+  },
+  _syncFPPopoverState(){
+    const pop=document.getElementById('fp-popover');if(!pop||pop.classList.contains('hidden'))return;
+    const ok=this.sel.length===1;
+    const note=document.getElementById('fp-sel-note');if(note)note.classList.toggle('hidden',ok);
+    document.getElementById('fp-apply-once')?.classList.toggle('fp-act-disabled',!ok);
+    document.getElementById('fp-apply-many')?.classList.toggle('fp-act-disabled',!ok);
   },
 
   getTargetSl(){
