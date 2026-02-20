@@ -1659,9 +1659,13 @@ const App={
     const first=this.slSel[0];let curFs;
     if(first.ssId){const ss=this._findSubSwim(first.ssId);curFs=(ss&&ss.fontSize)||9.5}else{const sl=this.gs(first.slId);curFs=(sl&&sl.fontSize)||12}
     document.getElementById('sl-fmt-fs').value=curFs;
+    /* Dynamic title */
+    const titleEl=document.getElementById('sl-fmt-title');
+    const hasSubs=this.slSel.some(s=>s.ssId);const hasMain=this.slSel.some(s=>!s.ssId);
+    if(titleEl){if(hasSubs&&!hasMain)titleEl.textContent='Format Sub-Swimlane Header';else titleEl.textContent='Format Swimlane Header'}
     /* Build scope options */
-    const scope=document.getElementById('sl-fmt-scope');const hasSubs=this.slSel.some(s=>s.ssId);const hasMain=this.slSel.some(s=>!s.ssId);
-    let opts='<option value="selected">Selected</option>';
+    const scope=document.getElementById('sl-fmt-scope');
+    let opts='<option value="selected">Selected Only</option>';
     if(hasMain&&!hasSubs)opts+='<option value="all-swim">All Swimlanes</option>';
     if(hasSubs&&!hasMain){
       const lanes=new Set(this.slSel.filter(s=>s.ssId).map(s=>s.slId));
@@ -3575,10 +3579,11 @@ const App={
       labelsH+=`<div class="sl-lbl sl-hidden-indicator" data-sl-id="${sl.id}" style="background:${sl.color};height:8px" title="${U.esc(sl.name)} (click to expand)"></div>`;
       bodyH+=`<div class="sw-row sl-hidden-indicator" data-sl-id="${sl.id}" style="height:8px"></div>`;
       }else{
-      const slSelCls=this._isSlSel(sl.id,'')?'sl-selected':'';
+      const slMainSel=this._isSlSel(sl.id,'');
+      const slSelCls=slMainSel&&!hasSubs?'sl-selected':'';
       labelsH+=`<div class="sl-lbl${isMinimized?' collapsed':''}${slSelCls?' '+slSelCls:''}" data-sl-id="${sl.id}" style="background:${sl.color};height:${totalH}px" title="Double-click to edit">`;
       if(isMinimized){labelsH+=`<button class="sl-collapse-btn sl-btn-expand" data-sl-id="${sl.id}" data-action="expand" title="Expand">▶</button>`;labelsH+=`<button class="sl-collapse-btn sl-btn-hide" data-sl-id="${sl.id}" data-action="hide" title="Hide">✕</button>`}else{labelsH+=`<button class="sl-collapse-btn" data-sl-id="${sl.id}" title="Minimize">▼</button>`}
-      if(!isCollapsed&&hasSubs){const mainW=Math.min(60,(p.labelWidth||160)/2);const availH=totalH-12;const baseMfs=sl.fontSize||12;let mfs=baseMfs;const tw=this._mt(sl.name,baseMfs,'700');if(tw>availH&&availH>0){mfs=Math.max(8,Math.floor(baseMfs*availH/tw))}labelsH+=`<div class="sl-lbl-main" style="width:${mainW}px;min-width:${mainW}px;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-size:${mfs}px">${U.esc(sl.name)}</div><div class="sl-lbl-subs">`;for(let smi=0;smi<subMeta.length;smi++){const{ssId,h,minimized}=subMeta[smi];const ss=sl.subSwimlanes.find(s=>s.id===ssId);const nm=ss?U.esc(ss.name):'';const icon=minimized?'&#9654;':'&#9660;';const ssSelCls=this._isSlSel(sl.id,ssId)?' sl-selected':'';const ssFs=ss&&ss.fontSize?ss.fontSize:9.5;labelsH+=`<div class="sl-sub-lbl${minimized?' ss-minimized':''}${ssSelCls}" data-ss-id="${ssId}" style="height:${h}px;font-size:${ssFs}px"><span class="ss-name">${nm}</span><button class="ss-collapse-btn" data-sl-id="${sl.id}" data-ss-id="${ssId}" title="${minimized?'Expand':'Minimize'}">${icon}</button></div>`}labelsH+=`</div>`}
+      if(!isCollapsed&&hasSubs){const mainW=Math.min(60,(p.labelWidth||160)/2);const availH=totalH-12;const baseMfs=sl.fontSize||12;let mfs=baseMfs;const tw=this._mt(sl.name,baseMfs,'700');if(tw>availH&&availH>0){mfs=Math.max(8,Math.floor(baseMfs*availH/tw))}const mainSelCls=slMainSel?' sl-selected':'';labelsH+=`<div class="sl-lbl-main${mainSelCls}" style="width:${mainW}px;min-width:${mainW}px;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-size:${mfs}px">${U.esc(sl.name)}</div><div class="sl-lbl-subs">`;for(let smi=0;smi<subMeta.length;smi++){const{ssId,h,minimized}=subMeta[smi];const ss=sl.subSwimlanes.find(s=>s.id===ssId);const nm=ss?U.esc(ss.name):'';const icon=minimized?'&#9654;':'&#9660;';const ssSelCls=this._isSlSel(sl.id,ssId)?' sl-selected':'';const ssFs=ss&&ss.fontSize?ss.fontSize:9.5;labelsH+=`<div class="sl-sub-lbl${minimized?' ss-minimized':''}${ssSelCls}" data-ss-id="${ssId}" style="height:${h}px;font-size:${ssFs}px"><span class="ss-name">${nm}</span><button class="ss-collapse-btn" data-sl-id="${sl.id}" data-ss-id="${ssId}" title="${minimized?'Expand':'Minimize'}">${icon}</button></div>`}labelsH+=`</div>`}
       else{const mainFs=sl.fontSize||12;labelsH+=`<div class="sl-lbl-main" style="flex:1;padding-left:20px;font-size:${mainFs}px">${U.esc(sl.name)}</div>`}
       labelsH+=`</div>`;
 

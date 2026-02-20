@@ -220,7 +220,11 @@
   </div>
   <!-- Swimlane format popover (F19) -->
   <div id="sl-fmt-popover" class="hidden">
-    <div class="sl-fmt-header">Format Label<button class="sl-fmt-close" id="sl-fmt-close">&times;</button></div>
+    <div class="sl-fmt-header"><span id="sl-fmt-title">Format Swimlane Header</span><button class="sl-fmt-close" id="sl-fmt-close">&times;</button></div>
+    <div class="sl-fmt-row">
+      <label class="sl-fmt-label">Select:</label>
+      <select id="sl-fmt-scope" class="sl-fmt-select"></select>
+    </div>
     <div class="sl-fmt-row">
       <label class="sl-fmt-label">Font Size</label>
       <div class="sl-fmt-stepper">
@@ -229,10 +233,6 @@
         <button class="sl-fmt-step" id="sl-fmt-inc">+</button>
         <span class="sl-fmt-unit">px</span>
       </div>
-    </div>
-    <div class="sl-fmt-row">
-      <label class="sl-fmt-label">Apply to</label>
-      <select id="sl-fmt-scope" class="sl-fmt-select"></select>
     </div>
   </div>
   <!-- Settings Modal -->
