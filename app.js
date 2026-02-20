@@ -253,6 +253,7 @@ const App={
     if(this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}
     if(this._panMode){this._panMode=false;document.getElementById('btn-pan')?.classList.remove('active')}
     if(this._fpStaged||this._fpMode){this.deactivateFP()}
+    else{this._hideFPPopover()}
     this.sched();
   },
   _handleNudgeKey(actionId,ctrl){
