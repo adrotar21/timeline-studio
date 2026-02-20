@@ -1802,7 +1802,7 @@ const App={
     if(!this._fpPersist)this.deactivateFP();
   },
   _getFPSelectedProps(){
-    try{const s=localStorage.getItem('tls3_fpProps');if(s)return JSON.parse(s)}catch(e){}
+    try{const s=localStorage.getItem('tls3_fpProps');if(s){const p=JSON.parse(s);if(p.length)return p}}catch(e){}
     return['color','textColor','fontSize','labelPosition'];
   },
   _saveFPProps(props){
