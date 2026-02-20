@@ -148,7 +148,7 @@ function _skDec(o){
 function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
 const App={
-  proj:newProj(),sel:[],slSel:[],undoStack:[],redoStack:[],
+  proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
   view:'timeline',panelCollapsed:false,panelLocked:false,editItem:null,
   _panelHintCooldown:0,_wasExpandedBeforeDataView:false,_lockPillHintCD:0,_hidePillHintCD:0,_pillHoverTimer:null,
   _dirty:false,_dataDirty:false,_raf:null,_unsaved:false,_shareMode:false,
@@ -1341,6 +1341,7 @@ const App={
     document.getElementById('sl-fmt-dec')?.addEventListener('click',()=>this._adjustSlFs(-0.5));
     document.getElementById('sl-fmt-inc')?.addEventListener('click',()=>this._adjustSlFs(0.5));
     const slFmtFs=document.getElementById('sl-fmt-fs');if(slFmtFs){slFmtFs.addEventListener('change',()=>{const v=parseFloat(slFmtFs.value);if(!isNaN(v))this._applySlFs(v)});slFmtFs.addEventListener('input',()=>{const v=parseFloat(slFmtFs.value);if(!isNaN(v)&&v>=7&&v<=24)this._applySlFs(v)})}
+    document.getElementById('sl-fmt-scope')?.addEventListener('change',()=>this._onSlScopeChange());
     // Column resize handle
     const colRH=this.$.sl_col_rh;
     if(colRH){colRH.addEventListener('mousedown',e=>{
@@ -1653,9 +1654,10 @@ const App={
   _findSubSwim(ssId){for(const sl of this.proj.swimlanes)for(const ss of sl.subSwimlanes||[])if(ss.id===ssId)return ss;return null},
   _isSlSel(slId,ssId){ssId=ssId||'';return this.slSel.some(s=>s.slId===slId&&s.ssId===ssId)},
   _clearSlSel(){if(this.slSel.length){this.slSel=[];this._hideSlFmtPopover();this.sched()}},
-  _hideSlFmtPopover(){const p=document.getElementById('sl-fmt-popover');if(p)p.classList.add('hidden')},
+  _hideSlFmtPopover(){const p=document.getElementById('sl-fmt-popover');if(!p)return;const wasVisible=!p.classList.contains('hidden');p.classList.add('hidden');if(wasVisible&&this._slSelManual.length){this.slSel=this._slSelManual.map(s=>({...s}));this._slSelManual=[];this.sched()}},
   _showSlFmtPopover(x,y){
     const pop=document.getElementById('sl-fmt-popover');if(!pop||!this.slSel.length)return;
+    this._slSelManual=this.slSel.map(s=>({...s}));
     const first=this.slSel[0];let curFs;
     if(first.ssId){const ss=this._findSubSwim(first.ssId);curFs=(ss&&ss.fontSize)||9.5}else{const sl=this.gs(first.slId);curFs=(sl&&sl.fontSize)||12}
     document.getElementById('sl-fmt-fs').value=curFs;
@@ -1678,6 +1680,16 @@ const App={
     const pw=pop.offsetWidth,ph=pop.offsetHeight;
     pop.style.left=Math.min(x,window.innerWidth-pw-8)+'px';
     pop.style.top=Math.min(y,window.innerHeight-ph-8)+'px';
+  },
+  _onSlScopeChange(){
+    const scope=document.getElementById('sl-fmt-scope')?.value||'selected';
+    if(scope==='selected'){this.slSel=this._slSelManual.map(s=>({...s}))}
+    else if(scope==='all-swim'){this.slSel=this.proj.swimlanes.map(sl=>({slId:sl.id,ssId:''}))}
+    else if(scope==='all-sub'){const a=[];this.proj.swimlanes.forEach(sl=>{(sl.subSwimlanes||[]).forEach(ss=>{a.push({slId:sl.id,ssId:ss.id})})});this.slSel=a}
+    else if(scope==='subs-in-lane'){const lanes=new Set(this._slSelManual.filter(s=>s.ssId).map(s=>s.slId));const a=[];lanes.forEach(slId=>{const sl=this.gs(slId);if(sl)(sl.subSwimlanes||[]).forEach(ss=>{a.push({slId,ssId:ss.id})})});this.slSel=a}
+    /* Update font size input to reflect new selection's first item */
+    if(this.slSel.length){const f=this.slSel[0];let fs;if(f.ssId){const ss=this._findSubSwim(f.ssId);fs=(ss&&ss.fontSize)||9.5}else{const sl=this.gs(f.slId);fs=(sl&&sl.fontSize)||12}document.getElementById('sl-fmt-fs').value=fs}
+    this.sched();
   },
   _adjustSlFs(delta){
     const inp=document.getElementById('sl-fmt-fs');const cur=parseFloat(inp.value)||12;
