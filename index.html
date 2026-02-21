@@ -80,11 +80,23 @@
         <div class="save-dropdown dd-wide hidden" id="view-dropdown">
           <div class="dd-section">
             <div class="dd-section-label">Scale</div>
-            <div class="dd-inline"><select id="ts-sel" class="toolbar-select"><option value="weeks">Weeks</option><option value="months" selected>Months</option><option value="quarters">Quarters</option><option value="years">Years</option></select></div>
+            <div class="dd-inline"><select id="ts-sel" class="toolbar-select"><option value="days">Days</option><option value="weeks">Weeks</option><option value="months" selected>Months</option><option value="quarters">Quarters</option><option value="years">Years</option></select></div>
           </div>
           <div class="dd-section">
             <div class="dd-section-label">Header Rows</div>
             <div class="dd-inline"><select id="hl-sel" class="toolbar-select"><option value="1">1 Row</option><option value="2" selected>2 Rows</option><option value="3">3 Rows</option></select></div>
+          </div>
+          <div class="dd-section" id="hdr-fmt-section">
+            <div class="dd-section-label">Header Format</div>
+            <div class="dd-inline hdr-fmt-row" id="hdr-fmt-day-row" style="display:none"><label class="hdr-fmt-lbl">Day Labels</label><select id="day-fmt-sel" class="toolbar-select hdr-fmt-sel"><option value="letter">M T W</option><option value="number">1 2 3</option><option value="hybrid">3&#8239;W</option></select></div>
+            <div class="dd-inline hdr-fmt-row" id="hdr-fmt-dayw-row" style="display:none"><label class="hdr-fmt-lbl">Day Width</label><select id="day-width-sel" class="toolbar-select hdr-fmt-sel"><option value="compact">Compact</option><option value="normal">Normal</option><option value="wide">Wide</option></select></div>
+            <div class="dd-inline hdr-fmt-row" id="hdr-fmt-month-row"><label class="hdr-fmt-lbl">Months</label><select id="month-fmt-sel" class="toolbar-select hdr-fmt-sel"><option value="short">Jan</option><option value="letter">J</option></select></div>
+            <div class="dd-inline hdr-fmt-row" id="hdr-fmt-quarter-row"><label class="hdr-fmt-lbl">Quarters</label><select id="quarter-fmt-sel" class="toolbar-select hdr-fmt-sel"><option value="withYear">Q1 2025</option><option value="plain">Q1</option></select></div>
+          </div>
+          <div class="dd-section" id="view-shading-section">
+            <div class="dd-section-label">Shading</div>
+            <div class="dd-inline hdr-fmt-row"><label class="hdr-fmt-lbl">Weekends</label><input type="checkbox" id="view-wknd-chk"><input type="range" id="view-wknd-op" min="1" max="30" style="width:50px"><span id="view-wknd-opval" style="font-size:9px;color:var(--tx3)">8%</span></div>
+            <div class="dd-inline hdr-fmt-row"><label class="hdr-fmt-lbl">Holidays</label><input type="checkbox" id="view-hol-chk"><input type="range" id="view-hol-op" min="1" max="40" style="width:50px"><span id="view-hol-opval" style="font-size:9px;color:var(--tx3)">12%</span><a href="#" id="view-hol-settings" style="font-size:10px;display:none;color:var(--acc);text-decoration:none;margin-left:2px" title="Open holiday settings">&#9881;</a></div>
           </div>
           <div class="dd-sep"></div>
           <div class="dd-section">
@@ -236,6 +248,44 @@
         <button class="sl-fmt-step" id="sl-fmt-inc">+</button>
         <span class="sl-fmt-unit">px</span>
       </div>
+    </div>
+  </div>
+  <!-- Header format popover (F4-P2) -->
+  <div id="hdr-fmt-popover" class="hidden">
+    <div class="sl-fmt-header"><span>Format Header</span><button class="sl-fmt-close" id="hdr-fmt-close">&times;</button></div>
+    <div class="sl-fmt-row">
+      <label class="sl-fmt-label">Font Size</label>
+      <div class="sl-fmt-stepper">
+        <button class="sl-fmt-step" id="hdr-fmt-dec">&minus;</button>
+        <input type="number" id="hdr-fmt-fs" class="sl-fmt-input" min="7" max="16" step="0.5" value="10.5">
+        <button class="sl-fmt-step" id="hdr-fmt-inc">+</button>
+        <span class="sl-fmt-unit">px</span>
+      </div>
+    </div>
+    <div class="sl-fmt-row hdr-fmt-row" id="hdr-pop-day-row" style="display:none">
+      <label class="sl-fmt-label">Day Labels</label>
+      <select id="hdr-pop-day-fmt" class="sl-fmt-select"><option value="letter">M T W</option><option value="number">1 2 3</option><option value="hybrid">3&#8239;W</option></select>
+    </div>
+    <div class="sl-fmt-row hdr-fmt-row" id="hdr-pop-dayw-row" style="display:none">
+      <label class="sl-fmt-label">Day Width</label>
+      <select id="hdr-pop-dayw-fmt" class="sl-fmt-select"><option value="compact">Compact</option><option value="normal">Normal</option><option value="wide">Wide</option></select>
+    </div>
+    <div class="sl-fmt-row hdr-fmt-row" id="hdr-pop-month-row" style="display:none">
+      <label class="sl-fmt-label">Months</label>
+      <select id="hdr-pop-month-fmt" class="sl-fmt-select"><option value="short">Jan</option><option value="letter">J</option></select>
+    </div>
+    <div class="sl-fmt-row hdr-fmt-row" id="hdr-pop-quarter-row" style="display:none">
+      <label class="sl-fmt-label">Quarters</label>
+      <select id="hdr-pop-quarter-fmt" class="sl-fmt-select"><option value="withYear">Q1 2025</option><option value="plain">Q1</option></select>
+    </div>
+    <div class="sl-fmt-sep"></div>
+    <div class="sl-fmt-row">
+      <label class="sl-fmt-label">Weekends</label>
+      <div style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="hdr-pop-wknd-chk"><input type="range" id="hdr-pop-wknd-op" min="1" max="30" style="width:60px"><span id="hdr-pop-wknd-opval" style="font-size:9px;color:var(--tx3)">8%</span></div>
+    </div>
+    <div class="sl-fmt-row">
+      <label class="sl-fmt-label">Holidays</label>
+      <div style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="hdr-pop-hol-chk"><input type="range" id="hdr-pop-hol-op" min="1" max="40" style="width:60px"><span id="hdr-pop-hol-opval" style="font-size:9px;color:var(--tx3)">12%</span><a href="#" id="hdr-pop-hol-settings" style="font-size:10px;display:none;color:var(--acc);text-decoration:none" title="Open holiday settings">&#9881;</a></div>
     </div>
   </div>
   <!-- Format Painter popover (F42) -->

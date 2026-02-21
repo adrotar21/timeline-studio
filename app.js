@@ -1,4 +1,4 @@
-/* Timeline Studio v0.36.0 — Share via Link v2: native CompressionStream (deflate-raw) + default-stripping + short-key encoding replaces LZString, reducing share links ~3x (11.5K→~3.4K chars for 30-item project). Slack/Teams character limit warnings. */
+/* Timeline Studio v0.40.0 — Header Bar Customization: Days timescale (3 formats × 3 widths), month/quarter format options, right-click header popover with font size + shading quick-controls, boundary-emphasized grid lines, holiday/weekend day indicators. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -61,6 +61,9 @@ const SHORTCUT_ACTIONS=[
   {id:'collapseAll',cat:'View',label:'Collapse All Swimlanes',defaults:[],ctx:'tl'},
   {id:'showFloat',cat:'View',label:'Toggle Float Labels',defaults:[],ctx:'tl'},
   {id:'autoFitHeights',cat:'View',label:'Auto Fit Heights',defaults:[],ctx:'tl'},
+  {id:'cycleDayFmt',cat:'View',label:'Cycle Day Label Format',defaults:[],ctx:'tl'},
+  {id:'cycleScale',cat:'View',label:'Cycle Timescale',defaults:[],ctx:'tl'},
+  {id:'cycleHdrRows',cat:'View',label:'Cycle Header Rows',defaults:[],ctx:'tl'},
   // Tier 2 — Customizable: Tools
   {id:'propagate',cat:'Tools',label:'Propagate to Successors',defaults:['Ctrl+Shift+p'],ctx:'sel-manual'},
   {id:'toggleLock',cat:'Tools',label:'Toggle Lock',defaults:[],global:true},
@@ -94,6 +97,7 @@ const MOUSE_REFS=[
   {combo:'Click label',desc:'Select swimlane / sub-swimlane'},
   {combo:'Ctrl+Click label',desc:'Multi-select swimlane labels'},
   {combo:'Right-click label',desc:'Format swimlane label'},
+  {combo:'Right-click header',desc:'Format header text size'},
   {combo:'Click in paint mode',desc:'Apply format to item'},
   {combo:'Double-click',desc:'Edit item / swimlane'},
   {combo:'Right-click',desc:'Context menu'},
@@ -108,7 +112,8 @@ const SK={
   version:'V',name:'n',owner:'o',dateFormat:'df',timescale:'ts',headerLayers:'hl',
   timelineStart:'a',timelineEnd:'b',autoRange:'ar',showToday:'st',showDeps:'sd',
   locked:'lk',lockH:'lh',lockV:'lv',hideMode:'hm',theme:'th',bgColor:'bc',
-  headerColor:'hc',zoom:'z',fontSize:'fs',watermark:'wm',wmDate:'wd',wmPos:'wp',
+  headerColor:'hc',zoom:'z',fontSize:'fs',monthFormat:'mF',quarterFormat:'qF',headerFontSize:'hF',dayLabelFormat:'dL',dayColumnWidth:'dW',
+  watermark:'wm',wmDate:'wd',wmPos:'wp',
   wmShowOwner:'wo',showWeekends:'sw',weekendOpacity:'wO',weekendAutoHide:'wA',
   holidays:'H',showHolidays:'sH',holidayOpacity:'hO',holidayColor:'hC',
   holidayLabels:'hL',scheduleAroundNonWorking:'sN',defaultFolder:'dF',
@@ -155,7 +160,7 @@ function _skDec(o){
   return o;
 }
 
-function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
+function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,monthFormat:'short',quarterFormat:'withYear',headerFontSize:10.5,dayLabelFormat:'letter',dayColumnWidth:'normal',watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
 const App={
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
@@ -245,9 +250,12 @@ const App={
     addSwimlane(){this.showSwM()},
     snapViewport(){this.copyScreenshot(true)},
     snapFull(){this.copyScreenshot(false)},
+    cycleDayFmt(){if(this.proj.timescale!=='days'){this.toast('Switch to Days scale first','info');return}this.snap();const order=['letter','number','hybrid'];const cur=this.proj.dayLabelFormat||'letter';const ni=(order.indexOf(cur)+1)%order.length;this.proj.dayLabelFormat=order[ni];this._syncHdrFmtUI();this.sched();this.autoSave();const labels={letter:'Letter (M T W)',number:'Number (1 2 3)',hybrid:'Hybrid (3 W)'};this.toast('Day format: '+labels[order[ni]])},
+    cycleScale(){this.snap();const order=['days','weeks','months','quarters','years'];const cur=this.proj.timescale||'months';const ni=(order.indexOf(cur)+1)%order.length;const prev=this.proj.timescale;this.proj.timescale=order[ni];this.$.ts_sel.value=order[ni];if(order[ni]==='days'){const days=U.days(this.proj.timelineStart,this.proj.timelineEnd);if(days>365)this.toast('Days scale works best for timelines under 6 months','info');if(prev!=='days')this._pendingFit=true}this._syncHdrFmtUI();this.sched();this.autoSave();this.toast('Scale: '+order[ni].charAt(0).toUpperCase()+order[ni].slice(1))},
+    cycleHdrRows(){this.snap();const ts=this.proj.timescale||'months';const max=ts==='years'?1:ts==='quarters'?2:3;const cur=this.proj.headerLayers||2;let next=cur+1;if(next>max)next=1;this.proj.headerLayers=next;this.$.hl_sel.value=String(next);this.sched();this.autoSave();this.toast('Header rows: '+next)},
   },
   _handleEscape(){
-    this.sel=[];this.slSel=[];this._hideSlFmtPopover();this.editItem=null;this.closePanel();
+    this.sel=[];this.slSel=[];this._hideSlFmtPopover();this._hideHdrFmtPopover();this.editItem=null;this.closePanel();
     this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');
     document.querySelectorAll('.modal:not(.hidden)').forEach(m=>m.classList.add('hidden'));
     if(this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}
@@ -310,11 +318,16 @@ const App={
 
   migrate(){
     const p=this.proj;
-    if(!p.timescale||!['weeks','months','quarters','years'].includes(p.timescale))p.timescale='months';
+    if(!p.timescale||!['days','weeks','months','quarters','years'].includes(p.timescale))p.timescale='months';
     if(!p.dateFormat)p.dateFormat='MMM D, YYYY';
     if(!p.theme)p.theme='default';if(p.autoRange==null)p.autoRange=true;
     if(p.locked==null)p.locked=false;if(p.hideMode==null)p.hideMode=false;
     if(p.headerLayers==null)p.headerLayers=2;if(p.fontSize==null)p.fontSize=11;
+    if(!p.monthFormat||!['short','letter'].includes(p.monthFormat))p.monthFormat='short';
+    if(!p.quarterFormat||!['withYear','plain'].includes(p.quarterFormat))p.quarterFormat='withYear';
+    if(p.headerFontSize==null)p.headerFontSize=10.5;p.headerFontSize=Math.max(7,Math.min(16,p.headerFontSize));
+    if(!p.dayLabelFormat||!['letter','number','hybrid'].includes(p.dayLabelFormat))p.dayLabelFormat='letter';
+    if(!p.dayColumnWidth||!['compact','normal','wide'].includes(p.dayColumnWidth))p.dayColumnWidth='normal';
     if(!p.watermark)p.watermark=false;if(!p.wmDate)p.wmDate='';if(!p.wmPos)p.wmPos='bottom-center';
     if(p.showDeps==null)p.showDeps=true;if(p.showToday==null)p.showToday=true;
     if(p.owner==null)p.owner='';if(p.wmShowOwner==null)p.wmShowOwner=false;
@@ -398,6 +411,7 @@ const App={
       this.$.zoom_lbl.textContent=(this.proj.zoom||100)+'%';
       this.$.ts_sel.value=this.proj.timescale;
       this.$.hl_sel.value=String(this.proj.headerLayers);
+      this._syncHdrFmtUI();
       this.$.project_name_text.textContent=this.proj.name||'Untitled';
       this._docTitle(this._unsaved);
       this.updateStatus();
@@ -405,6 +419,74 @@ const App={
     })}
   },
 
+  _syncHdrFmtUI(){
+    const ts=this.proj.timescale,layers=this.proj.headerLayers||2;
+    const mfSel=document.getElementById('month-fmt-sel');
+    const qfSel=document.getElementById('quarter-fmt-sel');
+    const dfSel=document.getElementById('day-fmt-sel');
+    const dwSel=document.getElementById('day-width-sel');
+    const mfRow=document.getElementById('hdr-fmt-month-row');
+    const qfRow=document.getElementById('hdr-fmt-quarter-row');
+    const dfRow=document.getElementById('hdr-fmt-day-row');
+    const dwRow=document.getElementById('hdr-fmt-dayw-row');
+    const section=document.getElementById('hdr-fmt-section');
+    // Days format visible only when timescale is days
+    const showDay=(ts==='days');
+    // Month format visible when months appear in any layer (months L1, weeks L2, days L2)
+    const showMonth=(ts==='months')||(ts==='weeks'&&layers>=2)||(ts==='days'&&layers>=2);
+    // Quarter format visible when quarters appear (months L2)
+    const showQuarter=(ts==='months'&&layers>=2);
+    if(dfRow)dfRow.style.display=showDay?'':'none';
+    if(dwRow)dwRow.style.display=showDay?'':'none';
+    if(mfRow)mfRow.style.display=showMonth?'':'none';
+    if(qfRow)qfRow.style.display=showQuarter?'':'none';
+    if(section)section.style.display=(showDay||showMonth||showQuarter)?'':'none';
+    if(mfSel)mfSel.value=this.proj.monthFormat||'short';
+    if(qfSel)qfSel.value=this.proj.quarterFormat||'withYear';
+    if(dfSel)dfSel.value=this.proj.dayLabelFormat||'letter';
+    if(dwSel)dwSel.value=this.proj.dayColumnWidth||'normal';
+    /* Sync header popover if visible */
+    const hdrPop=document.getElementById('hdr-fmt-popover');
+    if(hdrPop&&!hdrPop.classList.contains('hidden')){
+      const hpMf=document.getElementById('hdr-pop-month-fmt');
+      const hpQf=document.getElementById('hdr-pop-quarter-fmt');
+      const hpDf=document.getElementById('hdr-pop-day-fmt');
+      const hpDw=document.getElementById('hdr-pop-dayw-fmt');
+      const hpMr=document.getElementById('hdr-pop-month-row');
+      const hpQr=document.getElementById('hdr-pop-quarter-row');
+      const hpDr=document.getElementById('hdr-pop-day-row');
+      const hpDwR=document.getElementById('hdr-pop-dayw-row');
+      if(hpDr)hpDr.style.display=showDay?'':'none';
+      if(hpDwR)hpDwR.style.display=showDay?'':'none';
+      if(hpMr)hpMr.style.display=showMonth?'':'none';
+      if(hpQr)hpQr.style.display=showQuarter?'':'none';
+      if(hpMf)hpMf.value=this.proj.monthFormat||'short';
+      if(hpQf)hpQf.value=this.proj.quarterFormat||'withYear';
+      if(hpDf)hpDf.value=this.proj.dayLabelFormat||'letter';
+      if(hpDw)hpDw.value=this.proj.dayColumnWidth||'normal';
+      const hpFs=document.getElementById('hdr-fmt-fs');
+      if(hpFs)hpFs.value=this.proj.headerFontSize||10.5;
+    }
+    this._syncShadingUI();
+  },
+  _syncShadingUI(){
+    const p=this.proj,wk=p.showWeekends,wo=p.weekendOpacity||8,hol=p.showHolidays,ho=p.holidayOpacity||12;
+    const noHols=!p.holidays||p.holidays.length===0;
+    /* Popover elements */
+    const hpWC=document.getElementById('hdr-pop-wknd-chk'),hpWO=document.getElementById('hdr-pop-wknd-op'),hpWV=document.getElementById('hdr-pop-wknd-opval');
+    const hpHC=document.getElementById('hdr-pop-hol-chk'),hpHO=document.getElementById('hdr-pop-hol-op'),hpHV=document.getElementById('hdr-pop-hol-opval'),hpHL=document.getElementById('hdr-pop-hol-settings');
+    /* View dropdown elements */
+    const vWC=document.getElementById('view-wknd-chk'),vWO=document.getElementById('view-wknd-op'),vWV=document.getElementById('view-wknd-opval');
+    const vHC=document.getElementById('view-hol-chk'),vHO=document.getElementById('view-hol-op'),vHV=document.getElementById('view-hol-opval'),vHL=document.getElementById('view-hol-settings');
+    /* Weekend sync */
+    if(hpWC)hpWC.checked=wk;if(hpWO){hpWO.value=wo;hpWO.disabled=!wk}if(hpWV)hpWV.textContent=wo+'%';
+    if(vWC)vWC.checked=wk;if(vWO){vWO.value=wo;vWO.disabled=!wk}if(vWV)vWV.textContent=wo+'%';
+    /* Holiday sync */
+    if(hpHC){hpHC.checked=hol;hpHC.disabled=noHols}if(hpHO){hpHO.value=ho;hpHO.disabled=!hol||noHols}if(hpHV)hpHV.textContent=ho+'%';
+    if(hpHL)hpHL.style.display=noHols?'':'none';
+    if(vHC){vHC.checked=hol;vHC.disabled=noHols}if(vHO){vHO.value=ho;vHO.disabled=!hol||noHols}if(vHV)vHV.textContent=ho+'%';
+    if(vHL)vHL.style.display=noHols?'':'none';
+  },
   _docTitle(dirty){const n=this.proj?.name||'Timeline Studio';document.title=(dirty?'● ':'')+n+' — Timeline Studio'},
   markDirty(){this._unsaved=true;this.$.unsaved_dot.classList.remove('hidden');this._docTitle(true)},
   markClean(){this._unsaved=false;this.$.unsaved_dot.classList.add('hidden');this._docTitle(false)},
@@ -443,7 +525,7 @@ const App={
     const def=newProj();
     /* project-level: strip fields matching defaults */
     const projStrip=['owner','dateFormat','timescale','headerLayers','autoRange','showToday','showDeps',
-      'locked','lockH','lockV','hideMode','theme','bgColor','headerColor','zoom','fontSize',
+      'locked','lockH','lockV','hideMode','theme','bgColor','headerColor','zoom','fontSize','monthFormat','quarterFormat','headerFontSize','dayLabelFormat','dayColumnWidth',
       'watermark','wmDate','wmPos','wmShowOwner','showWeekends','weekendOpacity','weekendAutoHide',
       'showHolidays','holidayOpacity','holidayColor','holidayLabels','scheduleAroundNonWorking',
       'defaultFolder','tttEnabled','tttMilestoneId','showFloat','schedulingMode','labelWidth',
@@ -1272,8 +1354,16 @@ const App={
       pg.addEventListener('mouseenter',()=>{clearTimeout(this._pillHoverTimer);pg.classList.add('pill-hover')});
       pg.addEventListener('mouseleave',()=>{this._pillHoverTimer=setTimeout(()=>pg.classList.remove('pill-hover'),200)});
     }
-    this.$.ts_sel.onchange=e=>{this.snap();this.proj.timescale=e.target.value;this.sched()};
+    this.$.ts_sel.onchange=e=>{this.snap();const prev=this.proj.timescale;this.proj.timescale=e.target.value;if(e.target.value==='days'){const days=U.days(this.proj.timelineStart,this.proj.timelineEnd);if(days>365)this.toast('Days scale works best for timelines under 6 months','info');if(prev!=='days')this._pendingFit=true}this.sched()};
     this.$.hl_sel.onchange=e=>{this.snap();this.proj.headerLayers=+e.target.value;this.sched()};
+    const mfSel=document.getElementById('month-fmt-sel');
+    const qfSel=document.getElementById('quarter-fmt-sel');
+    if(mfSel)mfSel.onchange=e=>{this.snap();this.proj.monthFormat=e.target.value;const hp=document.getElementById('hdr-pop-month-fmt');if(hp)hp.value=e.target.value;this.sched();this.autoSave()};
+    if(qfSel)qfSel.onchange=e=>{this.snap();this.proj.quarterFormat=e.target.value;const hp=document.getElementById('hdr-pop-quarter-fmt');if(hp)hp.value=e.target.value;this.sched();this.autoSave()};
+    const dfSel=document.getElementById('day-fmt-sel');
+    const dwSel=document.getElementById('day-width-sel');
+    if(dfSel)dfSel.onchange=e=>{this.snap();this.proj.dayLabelFormat=e.target.value;const hp=document.getElementById('hdr-pop-day-fmt');if(hp)hp.value=e.target.value;this.sched();this.autoSave()};
+    if(dwSel)dwSel.onchange=e=>{this.snap();this.proj.dayColumnWidth=e.target.value;const hp=document.getElementById('hdr-pop-dayw-fmt');if(hp)hp.value=e.target.value;this.sched();this.autoSave()};
     this.$.file_input.onchange=e=>this.handleOpen(e);
     on('btn-s-apply',()=>this.applySettings());on('btn-save-sw',()=>this.saveSwM());on('btn-del-sw',()=>this.delSwM());
     on('btn-sched-apply',()=>this.applyScheduleTransition());
@@ -1363,7 +1453,8 @@ const App={
       if(!e.target.closest('#dt-ctx-menu'))this.$.dt_ctx_menu.classList.add('hidden');
       if(!e.target.closest('#dt-ctx-input')){const dci=document.getElementById('dt-ctx-input');if(dci)dci.classList.add('hidden')}
       if(!e.target.closest('.save-btn-group')){this.closeAllDD()}
-      if(!e.target.closest('#sl-fmt-popover')&&!e.target.closest('.sl-lbl'))this._hideSlFmtPopover();
+      if(!e.target.closest('#sl-fmt-popover')&&!(e.target.closest('.sl-lbl')&&(e.ctrlKey||e.metaKey)))this._hideSlFmtPopover();
+      if(!e.target.closest('#hdr-fmt-popover')&&!e.target.closest('#tl-hdr')&&!e.target.closest('#tl-hdr-corner'))this._hideHdrFmtPopover();
       if(!e.target.closest('#fp-popover')&&!e.target.closest('#fp-split')){if(this._fpStaged)this.deactivateFP();else this._hideFPPopover()}
     });
     this.$.ctx_menu.addEventListener('click',e=>{const a=e.target.closest('[data-action]')?.dataset.action;if(a&&!e.target.closest('.ctx-disabled'))this.ctxAct(a);this.$.ctx_menu.classList.add('hidden')});
@@ -1405,6 +1496,29 @@ const App={
     document.getElementById('sl-fmt-inc')?.addEventListener('click',()=>this._adjustSlFs(0.5));
     const slFmtFs=document.getElementById('sl-fmt-fs');if(slFmtFs){slFmtFs.addEventListener('change',()=>{const v=parseFloat(slFmtFs.value);if(!isNaN(v))this._applySlFs(v)});slFmtFs.addEventListener('input',()=>{const v=parseFloat(slFmtFs.value);if(!isNaN(v)&&v>=7&&v<=24)this._applySlFs(v)})}
     document.getElementById('sl-fmt-scope')?.addEventListener('change',()=>this._onSlScopeChange());
+    // Header format popover (F4-P2)
+    this.$.tl_hdr.addEventListener('contextmenu',e=>{e.preventDefault();this._showHdrFmtPopover(e.clientX,e.clientY)});
+    this.$.tl_hdr_corner.addEventListener('contextmenu',e=>{e.preventDefault();this._showHdrFmtPopover(e.clientX,e.clientY)});
+    document.getElementById('hdr-fmt-close')?.addEventListener('click',()=>this._hideHdrFmtPopover());
+    document.getElementById('hdr-fmt-dec')?.addEventListener('click',()=>this._adjustHdrFs(-0.5));
+    document.getElementById('hdr-fmt-inc')?.addEventListener('click',()=>this._adjustHdrFs(0.5));
+    const hdrFmtFs=document.getElementById('hdr-fmt-fs');if(hdrFmtFs){hdrFmtFs.addEventListener('change',()=>{const v=parseFloat(hdrFmtFs.value);if(!isNaN(v))this._applyHdrFs(v)});hdrFmtFs.addEventListener('input',()=>{const v=parseFloat(hdrFmtFs.value);if(!isNaN(v)&&v>=7&&v<=16)this._applyHdrFs(v)})}
+    const hdrPopMf=document.getElementById('hdr-pop-month-fmt');if(hdrPopMf)hdrPopMf.onchange=e=>{this.snap();this.proj.monthFormat=e.target.value;const vd=document.getElementById('month-fmt-sel');if(vd)vd.value=e.target.value;this.sched();this.autoSave()};
+    const hdrPopQf=document.getElementById('hdr-pop-quarter-fmt');if(hdrPopQf)hdrPopQf.onchange=e=>{this.snap();this.proj.quarterFormat=e.target.value;const vd=document.getElementById('quarter-fmt-sel');if(vd)vd.value=e.target.value;this.sched();this.autoSave()};
+    const hdrPopDf=document.getElementById('hdr-pop-day-fmt');if(hdrPopDf)hdrPopDf.onchange=e=>{this.snap();this.proj.dayLabelFormat=e.target.value;const vd=document.getElementById('day-fmt-sel');if(vd)vd.value=e.target.value;this.sched();this.autoSave()};
+    const hdrPopDw=document.getElementById('hdr-pop-dayw-fmt');if(hdrPopDw)hdrPopDw.onchange=e=>{this.snap();this.proj.dayColumnWidth=e.target.value;const vd=document.getElementById('day-width-sel');if(vd)vd.value=e.target.value;this.sched();this.autoSave()};
+    /* Shading quick-controls — popover */
+    const hpWC=document.getElementById('hdr-pop-wknd-chk');if(hpWC)hpWC.onchange=()=>{this.snap();this.proj.showWeekends=hpWC.checked;this._syncShadingUI();this.sched();this.autoSave()};
+    const hpWO=document.getElementById('hdr-pop-wknd-op');if(hpWO){hpWO.oninput=()=>{this.proj.weekendOpacity=+hpWO.value;this._syncShadingUI();this.sched()};hpWO.onchange=()=>this.autoSave()}
+    const hpHC=document.getElementById('hdr-pop-hol-chk');if(hpHC)hpHC.onchange=()=>{this.snap();this.proj.showHolidays=hpHC.checked;this._syncShadingUI();this.sched();this.autoSave()};
+    const hpHO=document.getElementById('hdr-pop-hol-op');if(hpHO){hpHO.oninput=()=>{this.proj.holidayOpacity=+hpHO.value;this._syncShadingUI();this.sched()};hpHO.onchange=()=>this.autoSave()}
+    const hpHLnk=document.getElementById('hdr-pop-hol-settings');if(hpHLnk)hpHLnk.onclick=e=>{e.preventDefault();this._hideHdrFmtPopover();this.showSettings();setTimeout(()=>{const s=document.getElementById('sect-display');if(s)s.scrollIntoView({behavior:'smooth',block:'start'})},100)};
+    /* Shading quick-controls — View dropdown */
+    const vWC=document.getElementById('view-wknd-chk');if(vWC)vWC.onchange=()=>{this.snap();this.proj.showWeekends=vWC.checked;this._syncShadingUI();this.sched();this.autoSave()};
+    const vWO=document.getElementById('view-wknd-op');if(vWO){vWO.oninput=()=>{this.proj.weekendOpacity=+vWO.value;this._syncShadingUI();this.sched()};vWO.onchange=()=>this.autoSave()}
+    const vHC=document.getElementById('view-hol-chk');if(vHC)vHC.onchange=()=>{this.snap();this.proj.showHolidays=vHC.checked;this._syncShadingUI();this.sched();this.autoSave()};
+    const vHO=document.getElementById('view-hol-op');if(vHO){vHO.oninput=()=>{this.proj.holidayOpacity=+vHO.value;this._syncShadingUI();this.sched()};vHO.onchange=()=>this.autoSave()}
+    const vHLnk=document.getElementById('view-hol-settings');if(vHLnk)vHLnk.onclick=e=>{e.preventDefault();this.closeAllDD();this.showSettings();setTimeout(()=>{const s=document.getElementById('sect-display');if(s)s.scrollIntoView({behavior:'smooth',block:'start'})},100)};
     // Column resize handle
     const colRH=this.$.sl_col_rh;
     if(colRH){colRH.addEventListener('mousedown',e=>{
@@ -1767,6 +1881,47 @@ const App={
     else if(scope==='all-sub'){this.proj.swimlanes.forEach(sl=>{(sl.subSwimlanes||[]).forEach(ss=>{ss.fontSize=size})})}
     else if(scope==='subs-in-lane'){const lanes=new Set(this.slSel.filter(s=>s.ssId).map(s=>s.slId));lanes.forEach(slId=>{const sl=this.gs(slId);if(sl)(sl.subSwimlanes||[]).forEach(ss=>{ss.fontSize=size})})}
     this.sched();this.autoSave();
+  },
+
+  /* ===== HEADER FORMAT POPOVER (F4-P2) ===== */
+  _hideHdrFmtPopover(){const p=document.getElementById('hdr-fmt-popover');if(p)p.classList.add('hidden')},
+  _showHdrFmtPopover(x,y){
+    const pop=document.getElementById('hdr-fmt-popover');if(!pop)return;
+    const fs=this.proj.headerFontSize||10.5;
+    document.getElementById('hdr-fmt-fs').value=fs;
+    /* Sync format dropdowns */
+    const ts=this.proj.timescale,layers=this.proj.headerLayers||2;
+    const showDay=(ts==='days');
+    const showMonth=(ts==='months')||(ts==='weeks'&&layers>=2)||(ts==='days'&&layers>=2);
+    const showQuarter=(ts==='months'&&layers>=2);
+    const dRow=document.getElementById('hdr-pop-day-row');
+    const dwRow=document.getElementById('hdr-pop-dayw-row');
+    const mRow=document.getElementById('hdr-pop-month-row');
+    const qRow=document.getElementById('hdr-pop-quarter-row');
+    if(dRow)dRow.style.display=showDay?'':'none';
+    if(dwRow)dwRow.style.display=showDay?'':'none';
+    if(mRow)mRow.style.display=showMonth?'':'none';
+    if(qRow)qRow.style.display=showQuarter?'':'none';
+    const dSel=document.getElementById('hdr-pop-day-fmt');
+    const dwSel=document.getElementById('hdr-pop-dayw-fmt');
+    const mSel=document.getElementById('hdr-pop-month-fmt');
+    const qSel=document.getElementById('hdr-pop-quarter-fmt');
+    if(dSel)dSel.value=this.proj.dayLabelFormat||'letter';
+    if(dwSel)dwSel.value=this.proj.dayColumnWidth||'normal';
+    if(mSel)mSel.value=this.proj.monthFormat||'short';
+    if(qSel)qSel.value=this.proj.quarterFormat||'withYear';
+    this._syncShadingUI();
+    pop.classList.remove('hidden');
+    const pw=pop.offsetWidth,ph=pop.offsetHeight;
+    pop.style.left=Math.min(x,window.innerWidth-pw-8)+'px';
+    pop.style.top=Math.min(y,window.innerHeight-ph-8)+'px';
+  },
+  _adjustHdrFs(delta){
+    const inp=document.getElementById('hdr-fmt-fs');const cur=parseFloat(inp.value)||10.5;
+    const next=Math.max(7,Math.min(16,cur+delta));inp.value=next;this._applyHdrFs(next);
+  },
+  _applyHdrFs(size){
+    this.snap();this.proj.headerFontSize=Math.max(7,Math.min(16,size));this.sched();this.autoSave();
   },
 
   /* ===== FORMAT PAINTER ===== */
@@ -3135,8 +3290,9 @@ const App={
     if(!items||!items.length)return;
     const p=this.proj;
     /* Use zoom=100% as reference so layout is deterministic regardless of current view zoom */
-    const baseCw={weeks:60,months:100,quarters:200,years:400}[p.timescale]||100;
-    const daysPerCol={weeks:7,months:30,quarters:91,years:365}[p.timescale]||30;
+    const dayCwMap={compact:20,normal:28,wide:36};
+    const baseCw=p.timescale==='days'?(dayCwMap[p.dayColumnWidth||'normal']||28):{weeks:60,months:100,quarters:200,years:400}[p.timescale]||100;
+    const daysPerCol={days:1,weeks:7,months:30,quarters:91,years:365}[p.timescale]||30;
     const pxPerDay=Math.max(0.5,baseCw/daysPerCol);
     const fs=p.fontSize||11;
     /* Tunable parameters from project settings */
@@ -3642,11 +3798,14 @@ const App={
   met(){
     const p=this.proj,start=new Date(p.timelineStart+'T12:00:00'),end=new Date(p.timelineEnd+'T12:00:00'),z=(p.zoom||100)/100;
     const cols=[],cur=new Date(start);
-    if(p.timescale==='weeks'){cur.setDate(cur.getDate()-cur.getDay());while(cur<=end){const sat=new Date(+cur+6*864e5);cols.push({label:'W'+Math.ceil(((cur-new Date(cur.getFullYear(),0,1))/864e5+1)/7),start:U.iso(cur),end:U.iso(sat),year:sat.getFullYear(),month:sat.getMonth(),quarter:Math.floor(sat.getMonth()/3)+1});cur.setDate(cur.getDate()+7)}}
-    else if(p.timescale==='months'){cur.setDate(1);while(cur<=end){cols.push({label:cur.toLocaleDateString('en',{month:'short'}),start:U.iso(cur),end:U.iso(new Date(cur.getFullYear(),cur.getMonth()+1,0)),year:cur.getFullYear(),month:cur.getMonth(),quarter:Math.floor(cur.getMonth()/3)+1});cur.setMonth(cur.getMonth()+1)}}
+    const _DL=['S','M','T','W','T','F','S'];
+    if(p.timescale==='days'){while(cur<=end){const dow=cur.getDay(),iso=U.iso(cur),dn=cur.getDate(),mi=cur.getMonth(),df=p.dayLabelFormat||'letter';const lbl=df==='number'?String(dn):df==='hybrid'?String(dn):_DL[dow];cols.push({label:lbl,dayLetter:_DL[dow],dayNum:dn,start:iso,end:iso,year:cur.getFullYear(),month:mi,quarter:Math.floor(mi/3)+1,dow,isWeekend:dow===0||dow===6});cur.setDate(cur.getDate()+1)}}
+    else if(p.timescale==='weeks'){cur.setDate(cur.getDate()-cur.getDay());while(cur<=end){const sat=new Date(+cur+6*864e5);cols.push({label:'W'+Math.ceil(((cur-new Date(cur.getFullYear(),0,1))/864e5+1)/7),start:U.iso(cur),end:U.iso(sat),year:sat.getFullYear(),month:sat.getMonth(),quarter:Math.floor(sat.getMonth()/3)+1});cur.setDate(cur.getDate()+7)}}
+    else if(p.timescale==='months'){const _MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],_ML=['J','F','M','A','M','J','J','A','S','O','N','D'];cur.setDate(1);while(cur<=end){const mi=cur.getMonth();cols.push({label:(p.monthFormat==='letter'?_ML:_MN)[mi],start:U.iso(cur),end:U.iso(new Date(cur.getFullYear(),mi+1,0)),year:cur.getFullYear(),month:mi,quarter:Math.floor(mi/3)+1});cur.setMonth(cur.getMonth()+1)}}
     else if(p.timescale==='quarters'){cur.setMonth(Math.floor(cur.getMonth()/3)*3);cur.setDate(1);while(cur<=end){const q=Math.floor(cur.getMonth()/3)+1;cols.push({label:`Q${q}`,start:U.iso(cur),end:U.iso(new Date(cur.getFullYear(),cur.getMonth()+3,0)),year:cur.getFullYear(),quarter:q});cur.setMonth(cur.getMonth()+3)}}
     else{cur.setMonth(0);cur.setDate(1);while(cur<=end){cols.push({label:String(cur.getFullYear()),start:U.iso(cur),end:`${cur.getFullYear()}-12-31`,year:cur.getFullYear()});cur.setFullYear(cur.getFullYear()+1)}}
-    const cw=({weeks:60,months:100,quarters:200,years:400}[p.timescale]||100)*z;
+    const dayCw={compact:20,normal:28,wide:36}[p.dayColumnWidth||'normal']||28;
+    const cw=(p.timescale==='days'?dayCw:{weeks:60,months:100,quarters:200,years:400}[p.timescale]||100)*z;
     return{start,end,cols,cw,tw:cols.length*cw,z}
   },
   dX(ds,tl){if(!ds||!tl.cols.length)return null;const d=new Date(ds+'T12:00:00');
@@ -3666,6 +3825,9 @@ const App={
   buildHdrRows(tl){
     const layers=this.proj.headerLayers||2,ts=this.proj.timescale,rows=[];
     const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const ML=['J','F','M','A','M','J','J','A','S','O','N','D'];
+    const mFmt=this.proj.monthFormat||'short',qFmt=this.proj.quarterFormat||'withYear';
+    const monthLabel=m=>mFmt==='letter'?ML[m]:MN[m];
     /* Helper: build header cells by date boundaries (for weeks where columns straddle months/years) */
     const buildBoundaryRow=(getNext,getLabel)=>{
       const g=[];if(!tl.cols.length)return g;
@@ -3684,8 +3846,8 @@ const App={
       if(prevX<tl.tw)g.push({label:prevLabel,width:tl.tw-prevX});
       return g;
     };
-    if(layers>=3&&(ts==='weeks'||ts==='months')){
-      if(ts==='weeks'){
+    if(layers>=3&&(ts==='days'||ts==='weeks'||ts==='months')){
+      if(ts==='days'||ts==='weeks'){
         rows.push(buildBoundaryRow(
           (d,first)=>{const y=first?d.getFullYear():d.getFullYear()+1;return new Date(y+(first?1:0),0,1)},
           d=>String(d.getFullYear())
@@ -3693,16 +3855,16 @@ const App={
       }else{const g=[];let cy=null,cn=0;tl.cols.forEach(c=>{if(c.year!==cy){if(cy!==null)g.push({label:String(cy),span:cn});cy=c.year;cn=1}else cn++});if(cy!==null)g.push({label:String(cy),span:cn});rows.push(g)}
     }
     if(layers>=2){
-      if(ts==='weeks'){
+      if(ts==='days'||ts==='weeks'){
         rows.push(buildBoundaryRow(
           (d,first)=>{const m=first?d.getMonth()+1:d.getMonth()+1;return new Date(d.getFullYear(),m,1)},
-          d=>MN[d.getMonth()]
+          d=>monthLabel(d.getMonth())
         ));
       }
-      else if(ts==='months'){const g=[];let cq=null,cn=0;tl.cols.forEach(c=>{const k=c.year+'-Q'+c.quarter;if(k!==cq){if(cq!==null)g.push({label:cq.split('-')[1]+' '+cq.split('-')[0],span:cn});cq=k;cn=1}else cn++});if(cq!==null)g.push({label:cq.split('-')[1]+' '+cq.split('-')[0],span:cn});rows.push(g)}
+      else if(ts==='months'){const g=[];let cq=null,cn=0;tl.cols.forEach(c=>{const k=c.year+'-Q'+c.quarter;if(k!==cq){if(cq!==null){const parts=cq.split('-');g.push({label:qFmt==='plain'?parts[1]:parts[1]+' '+parts[0],span:cn})}cq=k;cn=1}else cn++});if(cq!==null){const parts=cq.split('-');g.push({label:qFmt==='plain'?parts[1]:parts[1]+' '+parts[0],span:cn})}rows.push(g)}
       else if(ts==='quarters'){const g=[];let cy=null,cn=0;tl.cols.forEach(c=>{if(c.year!==cy){if(cy!==null)g.push({label:String(cy),span:cn});cy=c.year;cn=1}else cn++});if(cy!==null)g.push({label:String(cy),span:cn});rows.push(g)}
     }
-    rows.push(tl.cols.map(c=>({label:c.label,span:1})));return rows
+    rows.push(tl.cols.map((c,i)=>{const cell={label:c.label,span:1};if(c.dayLetter)cell.dayLetter=c.dayLetter;if(i>0){const prev=tl.cols[i-1];if((ts==='days'||ts==='weeks')&&c.month!==prev.month)cell.boundary=true;else if(ts==='months'&&c.quarter!==prev.quarter)cell.boundary=true;else if(ts==='quarters'&&c.year!==prev.year)cell.boundary=true}return cell}));return rows
   },
 
   renderTL(){
@@ -3712,7 +3874,10 @@ const App={
     if(this._panMode)this.$.tl_body.style.cursor='grab';else if(this._lassoMode)this.$.tl_body.style.cursor='crosshair';else if(this._fpMode)this.$.tl_body.style.cursor='copy';else this.$.tl_body.style.cursor='';
     const hc=th.hdr,hR=this.buildHdrRows(tl),rowH=22,totalHdrH=hR.length*rowH;
     this.$.tl_hdr_corner.style.height=totalHdrH+'px';this.$.tl_hdr_corner.style.background=hc;
-    let hh='';hR.forEach(row=>{hh+=`<div class="th-row" style="background:${hc};height:${rowH}px">`;row.forEach(cell=>{const w=cell.width!=null?cell.width:cell.span*tl.cw;hh+=`<div class="th-cell" style="width:${w}px;min-width:${w}px">${cell.label}</div>`});hh+=`</div>`});
+    const hFs=p.headerFontSize||10.5;
+    const isDaysHybrid=p.timescale==='days'&&(p.dayLabelFormat||'letter')==='hybrid';
+    const _holDateSet=new Set();if(p.timescale==='days'&&p.holidays&&p.holidays.length){for(const hol of p.holidays){const hs=new Date(hol.start+'T12:00:00'),he=new Date(hol.end+'T12:00:00');const cur=new Date(hs);while(cur<=he){_holDateSet.add(U.iso(cur));cur.setDate(cur.getDate()+1)}}}
+    let hh='';hR.forEach((row,ri)=>{hh+=`<div class="th-row" style="background:${hc};height:${rowH}px">`;row.forEach((cell,ci)=>{const w=cell.width!=null?cell.width:cell.span*tl.cw;let xCls=cell.boundary?' th-cell-boundary':'';if(p.timescale==='days'&&ri===hR.length-1){const col=tl.cols[ci];if(col){if(_holDateSet.has(col.start))xCls+=' th-day-holiday';else if(col.isWeekend)xCls+=' th-day-weekend'}}if(isDaysHybrid&&ri===hR.length-1&&cell.dayLetter){hh+=`<div class="th-cell th-cell-hybrid${xCls}" style="width:${w}px;min-width:${w}px;font-size:${hFs}px">${cell.label}<span class="th-day-letter">${cell.dayLetter}</span></div>`}else{hh+=`<div class="th-cell${xCls}" style="width:${w}px;min-width:${w}px;font-size:${hFs}px">${cell.label}</div>`}});hh+=`</div>`});
     this.$.tl_hdr.style.width=tl.tw+'px';this.$.tl_hdr.innerHTML=hh;
     this.$.tl_hdr_scroll.scrollLeft=this.$.tl_body_scroll.scrollLeft;
 
@@ -4540,9 +4705,10 @@ const App={
     }yO+=h}
     /* Header rows */
     let hdrY=0;
-    hR.forEach(row=>{let hx=lw;svg+=`<rect x="${lw}" y="${hdrY}" width="${vpW}" height="${rowHH}" fill="${th.hdr}"/>`;
-      row.forEach(cell=>{const cw=cell.width!=null?cell.width:cell.span*tl.cw,cx=hx-vpX;if(cx+cw>lw&&cx<lw+vpW){svg+=`<text x="${cx+cw/2}" y="${hdrY+rowHH/2+4}" fill="#fff" font-size="10.5" font-weight="600" text-anchor="middle">${cell.label}</text>`;svg+=`<line x1="${cx+cw}" y1="${hdrY}" x2="${cx+cw}" y2="${hdrY+rowHH}" stroke="rgba(255,255,255,0.1)"/>`}hx+=cw});
-      svg+=`<line x1="${lw}" y1="${hdrY+rowHH}" x2="${lw+vpW}" y2="${hdrY+rowHH}" stroke="rgba(255,255,255,0.1)"/>`;hdrY+=rowHH});
+    const isDaysHybridExp=p.timescale==='days'&&(p.dayLabelFormat||'letter')==='hybrid';
+    hR.forEach((row,ri)=>{let hx=lw;svg+=`<rect x="${lw}" y="${hdrY}" width="${vpW}" height="${rowHH}" fill="${th.hdr}"/>`;
+      const hFs=p.headerFontSize||10.5;row.forEach(cell=>{const cw=cell.width!=null?cell.width:cell.span*tl.cw,cx=hx-vpX;if(cx+cw>lw&&cx<lw+vpW){if(cell.boundary)svg+=`<line x1="${cx}" y1="${hdrY}" x2="${cx}" y2="${hdrY+rowHH}" stroke="rgba(255,255,255,0.35)"/>`;if(isDaysHybridExp&&ri===hR.length-1&&cell.dayLetter){svg+=`<text x="${cx+cw/2}" y="${hdrY+rowHH/2+4}" fill="#fff" font-size="${hFs}" font-weight="600" text-anchor="middle">${cell.label}</text>`;svg+=`<text x="${cx+cw-2}" y="${hdrY+5}" fill="rgba(255,255,255,0.6)" font-size="7" font-weight="500" text-anchor="end">${cell.dayLetter}</text>`}else{svg+=`<text x="${cx+cw/2}" y="${hdrY+rowHH/2+4}" fill="#fff" font-size="${hFs}" font-weight="600" text-anchor="middle">${cell.label}</text>`}svg+=`<line x1="${cx+cw}" y1="${hdrY}" x2="${cx+cw}" y2="${hdrY+rowHH}" stroke="rgba(255,255,255,0.2)"/>`}hx+=cw});
+      svg+=`<line x1="${lw}" y1="${hdrY+rowHH}" x2="${lw+vpW}" y2="${hdrY+rowHH}" stroke="rgba(255,255,255,0.2)"/>`;hdrY+=rowHH});
     svg+=`<rect x="0" y="0" width="${lw}" height="${totalHdrH}" fill="${th.hdr}"/>`;
     svg+=`<text x="${lw/2}" y="${totalHdrH/2+4}" fill="#fff" font-size="9" font-weight="600" text-anchor="middle">${U.esc(p.name)}</text>`;
     svg+=`<line x1="0" y1="${totalHdrH}" x2="${W}" y2="${totalHdrH}" stroke="rgba(0,0,0,0.15)"/>`;
