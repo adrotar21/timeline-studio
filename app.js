@@ -1,4 +1,4 @@
-/* Timeline Studio v0.40.1 — Bugfix: header popover mousedown-level dismiss (matches swimlane popover pattern), holiday gear icon scrolls to sect-holidays, canvas DPR capping for large exports. */
+/* Timeline Studio v0.40.2 — Bugfix: data table prepend/append popover dismiss race, plus v0.40.1 fixes (header popover mousedown dismiss, holiday gear scroll, canvas DPR capping). */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -1451,7 +1451,7 @@ const App={
     document.addEventListener('click',e=>{
       if(!e.target.closest('#ctx-menu'))this.$.ctx_menu.classList.add('hidden');
       if(!e.target.closest('#dt-ctx-menu'))this.$.dt_ctx_menu.classList.add('hidden');
-      if(!e.target.closest('#dt-ctx-input')){const dci=document.getElementById('dt-ctx-input');if(dci)dci.classList.add('hidden')}
+      if(!e.target.closest('#dt-ctx-input')&&!e.target.closest('#dt-ctx-menu')){const dci=document.getElementById('dt-ctx-input');if(dci)dci.classList.add('hidden')}
       if(!e.target.closest('.save-btn-group')){this.closeAllDD()}
       if(!e.target.closest('#sl-fmt-popover')&&!(e.target.closest('.sl-lbl')&&(e.ctrlKey||e.metaKey)))this._hideSlFmtPopover();
       if(!e.target.closest('#hdr-fmt-popover'))this._hideHdrFmtPopover();
