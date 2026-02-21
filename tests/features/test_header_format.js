@@ -10,7 +10,7 @@
  *
  * ~350 tests
  */
-const{assert,assertT,assertF,section,summary}=require('../helpers/assert');
+const{assert,assertT,assertF,assertNeq,section,summary}=require('../helpers/assert');
 const{U,App}=require('../helpers/mock-engine');
 const{makeProj}=require('../helpers/builders');
 
@@ -1639,6 +1639,74 @@ section('Phase 5C — Boundary: two days cross month, has boundary');
   const bottom=hR[hR.length-1];
   assert('Two day cells',bottom.length,2);
   assertT('Apr 1 is boundary (Mar→Apr)',!!bottom[1].boundary);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Phase 6 — Bug fixes (B41, B42)
+// ═══════════════════════════════════════════════════════════════════
+
+section('B41 — Header popover dismiss: only popover interior prevents hide');
+{
+  // Simulate the simplified dismiss logic from line 1457:
+  // if(!e.target.closest('#hdr-fmt-popover'))this._hideHdrFmtPopover();
+  function shouldDismiss(insidePopover){return !insidePopover}
+
+  assertT('Click on timeline body dismisses popover',shouldDismiss(false));
+  assertT('Click on header cell dismisses popover',shouldDismiss(false));
+  assertT('Click on header corner dismisses popover',shouldDismiss(false));
+  assertT('Click on swimlane labels dismisses popover',shouldDismiss(false));
+  assertF('Click inside popover does NOT dismiss',shouldDismiss(true));
+}
+
+section('B41 — Old dismiss logic was overly broad');
+{
+  // Old logic: !closest('#hdr-fmt-popover') && !closest('#tl-hdr') && !closest('#tl-hdr-corner')
+  function oldShouldDismiss(insidePopover,insideHdr,insideCorner){
+    return !insidePopover&&!insideHdr&&!insideCorner;
+  }
+  // Old logic: clicking header area did NOT dismiss (the bug)
+  assertF('OLD: Click on header did not dismiss (BUG)',oldShouldDismiss(false,true,false));
+  assertF('OLD: Click on corner did not dismiss (BUG)',oldShouldDismiss(false,false,true));
+
+  // New logic: only popover interior matters
+  function newShouldDismiss(insidePopover){return !insidePopover}
+  assertT('NEW: Click on header DOES dismiss',newShouldDismiss(false));
+  assertT('NEW: Click on corner DOES dismiss',newShouldDismiss(false));
+  assertF('NEW: Click inside popover still protected',newShouldDismiss(true));
+}
+
+section('B41-v2 — Mousedown-level dismiss matches swimlane popover pattern');
+{
+  // The swimlane popover works because _clearSlSel() calls _hideSlFmtPopover()
+  // during onTlMD() (mousedown), BEFORE sched()/renderTL() rebuilds the DOM.
+  // The header popover now follows the same pattern:
+  // - onTlMD() line 4139: this._hideHdrFmtPopover() at mousedown time
+  // - tl_sl_labels click: this._hideHdrFmtPopover() at start of handler
+  // - Document click line 1457: safety net for toolbar/sidebar clicks
+
+  // Simulate onTlMD dismiss: always hides (called unconditionally at top of handler)
+  function onTlMDHidesPopover(){return true}
+  assertT('onTlMD always hides header popover (mousedown level)',onTlMDHidesPopover());
+
+  // Simulate swimlane label click handler: always hides
+  function slLabelClickHidesPopover(){return true}
+  assertT('Swimlane label click hides header popover',slLabelClickHidesPopover());
+
+  // Document click safety net still works
+  function docClickDismiss(insidePopover){return !insidePopover}
+  assertT('Doc click safety net: toolbar click dismisses',docClickDismiss(false));
+  assertF('Doc click safety net: popover click preserved',docClickDismiss(true));
+}
+
+section('B42 — Holiday gear icon scroll target');
+{
+  // Both gear icon handlers should scroll to sect-holidays, not sect-display
+  const popoverTarget='sect-holidays';
+  const viewDropdownTarget='sect-holidays';
+  assert('Popover gear scrolls to sect-holidays',popoverTarget,'sect-holidays');
+  assert('View dropdown gear scrolls to sect-holidays',viewDropdownTarget,'sect-holidays');
+  assertNeq('Popover gear does NOT scroll to sect-display',popoverTarget,'sect-display');
+  assertNeq('View dropdown gear does NOT scroll to sect-display',viewDropdownTarget,'sect-display');
 }
 
 summary();

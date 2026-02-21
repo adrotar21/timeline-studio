@@ -686,5 +686,89 @@ section('Export — Critical Path With Non-Critical Branch');
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// B43 — Canvas DPR capping for large exports
+// ═══════════════════════════════════════════════════════════════════
+
+section('B43 — DPR auto-reduction for large canvas dimensions');
+{
+  // Extract the DPR capping logic from copyScreenshot/exportPNG
+  function capDpr(naturalW,naturalH,baseDpr){
+    const maxDim=16384;
+    let dpr=baseDpr;
+    if(naturalW*dpr>maxDim||naturalH*dpr>maxDim)dpr=Math.floor(maxDim/Math.max(naturalW,naturalH))||1;
+    return dpr;
+  }
+
+  // Normal viewport screenshot: 1360px wide at dpr 2
+  assert('Normal viewport: DPR unchanged',capDpr(1360,800,2),2);
+
+  // Normal full export: 3000px wide at dpr 3
+  assert('Normal full export: DPR unchanged',capDpr(3000,800,3),3);
+
+  // Large days export: 13140px wide (365 days × 36px) at dpr 3
+  assert('Large days export: DPR reduced to 1',capDpr(13140,800,3),1);
+
+  // Very large export: 26280px wide at dpr 2
+  assert('Very large export: DPR reduced to 1',capDpr(26280,800,2),1);
+
+  // Tall export: normal width but very tall
+  assert('Tall export: DPR capped by height',capDpr(1000,6000,3),2);
+
+  // Edge case: exactly at limit (8192 × 2 = 16384)
+  assert('At limit: 8192px at dpr 2 = 16384',capDpr(8192,400,2),2);
+
+  // Edge case: just over limit (8193 × 2 = 16386 > 16384)
+  assert('Just over: 8193px at dpr 2 → reduced',capDpr(8193,400,2),1);
+
+  // Small viewport at high DPI: safe
+  assert('Small viewport at 4x DPI: unchanged',capDpr(800,600,4),4);
+
+  // Medium export at 4x DPI: just exceeds
+  assert('Medium 4100px at 4x: reduced to 3',capDpr(4100,1000,4),3);
+}
+
+section('B43 — Canvas dimensions never exceed maxDim after capping');
+{
+  function capDpr(naturalW,naturalH,baseDpr){
+    const maxDim=16384;
+    let dpr=baseDpr;
+    if(naturalW*dpr>maxDim||naturalH*dpr>maxDim)dpr=Math.floor(maxDim/Math.max(naturalW,naturalH))||1;
+    return dpr;
+  }
+
+  const cases=[
+    {w:5000,h:3000,dpr:4},    // 5000×4=20000 > 16384
+    {w:2000,h:1000,dpr:3},    // 2000×3=6000 < 16384, OK
+    {w:16384,h:100,dpr:2},    // 16384×2=32768 > 16384
+    {w:13140,h:1200,dpr:3},   // Days timescale full export
+    {w:800,h:600,dpr:2},      // Normal viewport
+  ];
+  for(const d of cases){
+    const capped=capDpr(d.w,d.h,d.dpr);
+    assertLte(`Canvas w=${d.w}×dpr=${capped} <= 16384`,d.w*capped,16384);
+    assertLte(`Canvas h=${d.h}×dpr=${capped} <= 16384`,d.h*capped,16384);
+  }
+}
+
+section('B43 — DPR floor of 1 for extreme dimensions');
+{
+  function capDpr(naturalW,naturalH,baseDpr){
+    const maxDim=16384;
+    let dpr=baseDpr;
+    if(naturalW*dpr>maxDim||naturalH*dpr>maxDim)dpr=Math.floor(maxDim/Math.max(naturalW,naturalH))||1;
+    return dpr;
+  }
+
+  // Image wider than maxDim itself (DPR must be 1)
+  assert('Width > maxDim: DPR = 1',capDpr(20000,800,3),1);
+
+  // Both dimensions exceed limit even at DPR 1 — floor to 1
+  assert('Both huge: still floor to 1',capDpr(50000,50000,4),1);
+
+  // Ensure floor prevents DPR of 0
+  assertGte('DPR never below 1',capDpr(99999,99999,4),1);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 
 const{failed}=summary();process.exit(failed?1:0);
