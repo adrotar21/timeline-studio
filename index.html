@@ -132,18 +132,18 @@
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" style="margin-left:1px"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
         </button>
         <div class="save-dropdown dd-wide hidden" id="tools-dropdown">
-          <div class="save-dd-item" id="btn-lock"><span>🔓</span> <span id="lock-label">Unlocked</span></div>
-          <div class="save-dd-item" id="btn-hide"><span>👁</span> <span id="hide-label">Visible</span></div>
-          <div class="save-dd-item" id="btn-crit-path"><span>🔥</span> Critical Path</div>
+          <div class="save-dd-item" id="btn-lock" data-tooltip="Lock or unlock item dragging<br>on the timeline"><span>🔓</span> <span id="lock-label">Unlocked</span></div>
+          <div class="save-dd-item" id="btn-hide" data-tooltip="Toggle visibility of items marked<br>as hidden · Shows them at 30% opacity<br>when off"><span>👁</span> <span id="hide-label">Visible</span></div>
+          <div class="save-dd-item" id="btn-crit-path" data-tooltip="Highlight items with zero slack —<br>any delay on these delays the<br>entire project"><span>🔥</span> Critical Path</div>
           <div class="save-dd-item" id="btn-propagate-sel" data-tooltip="Push date changes to downstream<br>dependent items · Manual mode only<br>Ctrl+Shift+P"><span>🔀</span> Propagate Selection</div>
           <div class="dd-hint hidden" id="propagate-hint"></div>
           <div class="dd-sep"></div>
-          <div class="save-dd-item" id="btn-toggle-sched"><span>📐</span> <span id="toggle-sched-label">Switch to Auto-Scheduled</span></div>
-          <div class="save-dd-item" id="btn-lasso"><span>⬚</span> Lasso Select</div>
-          <div class="save-dd-item" id="btn-pan"><span>✋</span> Pan Mode</div>
+          <div class="save-dd-item" id="btn-toggle-sched" data-tooltip="Switch between Manual and<br>Auto-Scheduled modes · Auto mode<br>computes dates from dependencies"><span>📐</span> <span id="toggle-sched-label">Switch to Auto-Scheduled</span></div>
+          <div class="save-dd-item" id="btn-lasso" data-tooltip="Click and drag to select multiple<br>items on the timeline"><span>⬚</span> Lasso Select</div>
+          <div class="save-dd-item" id="btn-pan" data-tooltip="Click and drag to scroll the<br>timeline instead of selecting items"><span>✋</span> Pan Mode</div>
           <div class="dd-sep"></div>
-          <div class="save-dd-item" id="btn-snap-vp"><span>📷</span> Screenshot (Viewport)</div>
-          <div class="save-dd-item" id="btn-snap-full"><span>🖼</span> Screenshot (Full)</div>
+          <div class="save-dd-item" id="btn-snap-vp" data-tooltip="Copy the visible timeline area<br>to clipboard as a PNG image"><span>📷</span> Screenshot (Viewport)</div>
+          <div class="save-dd-item" id="btn-snap-full" data-tooltip="Copy the entire timeline to<br>clipboard as a PNG image ·<br>Includes content beyond the visible area"><span>🖼</span> Screenshot (Full)</div>
         </div>
       </div>
       <div class="toolbar-separator"></div>

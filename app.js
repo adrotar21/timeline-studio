@@ -1,4 +1,4 @@
-/* Timeline Studio v0.40.5 — Propagate Selection: disabled state, contextual hint, descriptive tooltip in Tools dropdown. */
+/* Timeline Studio v0.40.6 — Descriptive tooltips for all Tools dropdown items (first-time user clarity). */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
