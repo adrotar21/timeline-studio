@@ -1,4 +1,4 @@
-/* Timeline Studio v0.40.4 — Compact diagonal-split undo/redo button, Date Text Color rename, prepend/append popover fix. */
+/* Timeline Studio v0.40.5 — Propagate Selection: disabled state, contextual hint, descriptive tooltip in Tools dropdown. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -762,6 +762,9 @@ const App={
     const bu=document.getElementById('btn-undo'),br=document.getElementById('btn-redo');
     if(bu)bu.classList.toggle('disabled',!this.undoStack.length);
     if(br)br.classList.toggle('disabled',!this.redoStack.length);
+    /* Propagate Selection disabled state */
+    const bp=document.getElementById('btn-propagate-sel'),bph=document.getElementById('propagate-hint');
+    if(bp){const noSel=!this.sel.length,isAuto=this.proj.schedulingMode==='scheduled',dis=noSel||isAuto;bp.classList.toggle('dd-disabled',dis);if(bph){bph.classList.toggle('hidden',!dis);bph.textContent=isAuto?'Auto-handled in scheduled mode':noSel?'Select an item to propagate':''}}
     /* FP split button: grey out main icon when sel!==1 (unless staged/painting) */
     const fpBtn=document.getElementById('btn-fp');
     if(fpBtn)fpBtn.classList.toggle('fp-disabled',this.sel.length!==1&&!this._fpMode&&!this._fpStaged);
@@ -1305,7 +1308,7 @@ const App={
     on('btn-lock',()=>{this.$.tools_dropdown.classList.add('hidden');this.proj.locked=!this.proj.locked;this.proj.lockH=this.proj.locked;this.proj.lockV=this.proj.locked;this.sched();this.autoSave();this.toast(this.proj.locked?'Locked':'Unlocked')});
     on('btn-hide',()=>{this.$.tools_dropdown.classList.add('hidden');this.proj.hideMode=!this.proj.hideMode;this.sched();this.toast(this.proj.hideMode?'Hiding hidden':'Showing all')});
     on('btn-crit-path',()=>{this.$.tools_dropdown.classList.add('hidden');this.toggleCritPath()});
-    on('btn-propagate-sel',()=>{this.$.tools_dropdown.classList.add('hidden');if(!this.sel.length){this.toast('Select items first','error');return}if(this.proj.schedulingMode==='scheduled'){this.toast('In Auto-Scheduled mode, dates update automatically','info');return}this.propagateFrom(this.sel)});
+    on('btn-propagate-sel',()=>{this.$.tools_dropdown.classList.add('hidden');if(document.getElementById('btn-propagate-sel')?.classList.contains('dd-disabled'))return;if(!this.sel.length){this.toast('Select items first','error');return}if(this.proj.schedulingMode==='scheduled'){this.toast('In Auto-Scheduled mode, dates update automatically','info');return}this.propagateFrom(this.sel)});
     on('btn-toggle-sched',()=>{this.$.tools_dropdown.classList.add('hidden');this.toggleSchedulingMode()});
     on('btn-lasso',()=>{this.$.tools_dropdown.classList.add('hidden');this._scDispatch.toggleLasso.call(this)});
     on('btn-pan',()=>{this.$.tools_dropdown.classList.add('hidden');this._scDispatch.togglePan.call(this)});
