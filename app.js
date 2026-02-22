@@ -1,4 +1,4 @@
-/* Timeline Studio v0.40.3 — Rename "Edge Text Color" to "Date Text Color" with contextual hint in properties panel. */
+/* Timeline Studio v0.40.4 — Compact diagonal-split undo/redo button, Date Text Color rename, prepend/append popover fix. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -758,6 +758,10 @@ const App={
         ph.classList.toggle('has-count',ct>0);
       }
     }
+    /* Undo/Redo disabled state */
+    const bu=document.getElementById('btn-undo'),br=document.getElementById('btn-redo');
+    if(bu)bu.classList.toggle('disabled',!this.undoStack.length);
+    if(br)br.classList.toggle('disabled',!this.redoStack.length);
     /* FP split button: grey out main icon when sel!==1 (unless staged/painting) */
     const fpBtn=document.getElementById('btn-fp');
     if(fpBtn)fpBtn.classList.toggle('fp-disabled',this.sel.length!==1&&!this._fpMode&&!this._fpStaged);

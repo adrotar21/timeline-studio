@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.40.3` — Rename "Edge Text Color" to "Date Text Color" with contextual hint. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.40.4` — Compact diagonal-split undo/redo button with disabled state. Live at `https://adrotar21.github.io/timeline-studio/`.
 - Version history tracked in `BACKLOG.md` under the Versioning table and via **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 

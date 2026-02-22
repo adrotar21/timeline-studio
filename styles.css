@@ -29,6 +29,16 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .toolbar-btn{display:flex;align-items:center;gap:4px;padding:4px 7px;border:none;background:transparent;color:var(--tx2);border-radius:5px;cursor:pointer;font-family:var(--font);font-size:11.5px;white-space:nowrap;transition:background .12s,color .12s}
 .toolbar-btn:hover{background:var(--bg3);color:var(--tx1)}
 .toolbar-btn.active{background:var(--accL);color:var(--acc)}
+.ur-wrap{position:relative;width:30px;height:28px;border-radius:5px;overflow:hidden;flex-shrink:0}
+.ur-half{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--tx2);cursor:pointer;transition:background .12s,color .12s,opacity .12s;padding:0}
+.ur-undo{clip-path:polygon(0 0,100% 0,0 100%)}
+.ur-undo svg{transform:translate(-5px,-5px)}
+.ur-redo{clip-path:polygon(100% 0,100% 100%,0 100%)}
+.ur-redo svg{transform:translate(5px,5px)}
+.ur-half:hover{background:var(--bg3);color:var(--tx1)}
+.ur-half.disabled{opacity:.3;cursor:default}
+.ur-half.disabled:hover{background:transparent;color:var(--tx2)}
+.ur-wrap::after{content:'';position:absolute;top:0;right:0;width:141%;height:1px;background:var(--brd);transform-origin:top right;transform:rotate(45deg);pointer-events:none;z-index:1}
 .toolbar-select{padding:3px 5px;background:var(--bg2);color:var(--tx1);border:1px solid var(--brd);border-radius:5px;font-family:var(--font);font-size:11px;cursor:pointer;outline:none}
 .tls{display:flex;flex-direction:column;align-items:center}
 .tls-label{font-size:8px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px}
