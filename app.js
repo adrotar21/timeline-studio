@@ -1,4 +1,4 @@
-/* Timeline Studio v0.40.7 — Tools dropdown: keyboard shortcut call-out, toggleSched shortcut action, confirmation tooltip. */
+/* Timeline Studio v0.40.8 — UX: shorter tools call-out, Lock Shift+drag tooltip, lasso Escape priority, settings scroll-spy fix. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -257,10 +257,11 @@ const App={
     cycleHdrRows(){this.snap();const ts=this.proj.timescale||'months';const max=ts==='years'?1:ts==='quarters'?2:3;const cur=this.proj.headerLayers||2;let next=cur+1;if(next>max)next=1;this.proj.headerLayers=next;this.$.hl_sel.value=String(next);this.sched();this.autoSave();this.toast('Header rows: '+next)},
   },
   _handleEscape(){
+    /* Lasso mode: first Escape exits lasso only (preserves selection), second clears selection */
+    if(this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode');this.sched();return}
     this.sel=[];this.slSel=[];this._hideSlFmtPopover();this._hideHdrFmtPopover();this.editItem=null;this.closePanel();
     this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');
     document.querySelectorAll('.modal:not(.hidden)').forEach(m=>m.classList.add('hidden'));
-    if(this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}
     if(this._panMode){this._panMode=false;document.getElementById('btn-pan')?.classList.remove('active')}
     if(this._fpStaged||this._fpMode){this.deactivateFP()}
     else{this._hideFPPopover()}
@@ -2645,19 +2646,14 @@ const App={
     const sNav=document.getElementById('settings-nav');
     if(sContent)sContent.scrollTop=0;
     if(sNav){
+      const links=sNav.querySelectorAll('a');
       /* Reset active to first link */
-      sNav.querySelectorAll('a').forEach((a,i)=>a.classList.toggle('active',i===0));
+      links.forEach((a,i)=>a.classList.toggle('active',i===0));
+      /* Scroll-spy: highlight nav link whose section is nearest the top of the scroll container */
+      const spy=()=>{const cTop=sContent.getBoundingClientRect().top;let best=null,bestD=Infinity;links.forEach(a=>{const s=document.getElementById(a.getAttribute('href').slice(1));if(!s)return;const d=Math.abs(s.getBoundingClientRect().top-cTop);if(d<bestD){bestD=d;best=a}});if(best)links.forEach(a=>a.classList.toggle('active',a===best))};
+      sContent.onscroll=spy;
       /* Click-to-jump */
-      sNav.querySelectorAll('a').forEach(a=>{a.onclick=e=>{e.preventDefault();const tgt=document.querySelector(a.getAttribute('href'));if(tgt&&sContent)tgt.scrollIntoView({behavior:'smooth',block:'start'})}});
-      /* Scroll-spy via IntersectionObserver */
-      if(this._settingsObs)this._settingsObs.disconnect();
-      const sections=sContent.querySelectorAll('.settings-section[id]');
-      this._settingsObs=new IntersectionObserver(entries=>{
-        let topId=null,topR=Infinity;
-        sections.forEach(s=>{const r=s.getBoundingClientRect();const cR=sContent.getBoundingClientRect();const rel=r.top-cR.top;if(rel<cR.height*0.35&&rel>-r.height&&rel<topR){topR=rel;topId=s.id}});
-        if(topId){sNav.querySelectorAll('a').forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+topId))}
-      },{root:sContent,threshold:0,rootMargin:'-10% 0px -60% 0px'});
-      sections.forEach(s=>this._settingsObs.observe(s));
+      links.forEach(a=>{a.onclick=e=>{e.preventDefault();const tgt=document.getElementById(a.getAttribute('href').slice(1));if(tgt)tgt.scrollIntoView({behavior:'smooth',block:'start'})}});
     }
   },
   applySettings(){
