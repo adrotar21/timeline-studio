@@ -1,4 +1,4 @@
-/* Timeline Studio v0.40.6 — Descriptive tooltips for all Tools dropdown items (first-time user clarity). */
+/* Timeline Studio v0.40.7 — Tools dropdown: keyboard shortcut call-out, toggleSched shortcut action, confirmation tooltip. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -69,6 +69,7 @@ const SHORTCUT_ACTIONS=[
   {id:'toggleLock',cat:'Tools',label:'Toggle Lock',defaults:[],global:true},
   {id:'toggleHide',cat:'Tools',label:'Toggle Hide Mode',defaults:[],global:true},
   {id:'toggleCritPath',cat:'Tools',label:'Toggle Critical Path',defaults:[],ctx:'tl'},
+  {id:'toggleSched',cat:'Tools',label:'Toggle Scheduling Mode',defaults:[],global:true},
   {id:'toggleLasso',cat:'Tools',label:'Toggle Lasso Mode',defaults:[],ctx:'tl'},
   {id:'togglePan',cat:'Tools',label:'Toggle Pan Mode',defaults:[],ctx:'tl'},
   {id:'formatPainter',cat:'Tools',label:'Format Painter',defaults:[],ctx:'sel'},
@@ -241,6 +242,7 @@ const App={
     toggleLock(){this.proj.locked=!this.proj.locked;this.proj.lockH=this.proj.locked;this.proj.lockV=this.proj.locked;this.sched();this.autoSave();this.toast(this.proj.locked?'Locked':'Unlocked')},
     toggleHide(){this.proj.hideMode=!this.proj.hideMode;this.sched();this.toast(this.proj.hideMode?'Hiding hidden':'Showing all')},
     toggleCritPath(){this.toggleCritPath()},
+    toggleSched(){this.toggleSchedulingMode()},
     toggleLasso(){if(this._fpMode||this._fpStaged)this.deactivateFP();this._lassoMode=!this._lassoMode;if(this._lassoMode&&this._panMode){this._panMode=false;document.getElementById('btn-pan')?.classList.remove('active')}document.getElementById('btn-lasso')?.classList.toggle('active',this._lassoMode);this.$.tl_body.classList.toggle('lasso-mode',this._lassoMode);this.toast(this._lassoMode?'Lasso mode ON — click and drag':'Lasso mode OFF')},
     togglePan(){if(this._fpMode||this._fpStaged)this.deactivateFP();this._panMode=!this._panMode;if(this._panMode&&this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}document.getElementById('btn-pan')?.classList.toggle('active',this._panMode);this.sched();this.toast(this._panMode?'Pan mode ON — click and drag to scroll':'Pan mode OFF')},
     formatPainter(){if(this._fpMode||this._fpStaged)this.deactivateFP();else this.stageFP()},
@@ -1315,6 +1317,7 @@ const App={
     // Screenshot items
     on('btn-snap-vp',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(true)});
     on('btn-snap-full',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(false)});
+    document.getElementById('tools-sc-link')?.addEventListener('click',e=>{e.preventDefault();this.$.tools_dropdown.classList.add('hidden');this.showSettingsShortcuts()});
     /* Format Painter split button */
     {const fpMain=document.getElementById('btn-fp');
     const fpDD=document.getElementById('btn-fp-dd');
