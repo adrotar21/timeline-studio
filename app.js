@@ -1,4 +1,4 @@
-/* Timeline Studio v0.40.2 — Bugfix: data table prepend/append popover dismiss race, plus v0.40.1 fixes (header popover mousedown dismiss, holiday gear scroll, canvas DPR capping). */
+/* Timeline Studio v0.40.3 — Rename "Edge Text Color" to "Date Text Color" with contextual hint in properties panel. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -82,7 +82,7 @@ const SHORTCUT_ACTIONS=[
   {id:'snapFull',cat:'Export',label:'Screenshot (Full)',defaults:[],ctx:'tl'},
 ];
 const FP_PROPS_DEF=[
-  {key:'color',label:'Color'},{key:'textColor',label:'Text Color'},{key:'edgeTextColor',label:'Edge Text Color'},
+  {key:'color',label:'Color'},{key:'textColor',label:'Text Color'},{key:'edgeTextColor',label:'Date Text Color'},
   {key:'fontSize',label:'Font Size'},{key:'labelPosition',label:'Label Position'},{key:'iconType',label:'Icon'},
   {key:'dateDisplay',label:'Date Display',composite:true},{key:'dateFormat',label:'Date Format'},
   {key:'showOwner',label:'Show Owner'},{key:'status',label:'Status'},
@@ -3569,7 +3569,7 @@ const App={
     let h=`<div class="ps"><div class="ps-t">Bulk Edit — ${items.length} items</div>
       <div class="pr"><label>Color</label><div class="pcr"><input type="color" id="bp-clr" class="pci" value="${first.color}"><div class="color-presets-h">${COLORS.slice(0,10).map(c=>`<div class="cs" style="background:${c}" data-c="${c}"></div>`).join('')}</div></div></div>
       <div class="pr"><label>Text Color</label><div class="pcr"><input type="color" id="bp-tc" class="pci" value="${first.textColor||'#1a1a1a'}"><div class="color-presets-h">${TEXT_COLORS.slice(0,8).map(c=>`<div class="cs" style="background:${c}" data-c="${c}" data-f="tc"></div>`).join('')}</div></div></div>`;
-    if(hasTasks)h+=`<div class="pr"><label>Edge Text Color</label><div class="pcr"><input type="color" id="bp-etc" class="pci" value="${(items.find(i=>i.type==='task')||first).edgeTextColor||'#5a6577'}"><div class="color-presets-h">${TEXT_COLORS.slice(0,8).map(c=>`<div class="cs" style="background:${c}" data-c="${c}" data-f="etc"></div>`).join('')}</div></div></div>`;
+    if(hasTasks)h+=`<div class="pr"><label>Date Text Color</label><div class="pcr"><input type="color" id="bp-etc" class="pci" value="${(items.find(i=>i.type==='task')||first).edgeTextColor||'#5a6577'}"><div class="color-presets-h">${TEXT_COLORS.slice(0,8).map(c=>`<div class="cs" style="background:${c}" data-c="${c}" data-f="etc"></div>`).join('')}</div></div></div>`;
     h+=`<div class="pr"><label>Font Size (0 = global)</label><input type="number" id="bp-fs" value="${first.fontSize||0}" min="0" max="20"></div>
       <div class="pr"><label>Label Pos</label><div class="lp-grid"><div class="lp-btn" data-v=""></div><div class="lp-btn" data-v="top">T</div><div class="lp-btn" data-v=""></div><div class="lp-btn" data-v="left">L</div><div class="lp-btn" data-v="center">M</div><div class="lp-btn" data-v="right">R</div><div class="lp-btn" data-v=""></div><div class="lp-btn" data-v="bottom">B</div><div class="lp-btn" data-v=""></div></div></div>`;
     if(hasMilestones)h+=`<div class="pr"><label>Icon</label><div class="icon-grid">${ICONS.map(ic=>`<button class="ic-btn" data-ic="${ic.id}" title="${ic.l}"><svg width="14" height="14" viewBox="0 0 24 24" fill="${first.color}"><path d="${ic.p}"/></svg></button>`).join('')}</div></div>`;
@@ -3659,7 +3659,7 @@ const App={
     h+=`<div class="ps"><div class="ps-t">Appearance</div>
       <div class="pr"><label>Color</label><div class="pcr"><input type="color" id="pp-clr" class="pci" value="${it.color}">${COLORS.slice(0,10).map(c=>`<div class="cs ${c===it.color?'active':''}" style="background:${c}" data-c="${c}"></div>`).join('')}</div></div>
       <div class="pr"><label>Text Color</label><div class="pcr"><input type="color" id="pp-tc" class="pci" value="${it.textColor||'#1a1a1a'}">${TEXT_COLORS.slice(0,8).map(c=>`<div class="cs" style="background:${c}" data-c="${c}" data-f="tc"></div>`).join('')}</div></div>`;
-    if(it.type==='task')h+=`<div class="pr"><label>Edge Text Color</label><div class="pcr"><input type="color" id="pp-etc" class="pci" value="${it.edgeTextColor||'#5a6577'}">${TEXT_COLORS.slice(0,8).map(c=>`<div class="cs" style="background:${c}" data-c="${c}" data-f="etc"></div>`).join('')}</div></div>`;
+    if(it.type==='task')h+=`<div class="pr"><label>Date Text Color</label><div class="pcr"><input type="color" id="pp-etc" class="pci" value="${it.edgeTextColor||'#5a6577'}">${TEXT_COLORS.slice(0,8).map(c=>`<div class="cs" style="background:${c}" data-c="${c}" data-f="etc"></div>`).join('')}</div><div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">${it.showStartDate||it.showEndDate?'Color of start/end date labels on the task bar':'Enable Start/End Date below to see date labels'}</div></div>`;
     h+=`<div class="pr"><label>Font Size (0 = global: ${p.fontSize}px)</label><input type="number" id="pp-fs" value="${gfs}" min="0" max="20"></div>`;
     if(it.type==='milestone')h+=`<div class="pr"><label>Icon</label><div class="icon-grid">${ICONS.map(ic=>`<button class="ic-btn ${ic.id===it.iconType?'active':''}" data-ic="${ic.id}" title="${ic.l}"><svg width="14" height="14" viewBox="0 0 24 24" fill="${it.color}"><path d="${ic.p}"/></svg></button>`).join('')}</div></div>`;
     h+=`<div class="pr"><label>Label Pos</label><div class="lp-grid"><div class="lp-btn" data-v=""></div><div class="lp-btn ${it.labelPosition==='top'?'active':''}" data-v="top">T</div><div class="lp-btn" data-v=""></div><div class="lp-btn ${it.labelPosition==='left'?'active':''}" data-v="left">L</div><div class="lp-btn ${it.labelPosition==='center'?'active':''}" data-v="center">M</div><div class="lp-btn ${it.labelPosition==='right'?'active':''}" data-v="right">R</div><div class="lp-btn" data-v=""></div><div class="lp-btn ${it.labelPosition==='bottom'?'active':''}" data-v="bottom">B</div><div class="lp-btn" data-v=""></div></div></div></div>`;

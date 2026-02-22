@@ -22,7 +22,7 @@ console.log('\x1b[36m========================================\x1b[0m');
 //  FP_PROPS_DEF constant (mirrors app.js)
 // ═══════════════════════════════════════════════════════════════════
 const FP_PROPS_DEF=[
-  {key:'color',label:'Color'},{key:'textColor',label:'Text Color'},{key:'edgeTextColor',label:'Edge Text Color'},
+  {key:'color',label:'Color'},{key:'textColor',label:'Text Color'},{key:'edgeTextColor',label:'Date Text Color'},
   {key:'fontSize',label:'Font Size'},{key:'labelPosition',label:'Label Position'},{key:'iconType',label:'Icon'},
   {key:'dateDisplay',label:'Date Display',composite:true},{key:'dateFormat',label:'Date Format'},
   {key:'showOwner',label:'Show Owner'},{key:'status',label:'Status'},
