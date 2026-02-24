@@ -15,7 +15,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
 - **Current:** `v0.40.8` — UX: shorter tools call-out, Lock Shift+drag tooltip, lasso Escape priority, settings scroll-spy fix. Live at `https://adrotar21.github.io/timeline-studio/`.
-- Version history tracked in `BACKLOG.md` under the Versioning table and via **git tags** (`git tag v0.23.1`)
+- Version history tracked in `docs/BACKLOG.md` (recent) and `docs/VERSION_HISTORY.md` (archive), plus **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 
 ## Critical Architecture Rule
@@ -36,9 +36,16 @@ TimelineProject/
 ├── app.js                          # All application logic (~5200 lines)
 ├── styles.css                      # Theming via CSS custom properties, layout
 ├── Showcase.tlproj                 # Example project file (JSON)
-├── CLAUDE.md                       # This file — project context for AI assistants
-├── BACKLOG.md                      # Prioritized bugs/features with version history
-├── dependency-prd.md               # Dependency engine PRD (Phase 1 + Phase 2)
+├── README.md                       # Project README (stays at root for GitHub)
+├── docs/                           # All documentation
+│   ├── CLAUDE.md                   # This file — project context for AI assistants
+│   ├── BACKLOG.md                  # Prioritized bugs/features with recent version history
+│   ├── COMPLETED.md                # Completed items archive (moved from BACKLOG appendix)
+│   ├── VERSION_HISTORY.md          # Version history archive (pre-0.40.0)
+│   ├── PRIVACY.md                  # Privacy architecture document
+│   ├── dependency-prd.md           # Dependency engine PRD (Phase 1 + Phase 2)
+│   ├── autofit-analysis.md         # Auto-fit analysis document
+│   └── timeline-studio-layout-engine-analysis.md  # Layout engine analysis
 ├── screenshots/                    # README screenshots (5 PNGs)
 └── tests/                         # 2,489 tests across 22 files
     ├── helpers/                    # Shared assert lib, mock engine, builder factories
@@ -222,9 +229,9 @@ Output is color-coded (green pass / red fail) with summary stats. Tests mock eng
 - Customizable keyboard shortcuts with 3-tier manager (Reserved / Customizable / Mouse Reference) in Settings → Shortcuts (Ctrl+Shift+K). Per-user overrides stored in localStorage.
 
 ## Known Issues & Backlog
-See `BACKLOG.md` for the prioritized and sized bug/feature backlog with version history.
+See `docs/BACKLOG.md` for the prioritized and sized bug/feature backlog with version history. Completed items are archived in `docs/COMPLETED.md`. Older version history is in `docs/VERSION_HISTORY.md`.
 
-**Backlog management rule:** On each edit to `BACKLOG.md`, all **Done** items must be moved from the Open tables to the **Appendix: Completed Items** table. Open tables should only contain active work (Open, Plan, Blocked, Published & Testing).
+**Backlog management rule:** On each edit to `docs/BACKLOG.md`, all **Done** items must be moved from the Open tables to `docs/COMPLETED.md`. Open tables should only contain active work (Open, Plan, Blocked, Published & Testing).
 
 ## Common Patterns
 - Event handlers are wired in `bind()` method

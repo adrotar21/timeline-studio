@@ -40,7 +40,7 @@ That's it. No terminal. No package manager. No account.
 
 > **Fonts:** The app loads [DM Sans](https://fonts.google.com/specimen/DM+Sans) and [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) from Google Fonts for best appearance, but works fine offline with system font fallback.
 
-> **Privacy:** Your project files never leave your device. There is no server, no database, and no tracking — the app runs entirely in your browser. See [`PRIVACY.md`](PRIVACY.md) for a full explanation of the architecture and sourced references.
+> **Privacy:** Your project files never leave your device. There is no server, no database, and no tracking — the app runs entirely in your browser. See [`docs/PRIVACY.md`](docs/PRIVACY.md) for a full explanation of the architecture and sourced references.
 
 ---
 
@@ -229,7 +229,7 @@ node tests/run-all.js              # 2,112 tests across 18 files
 
 **Tech stack:** Vanilla JavaScript (ES6+), SVG for dependency arrows, Canvas API for PNG export with DPI scaling, CSS custom properties for theming, localStorage for session recovery.
 
-See [`CLAUDE.md`](CLAUDE.md) for full architecture documentation including the rendering pipeline, coordinate system, export mechanics, and dependency engine internals.
+See [`docs/CLAUDE.md`](docs/CLAUDE.md) for full architecture documentation including the rendering pipeline, coordinate system, export mechanics, and dependency engine internals.
 
 ---
 
@@ -239,7 +239,7 @@ Timeline Studio is currently in beta. We're looking for users and feedback to he
 
 If you find it useful, have suggestions, or run into issues, please [open an issue](../../issues) or start a [discussion](../../discussions).
 
-See [`BACKLOG.md`](BACKLOG.md) for the detailed feature and bug backlog.
+See [`docs/BACKLOG.md`](docs/BACKLOG.md) for the detailed feature and bug backlog.
 
 ---
 
