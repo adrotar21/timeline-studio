@@ -21,9 +21,16 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .toolbar-left,.toolbar-right{display:flex;align-items:center;gap:3px}
 .toolbar-center{display:flex;align-items:center;gap:6px;position:absolute;left:50%;transform:translateX(-50%)}
 .app-brand{color:var(--acc);margin-right:4px;display:flex;align-items:center}
-.project-name-display{cursor:pointer;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;color:var(--tx1);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:background .12s}
+.project-name-display{cursor:pointer;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;color:var(--tx1);min-width:80px;max-width:220px;overflow:hidden;transition:background .12s;display:flex;flex-direction:column;align-items:flex-start;gap:0}
 .project-name-display:hover{background:var(--bg2)}
-.unsaved-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--warn);margin-left:5px;vertical-align:middle}
+#project-name-text{font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.unsaved-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--warn);margin-right:3px;vertical-align:middle;flex-shrink:0}
+.file-subtitle{font-size:9px;font-weight:400;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.2;cursor:pointer;transition:color .15s;display:flex;align-items:center}
+.file-subtitle:hover{color:var(--acc)}
+.file-subtitle.fi-linked{color:var(--success)}
+.file-subtitle.fi-linked:hover{color:var(--success);opacity:.85}
+.file-subtitle.fi-dirty{color:var(--warn)}
+.file-subtitle.fi-dirty:hover{color:var(--warn);opacity:.85}
 .toolbar-separator{width:1px;height:22px;background:var(--brd);margin:0 5px}
 .toolbar-group{display:flex;align-items:center;gap:2px}
 .toolbar-btn{display:flex;align-items:center;gap:4px;padding:4px 7px;border:none;background:transparent;color:var(--tx2);border-radius:5px;cursor:pointer;font-family:var(--font);font-size:11.5px;white-space:nowrap;transition:background .12s,color .12s}

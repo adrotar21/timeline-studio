@@ -1,4 +1,4 @@
-/* Timeline Studio v0.40.8 — UX: shorter tools call-out, Lock Shift+drag tooltip, lasso Escape priority, settings scroll-spy fix. */
+/* Timeline Studio v0.41.1 — F53 file indicator polish (italic project name, dirty-aware green/amber states, inline dot, always-visible subtitle), B46 TTT color fix corrected (>=0 green, <0 red). */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -167,7 +167,7 @@ const App={
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
   view:'timeline',panelCollapsed:false,panelLocked:false,editItem:null,
   _panelHintCooldown:0,_wasExpandedBeforeDataView:false,_lockPillHintCD:0,_hidePillHintCD:0,_pillHoverTimer:null,
-  _dirty:false,_dataDirty:false,_raf:null,_unsaved:false,_shareMode:false,
+  _dirty:false,_dataDirty:false,_raf:null,_unsaved:false,_shareMode:false,_fileHintShown:false,_storedHandle:null,
   _sortCol:null,_sortDir:'asc',
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
   _fileHandle:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
@@ -217,6 +217,12 @@ const App={
     else s=s.replace(/([⌘⇧⌥])([a-z])$/,(_, mod, c)=>mod+c.toUpperCase());
     return s;
   },
+  /* ── IndexedDB File Handle Store (F53) ── */
+  _openHandleDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open('tls3_handles',1);req.onupgradeneeded=()=>req.result.createObjectStore('handles');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})},
+  async _storeHandle(handle){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readwrite');tx.objectStore('handles').put(handle,'fileHandle');await new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=j});db.close()}catch(e){}},
+  async _loadHandle(){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readonly');const req=tx.objectStore('handles').get('fileHandle');const handle=await new Promise((r,j)=>{req.onsuccess=()=>r(req.result);req.onerror=j});db.close();return handle||null}catch(e){return null}},
+  async _clearHandle(){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readwrite');tx.objectStore('handles').delete('fileHandle');db.close()}catch(e){}},
+  async _tryReconnect(){const handle=await this._loadHandle();if(!handle)return false;try{const perm=await handle.requestPermission({mode:'readwrite'});if(perm==='granted'){this._fileHandle=handle;this._updateFileIndicator();this.toast('Reconnected to '+handle.name);return true}}catch(e){}return false},
   _scDispatch:{
     undo(){this.undo()},
     redo(){this.redo()},
@@ -297,7 +303,7 @@ const App={
      'sw-name','sw-color','sw-modal-title',
      'data-search','data-search-ct','ds-clear',
      'file-dropdown','add-dropdown','view-dropdown','tools-dropdown','apply-title','tooltip',
-     'project-name-text','unsaved-dot',
+     'project-name-text','unsaved-dot','file-subtitle','project-name-display',
      'hide-label','ctx-link-dep',
      'help-body','np-template','np-name',
      'data-filter-bar','flt-type','flt-name','flt-owner','flt-swim','flt-sub','flt-notes','flt-start','flt-end','flt-status',
@@ -313,6 +319,16 @@ const App={
     if(this.panelCollapsed){this.$.panel_tab.classList.remove('hidden');this.$.props_panel.classList.add('panel-hidden');this._syncLockTab()}else{this._renderEmptyPanel()}
     this._syncPanelPad();this.applyTheme();this.bind();this.sched();if(this.proj.items.length)this._pendingFit=true;
     if(this._shareMode){this._showShareBanner();this.markClean();this.toast('Shared timeline loaded','info',3000)}
+    /* F53: File handle reconnect on startup */
+    if(!this._shareMode&&this.proj.items.length){(async()=>{
+      const stored=await this._loadHandle();
+      if(stored){
+        this._storedHandle=stored;
+        try{const perm=await stored.queryPermission({mode:'readwrite'});if(perm==='granted'){this._fileHandle=stored;this._updateFileIndicator();return}}catch(e){}
+        this._updateFileIndicator();
+        if(!this._fileHintShown){this._fileHintShown=true;const fn=stored.name||localStorage.getItem('tls3_fileName')||'';if(fn)setTimeout(()=>this.toast(fn+' \u2014 click filename to reconnect','info',4000),600)}
+      }else if(!this._fileHandle){this._updateFileIndicator()}
+    })()}
     this.$.tl_body_scroll.addEventListener('scroll',()=>{
       this.$.tl_sl_labels.scrollTop=this.$.tl_body_scroll.scrollTop;
       this.$.tl_hdr_scroll.scrollLeft=this.$.tl_body_scroll.scrollLeft;
@@ -491,8 +507,8 @@ const App={
     if(vHL)vHL.style.display=noHols?'':'none';
   },
   _docTitle(dirty){const n=this.proj?.name||'Timeline Studio';document.title=(dirty?'● ':'')+n+' — Timeline Studio'},
-  markDirty(){this._unsaved=true;this.$.unsaved_dot.classList.remove('hidden');this._docTitle(true)},
-  markClean(){this._unsaved=false;this.$.unsaved_dot.classList.add('hidden');this._docTitle(false)},
+  markDirty(){this._unsaved=true;this.$.unsaved_dot.classList.remove('hidden');this._docTitle(true);this._updateFileIndicator()},
+  markClean(){this._unsaved=false;this.$.unsaved_dot.classList.add('hidden');this._docTitle(false);this._updateFileIndicator()},
   snap(){this.undoStack.push(U.deep(this.proj));if(this.undoStack.length>40)this.undoStack.shift();this.redoStack=[];this.markDirty()},
   undo(){if(!this.undoStack.length)return;this.redoStack.push(U.deep(this.proj));this.proj=this.undoStack.pop();this.migrate();this.sched();this.refreshPanel();this.toast('Undone')},
   redo(){if(!this.redoStack.length)return;this.undoStack.push(U.deep(this.proj));this.proj=this.redoStack.pop();this.migrate();this.sched();this.refreshPanel();this.toast('Redone')},
@@ -518,9 +534,11 @@ const App={
 
   async saveFile(saveAs=false){
     const data=JSON.stringify(this.proj,null,2);
-    if(!saveAs&&this._fileHandle){try{const w=await this._fileHandle.createWritable();await w.write(data);await w.close();this.markClean();this.toast('Saved!');this.autoSave();return}catch(e){}}
-    if(window.showSaveFilePicker){try{const prevHandle=saveAs?this._fileHandle:null;const h=await window.showSaveFilePicker({suggestedName:(this.proj.name||'timeline')+'.tlproj',types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}]});const w=await h.createWritable();await w.write(data);await w.close();this._fileHandle=saveAs&&prevHandle?prevHandle:h;this.markClean();this.toast(saveAs?'Saved copy!':'Saved!');this.autoSave();return}catch(e){if(e.name==='AbortError')return}}
-    const b=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.tlproj';a.click();URL.revokeObjectURL(a.href);this.markClean();this.toast('Downloaded!');this.autoSave()
+    /* F53: Try stored handle if no active handle (auto-reconnect on Ctrl+S) */
+    if(!saveAs&&!this._fileHandle){const stored=await this._loadHandle();if(stored){try{const perm=await stored.requestPermission({mode:'readwrite'});if(perm==='granted')this._fileHandle=stored}catch(e){}}}
+    if(!saveAs&&this._fileHandle){try{const w=await this._fileHandle.createWritable();await w.write(data);await w.close();this.markClean();this.toast('Saved!');this.autoSave();try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();return}catch(e){}}
+    if(window.showSaveFilePicker){try{const prevHandle=saveAs?this._fileHandle:null;const h=await window.showSaveFilePicker({suggestedName:(this.proj.name||'timeline')+'.tlproj',types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}]});const w=await h.createWritable();await w.write(data);await w.close();this._fileHandle=saveAs&&prevHandle?prevHandle:h;this.markClean();this.toast(saveAs?'Saved copy!':'Saved!');this.autoSave();this._storeHandle(this._fileHandle);try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();return}catch(e){if(e.name==='AbortError')return}}
+    const b=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.tlproj';a.click();URL.revokeObjectURL(a.href);this.markClean();this.toast('Downloaded!');this.autoSave();try{localStorage.setItem('tls3_fileName',(this.proj.name||'timeline')+'.tlproj')}catch(e){}this._updateFileIndicator()
   },
   /* ── Share-link compression pipeline ── */
   _packProj(){
@@ -679,23 +697,23 @@ const App={
     if(window.showOpenFilePicker){
       try{const[handle]=await window.showOpenFilePicker({types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}],multiple:false});
         const file=await handle.getFile();const text=await file.text();
-        try{this.snap();this.proj=JSON.parse(text);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=handle;this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}
+        try{this.snap();this.proj=JSON.parse(text);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=handle;this._storeHandle(handle);try{localStorage.setItem('tls3_fileName',handle.name)}catch(e){}this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}
         return}catch(e){if(e.name==='AbortError')return}
     }
     this.$.file_input.click()
   },
-  handleOpen(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{this.snap();this.proj=JSON.parse(ev.target.result);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=null;this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}};r.readAsText(f);e.target.value=''},
+  handleOpen(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{this.snap();this.proj=JSON.parse(ev.target.result);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=null;try{localStorage.setItem('tls3_fileName',f.name)}catch(e2){}this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}};r.readAsText(f);e.target.value=''},
   newProjAct(){this.showModal('new-proj-modal');this.$.np_name.value='New Timeline';document.getElementById('np-template').value='blank'},
   createFromTemplate(){
     const tpl=document.getElementById('np-template').value,name=this.$.np_name.value.trim()||'New Timeline';
-    if(tpl==='duplicate'){this.snap();const dup=U.deep(this.proj);dup.name=name+' (Copy)';this.proj=dup;this._fileHandle=null;this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markDirty();document.getElementById('new-proj-modal').classList.add('hidden');this.toast('Duplicated!');return}
+    if(tpl==='duplicate'){this.snap();const dup=U.deep(this.proj);dup.name=name+' (Copy)';this.proj=dup;this._fileHandle=null;this._clearHandle();try{localStorage.removeItem('tls3_fileName')}catch(e){}this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markDirty();document.getElementById('new-proj-modal').classList.add('hidden');this.toast('Duplicated!');return}
     if(this._unsaved&&!confirm('Unsaved changes will be lost.'))return;
     this.snap();
     if(tpl==='blank')this.proj=newProj();
     else if(tpl==='product-launch')this.proj=this.tplProductLaunch();
     else if(tpl==='software-dev')this.proj=this.tplSoftwareDev();
     else this.proj=newProj();
-    this.proj.name=name;this._fileHandle=null;this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();
+    this.proj.name=name;this._fileHandle=null;this._clearHandle();try{localStorage.removeItem('tls3_fileName')}catch(e){}this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();
     document.getElementById('new-proj-modal').classList.add('hidden');this.toast('Created!')
   },
   tplProductLaunch(){const p=newProj();p.name='Product Launch';const y=new Date().getFullYear();
@@ -772,6 +790,39 @@ const App={
     const fpBtn=document.getElementById('btn-fp');
     if(fpBtn)fpBtn.classList.toggle('fp-disabled',this.sel.length!==1&&!this._fpMode&&!this._fpStaged);
     this._syncFPPopoverState();
+    this._updateFileIndicator();
+  },
+  _updateFileIndicator(){
+    const el=this.$.file_subtitle;if(!el)return;
+    const linked=!!this._fileHandle;
+    const dirty=this._unsaved;
+    const storedName=localStorage.getItem('tls3_fileName')||'';
+    const dot=this.$.unsaved_dot;
+    /* Determine filename text */
+    let fname='';
+    if(linked)fname=this._fileHandle.name;
+    else if(storedName)fname=storedName;
+    /* Clear existing text nodes but keep the dot span child */
+    [...el.childNodes].forEach(n=>{if(n.nodeType===3)n.remove()});
+    if(linked){
+      el.appendChild(document.createTextNode(fname));
+      el.className='file-subtitle'+(dirty?' fi-dirty':' fi-linked');
+    }else if(storedName){
+      el.appendChild(document.createTextNode(fname+' \u00b7 click to reconnect'));
+      el.className='file-subtitle';
+    }else{
+      el.appendChild(document.createTextNode(dirty?'Not saved \u2014 Ctrl+S':'No file linked \u2014 Ctrl+S to save'));
+      el.className='file-subtitle';
+    }
+    /* Update container tooltip: full project name + file info when truncated */
+    const pnd=this.$.project_name_display;
+    if(pnd){
+      const projName=this.proj?.name||'Untitled';
+      let tip='Double-click to edit project name';
+      if(fname)tip=projName+'<br>'+fname+(dirty?' (unsaved changes)':'')+'<br><br>Double-click to edit name';
+      else tip=projName+'<br><br>Double-click to edit name';
+      pnd.dataset.tooltip=tip;
+    }
   },
 
   /* ===== DEPENDENCY ENGINE (Phase 1: Smart Defaults) ===== */
@@ -1365,7 +1416,7 @@ const App={
       pg.addEventListener('mouseenter',()=>{clearTimeout(this._pillHoverTimer);pg.classList.add('pill-hover')});
       pg.addEventListener('mouseleave',()=>{this._pillHoverTimer=setTimeout(()=>pg.classList.remove('pill-hover'),200)});
     }
-    this.$.ts_sel.onchange=e=>{this.snap();const prev=this.proj.timescale;this.proj.timescale=e.target.value;if(e.target.value==='days'){const days=U.days(this.proj.timelineStart,this.proj.timelineEnd);if(days>365)this.toast('Days scale works best for timelines under 6 months','info');if(prev!=='days')this._pendingFit=true}this.sched()};
+    this.$.ts_sel.onchange=e=>{this.snap();const prev=this.proj.timescale;this.proj.timescale=e.target.value;if(e.target.value==='days'){const days=U.days(this.proj.timelineStart,this.proj.timelineEnd);if(days>365)this.toast('Days scale works best for timelines under 6 months','info')}if(prev!==e.target.value)this.smartZoomForScale(e.target.value);else this.sched()};
     this.$.hl_sel.onchange=e=>{this.snap();this.proj.headerLayers=+e.target.value;this.sched()};
     const mfSel=document.getElementById('month-fmt-sel');
     const qfSel=document.getElementById('quarter-fmt-sel');
@@ -1441,6 +1492,8 @@ const App={
     on('btn-flt-clear',()=>{fltKeys.forEach(k=>{if(this.$[k])this.$[k].value=''});updateFltInd();this.sched(false,true)});
     // Settings toggles
     document.getElementById('project-name-display').addEventListener('dblclick',()=>{document.getElementById('pn-name').value=this.proj.name;this.showModal('pname-modal');document.getElementById('pn-name').focus()});
+    /* F53: Click file subtitle to reconnect to stored handle */
+    if(this.$.file_subtitle){this.$.file_subtitle.onclick=async(e)=>{e.stopPropagation();if(this._fileHandle)return;const ok=await this._tryReconnect();if(!ok)this.openFile()}}
     on('btn-pn-save',()=>{this.snap();this.proj.name=document.getElementById('pn-name').value.trim()||'Untitled';document.getElementById('pname-modal').classList.add('hidden');this.sched();this.autoSave()});
     document.getElementById('s-watermark').onchange=function(){document.getElementById('watermark-opts').classList.toggle('hidden',!this.checked)};
     document.getElementById('s-show-weekends').onchange=function(){document.getElementById('weekend-opts').classList.toggle('hidden',!this.checked)};
@@ -1835,6 +1888,41 @@ const App={
       bs.scrollLeft=Math.max(0,minAbs-20);
     });
     this.toast(`Fit to selection (${fitItems.length} item${fitItems.length===1?'':'s'})`);
+  },
+  /* F45: Smart zoom — set a comfortable reading level when switching timescales */
+  smartZoomForScale(newScale){
+    const bs=this.$.tl_body_scroll;if(!bs)return;
+    const panelW=this.panelCollapsed?28:290;
+    const vpW=bs.clientWidth-panelW;
+    if(vpW<=0){this._pendingFit=true;this.sched();return}
+    /* Base column widths — must match met() */
+    const dayCw={compact:20,normal:28,wide:36}[this.proj.dayColumnWidth||'normal']||28;
+    const baseCw={days:dayCw,weeks:60,months:100,quarters:200,years:400}[newScale]||100;
+    /* Target visible columns per scale */
+    const targetCols={days:30,weeks:20,months:20,quarters:12,years:7}[newScale]||20;
+    /* Count total columns at new scale from timeline date range */
+    const p=this.proj;
+    const start=new Date(p.timelineStart+'T12:00:00'),end=new Date(p.timelineEnd+'T12:00:00');
+    let totalCols=0;
+    if(newScale==='days'){totalCols=Math.max(1,U.days(p.timelineStart,p.timelineEnd)+1)}
+    else if(newScale==='weeks'){totalCols=Math.max(1,Math.ceil((U.days(p.timelineStart,p.timelineEnd)+1)/7))}
+    else if(newScale==='months'){totalCols=Math.max(1,(end.getFullYear()-start.getFullYear())*12+(end.getMonth()-start.getMonth())+1)}
+    else if(newScale==='quarters'){totalCols=Math.max(1,(end.getFullYear()-start.getFullYear())*4+(Math.floor(end.getMonth()/3)-Math.floor(start.getMonth()/3))+1)}
+    else{totalCols=Math.max(1,end.getFullYear()-start.getFullYear()+1)}
+    /* Small timeline → just fit everything */
+    if(totalCols<=targetCols*1.3){this._pendingFit=true;this.sched();return}
+    /* Compute target zoom */
+    const targetZoom=U.clamp(Math.round((vpW/(targetCols*baseCw))*100),30,300);
+    p.zoom=targetZoom;
+    /* Determine scroll anchor: today > selection centroid > viewport center */
+    const todayIso=U.iso(new Date());
+    const inRange=todayIso>=p.timelineStart&&todayIso<=p.timelineEnd;
+    const centroid=this._selCentroidDate();
+    const anchorDate=inRange?todayIso:(centroid||null);
+    this.sched();
+    requestAnimationFrame(()=>{
+      if(anchorDate){const tl=this.met();const px=this.dX(anchorDate,tl);if(px!=null)bs.scrollLeft=Math.max(0,px-vpW/2)}
+    });
   },
   goToday(){const tl=this.met();const x=this.dX(U.iso(new Date()),tl);if(x!==null){const panelW=this.panelCollapsed?28:290;this.$.tl_body_scroll.scrollLeft=x-(this.$.tl_body_scroll.clientWidth-panelW)/2}},
   showModal(id){document.getElementById(id).classList.remove('hidden')},
@@ -3955,7 +4043,7 @@ const App={
             const diffDays=U.days(refDate,targetDate);
             const diffWeeks=Math.round(diffDays/7);
             const label=it.id===p.tttMilestoneId?'0':String(diffWeeks);
-            const clr=it.id===p.tttMilestoneId?'#2ea043':'#e5534b';
+            const clr=(it.id===p.tttMilestoneId||diffWeeks>=0)?'#2ea043':'#e5534b';
             bodyH+=`<div class="ttt-label" style="left:${ix+(it.type==='task'?0:8)+2}px;top:${iy+23}px;color:${clr}">${label}</div>`;
           }
         }
@@ -4664,7 +4752,7 @@ const App={
           const ix=it.type==='task'?this.dXEnd(targetDate,tl):this.dXMid(targetDate,tl);if(ix===null)continue;
           const diffWeeks=Math.round(U.days(refDate,targetDate)/7);
           const label=it.id===p.tttMilestoneId?'0':String(diffWeeks);
-          const clr=it.id===p.tttMilestoneId?'#2ea043':'#e5534b';
+          const clr=(it.id===p.tttMilestoneId||diffWeeks>=0)?'#2ea043':'#e5534b';
           svg+=`<text x="${lw+ix-vpX+(it.type==='task'?2:10)}" y="${iy+32}" fill="${clr}" font-size="9" font-weight="700" font-family="monospace">${label}</text>`
         }
       }}}
@@ -4919,6 +5007,10 @@ const App={
       const cb=e.target.closest('.dt-cb');
       if(cb&&e.shiftKey&&this._lastShiftSel){e.preventDefault();this._dtSelect(cb.dataset.id,true,false);return}
       if(e.target.closest('.dt-cb,.dt-pin,.dt-hid'))return;
+      /* B45: Clicking a <select> (status dropdown) silently sets selection without
+         triggering sched()/re-render so the native dropdown stays open. The row gets
+         visually selected on the next render (triggered by onchange). */
+      if(e.target.closest('select')){const id=row.dataset.iid;if(!(this.sel.length===1&&this.sel[0]===id)){this.sel=[id];this._lastShiftSel=id}return}
       if(e.button===2&&this.sel.includes(row.dataset.iid))return;
       this._dtSelect(row.dataset.iid,e.shiftKey,e.ctrlKey||e.metaKey);
     };
