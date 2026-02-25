@@ -1,4 +1,4 @@
-/* Timeline Studio v0.42.2 — B48 context menu overflow fix (rAF reposition + max-height safety), shortened popup hint text. */
+/* Timeline Studio v0.42.3 — B49 share link fix for Office apps: _loadFromHash() now handles %23p= URL-encoded hash from Word/Excel embedded links. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -525,18 +525,18 @@ const App={
   loadAuto(){try{const s=localStorage.getItem('tls3');if(s)this.proj=JSON.parse(s)}catch(e){}},
   async _loadFromHash(){
     try{
-      const h=location.hash;
-      if(!h.startsWith('#p='))return false;
-      const raw=h.slice(3);
+      let raw='';const h=location.hash;
+      if(h.startsWith('#p=')){raw=h.slice(3)}
+      else{const full=location.href;const idx=full.indexOf('%23p=');if(idx===-1)return false;raw=full.slice(idx+5)}
       const json=await this._decompress(raw);
       if(!json)throw new Error('decompress failed');
       const parsed=JSON.parse(json);
       this.proj=_skDec(parsed);
       this._shareMode=true;
       this._fileHandle=null;
-      history.replaceState(null,'',location.pathname+location.search);
+      history.replaceState(null,'',location.pathname);
       return true;
-    }catch(e){return false}
+    }catch(e){console.warn('Share link load failed:',e);return false}
   },
   toast(m,t='success',dur=2200){const el=document.createElement('div');el.className=`toast toast-${t}`;el.textContent=m;const active=document.querySelectorAll('.toast');const offset=active.length*40;el.style.bottom=(18+offset)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),dur)},
 
