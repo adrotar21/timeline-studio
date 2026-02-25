@@ -321,7 +321,7 @@ const App={
      'pill-group','pill-lock','pill-hide','pill-auto','pill-fp','pill-sel',
      'panel-tab','panel-tab-icon','btn-collapse','btn-lock-collapse',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
-    if(!await this._loadFromHash())this.loadAuto();this.migrate();this._loadShortcuts();this._buildShortcutMap();
+    if(!await this._loadFromHash()){if(this._shareLoadFailed)this.proj=newProj();else this.loadAuto()}this.migrate();this._loadShortcuts();this._buildShortcutMap();
     try{this.panelCollapsed=localStorage.getItem('tls3_panelCollapsed')==='1';this.panelLocked=localStorage.getItem('tls3_panelLocked')==='1'}catch(e){}
     if(this.panelCollapsed){this.$.panel_tab.classList.remove('hidden');this.$.props_panel.classList.add('panel-hidden');this._syncLockTab()}else{this._renderEmptyPanel()}
     this._syncPanelPad();this.applyTheme();this.bind();this.sched();if(this.proj.items.length)this._pendingFit=true;
@@ -536,7 +536,7 @@ const App={
       this._fileHandle=null;
       history.replaceState(null,'',location.pathname+location.search);
       return true;
-    }catch(e){console.warn('Share link load failed:',e);if(location.hash.startsWith('#p='))setTimeout(()=>App.toast('Share link may be truncated \u2014 copy-paste the full URL directly','error',6000),500);return false}
+    }catch(e){console.warn('Share link load failed:',e);if(location.hash.startsWith('#p=')){this._shareLoadFailed=true;history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>App.toast('Share link may be truncated \u2014 copy-paste the full URL directly','error',6000),500)}return false}
   },
   toast(m,t='success',dur=2200){const el=document.createElement('div');el.className=`toast toast-${t}`;el.textContent=m;const active=document.querySelectorAll('.toast');const offset=active.length*40;el.style.bottom=(18+offset)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),dur)},
 
