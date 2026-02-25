@@ -1,4 +1,4 @@
-/* Timeline Studio v0.42.1 — B47 December custom format bug fixed (placeholder tokens prevent "Dec" D-replacement corruption), added MMM YYYY preset date format. */
+/* Timeline Studio v0.42.2 — B48 context menu overflow fix (rAF reposition + max-height safety), shortened popup hint text. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -2243,7 +2243,7 @@ const App={
         })
       })
     }
-    const m=this.$.ctx_menu;m.classList.remove('hidden');m.style.left=Math.min(e.clientX,window.innerWidth-210)+'px';m.style.top=Math.min(e.clientY,window.innerHeight-400)+'px'
+    const m=this.$.ctx_menu;m.classList.remove('hidden');m.style.left=Math.min(e.clientX,window.innerWidth-210)+'px';m.style.top=Math.min(e.clientY,window.innerHeight-400)+'px';requestAnimationFrame(()=>{const r=m.getBoundingClientRect();if(r.bottom>window.innerHeight-8)m.style.top=Math.max(4,window.innerHeight-r.height-8)+'px'})
   },
 
   ctxAct(a){
