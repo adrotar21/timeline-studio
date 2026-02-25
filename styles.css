@@ -561,7 +561,7 @@ body.theme-midnight #props-panel{box-shadow:-4px 0 20px rgba(0,0,0,.4)}
 .tp-midnight{background:linear-gradient(135deg,#111827 50%,#1f2937 50%)}
 
 /* Context menu */
-#ctx-menu{position:fixed;z-index:5000;background:var(--bg2);border:1px solid var(--brd);border-radius:7px;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.4);padding:3px 0;max-height:85vh;overflow-y:auto}
+#ctx-menu{position:fixed;z-index:5000;background:var(--bg2);border:1px solid var(--brd);border-radius:7px;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.4);padding:3px 0}
 .ctx-item{padding:6px 12px;cursor:pointer;font-size:11px;color:var(--tx2);transition:background .08s}
 .ctx-item:hover{background:var(--bg3);color:var(--tx1)}
 .ctx-item.ctx-disabled{opacity:.35;pointer-events:none}
