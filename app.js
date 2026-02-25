@@ -807,7 +807,7 @@ const App={
     const el=this.$.file_subtitle;if(!el)return;
     const linked=!!this._fileHandle;
     const dirty=this._unsaved;
-    const storedName=localStorage.getItem('tls3_fileName')||'';
+    const storedName=this._shareLoadFailed?'':localStorage.getItem('tls3_fileName')||'';
     const dot=this.$.unsaved_dot;
     /* Determine filename text */
     let fname='';
