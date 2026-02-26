@@ -1,4 +1,4 @@
-/* Timeline Studio v0.42.6 — F47 Import shortcut: added "Import..." entry to the Add dropdown (+ button) that opens the paste/import modal directly, making the import flow discoverable without hunting through File menu or Data View. */
+/* Timeline Studio v0.43.0 — F54 Settings modal reorganization: 13→10 nav sections (Project, Appearance, Scheduling, Holidays, Status, Layout, Export, Shortcuts, Links, Advanced). Collapsible Watermark/TTT panels with descriptions and reactive summaries. Inline shading controls with color preview boxes (live opacity preview). Promoted Holidays to own section with cross-links. Live theme preview. Toggle switch depth. Auto Arrange right-click hint. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -1508,9 +1508,9 @@ const App={
     if(this.$.file_subtitle){this.$.file_subtitle.onclick=async(e)=>{e.stopPropagation();if(this._fileHandle)return;const ok=await this._tryReconnect();if(!ok)this.openFile()}}
     on('btn-pn-save',()=>{this.snap();this.proj.name=document.getElementById('pn-name').value.trim()||'Untitled';document.getElementById('pname-modal').classList.add('hidden');this.sched();this.autoSave()});
     document.getElementById('s-watermark').onchange=function(){document.getElementById('watermark-opts').classList.toggle('hidden',!this.checked)};
-    document.getElementById('s-show-weekends').onchange=function(){document.getElementById('weekend-opts').classList.toggle('hidden',!this.checked)};
-    document.getElementById('s-show-holidays').onchange=function(){document.getElementById('holiday-opts').classList.toggle('hidden',!this.checked)};
-    const holOpSlider=document.getElementById('s-hol-opacity');if(holOpSlider)holOpSlider.oninput=function(){document.getElementById('s-hol-opval').textContent=this.value+'%'};
+    document.getElementById('s-show-weekends').onchange=function(){document.getElementById('weekend-inline').classList.toggle('hidden',!this.checked);document.getElementById('weekend-opts').classList.toggle('hidden',!this.checked)};
+    document.getElementById('s-show-holidays').onchange=function(){document.getElementById('holiday-inline').classList.toggle('hidden',!this.checked);document.getElementById('holiday-opts').classList.toggle('hidden',!this.checked)};
+    const holOpSlider=document.getElementById('s-hol-opacity');if(holOpSlider)holOpSlider.oninput=function(){document.getElementById('s-hol-opval').textContent=this.value+'%';const b=document.getElementById('s-hol-color');if(b)b.style.opacity=(0.3+(this.value/40)*0.7).toFixed(2)};
     document.getElementById('btn-hol-add').onclick=()=>{const box=document.getElementById('hol-add-box');box.classList.toggle('hidden');if(!box.classList.contains('hidden')){document.getElementById('hol-import-box').classList.add('hidden');document.getElementById('hol-add-name').value='';document.getElementById('hol-add-start').value='';document.getElementById('hol-add-end').value='';document.getElementById('hol-add-name').focus()}};
     document.getElementById('btn-hol-do-add').onclick=()=>this.addSingleHoliday();
     document.getElementById('hol-add-name').addEventListener('keydown',e=>{if(e.key==='Enter')this.addSingleHoliday()});
@@ -1520,8 +1520,8 @@ const App={
     document.getElementById('btn-hol-do-import').onclick=()=>this.importHolidays();
     document.getElementById('btn-sc-reset').onclick=()=>{this._pendingShortcuts={};this._hideScMsg();this.renderScList();this.toast('Shortcuts reset to defaults')};
     document.getElementById('hol-paste-ta').oninput=()=>{const r=this.parseHolidays(document.getElementById('hol-paste-ta').value);document.getElementById('hol-paste-prev').textContent=r.length?`Found ${r.length} holiday${r.length>1?'s':''}`:''};
-    const opSlider=document.getElementById('s-wknd-opacity');if(opSlider)opSlider.oninput=function(){document.getElementById('s-wknd-opval').textContent=this.value+'%'};
-    document.querySelectorAll('.theme-card').forEach(c=>{c.onclick=()=>{document.querySelectorAll('.theme-card').forEach(x=>x.classList.remove('active'));c.classList.add('active')}});
+    const opSlider=document.getElementById('s-wknd-opacity');if(opSlider)opSlider.oninput=function(){document.getElementById('s-wknd-opval').textContent=this.value+'%';const b=document.getElementById('s-wknd-color-box');if(b)b.style.opacity=(0.3+(this.value/30)*0.7).toFixed(2)};
+    document.querySelectorAll('.theme-card').forEach(c=>{c.onclick=()=>{document.querySelectorAll('.theme-card').forEach(x=>x.classList.remove('active'));c.classList.add('active');this.proj.theme=c.dataset.theme;this.applyTheme()}});
     document.querySelectorAll('[data-close-modal]').forEach(b=>{b.onclick=e=>{const m=e.target.closest('.modal');if(m){m.classList.add('hidden');if(m.id==='settings-modal')this._resetSettingsLive()}}});
     document.querySelectorAll('.modal-overlay').forEach(el=>{el.onclick=()=>{const m=el.closest('.modal');if(m){m.classList.add('hidden');if(m.id==='settings-modal')this._resetSettingsLive()}}});
     /* Bulk URL Links modal wiring */
@@ -2676,9 +2676,12 @@ const App={
     const sm=document.getElementById('settings-modal');if(!sm)return;
     sm.classList.remove('modal-live');
     const mc=sm.querySelector('.modal-content');if(mc){mc.style.left='';mc.style.top=''}
+    /* Restore original theme if settings were cancelled */
+    if(this._settingsOrigTheme!=null){this.proj.theme=this._settingsOrigTheme;this.applyTheme();this._settingsOrigTheme=null}
   },
   showSettings(){
-    const p=this.proj;this.$.s_name.value=p.name;this.$.s_owner.value=p.owner||'';
+    const p=this.proj;this._settingsOrigTheme=p.theme;
+    this.$.s_name.value=p.name;this.$.s_owner.value=p.owner||'';
     this.$.s_start.value=p.timelineStart;this.$.s_end.value=p.timelineEnd;
     this.$.s_auto_range.checked=p.autoRange;this.$.s_today.checked=p.showToday;this.$.s_deps.checked=p.showDeps;
     this.$.s_fontsize.value=p.fontSize||11;
@@ -2693,16 +2696,25 @@ const App={
     }
     document.querySelectorAll('.theme-card').forEach(c=>c.classList.toggle('active',c.dataset.theme===p.theme));
     document.getElementById('s-show-weekends').checked=p.showWeekends;
+    document.getElementById('weekend-inline').classList.toggle('hidden',!p.showWeekends);
     document.getElementById('weekend-opts').classList.toggle('hidden',!p.showWeekends);
     document.getElementById('s-wknd-opacity').value=p.weekendOpacity||8;
     document.getElementById('s-wknd-opval').textContent=(p.weekendOpacity||8)+'%';
     document.getElementById('s-wknd-auto').checked=p.weekendAutoHide!==false;
     document.getElementById('s-show-holidays').checked=p.showHolidays;
+    document.getElementById('holiday-inline').classList.toggle('hidden',!p.showHolidays);
     document.getElementById('holiday-opts').classList.toggle('hidden',!p.showHolidays);
     document.getElementById('s-hol-color').value=p.holidayColor||'#e5534b';
     document.getElementById('s-hol-opacity').value=p.holidayOpacity||12;
     document.getElementById('s-hol-opval').textContent=(p.holidayOpacity||12)+'%';
     document.getElementById('s-hol-labels').checked=p.holidayLabels!==false;
+    /* Initialize color box opacity previews */
+    const wkndBox=document.getElementById('s-wknd-color-box');if(wkndBox){const v=p.weekendOpacity||8;wkndBox.style.opacity=(0.3+(v/30)*0.7).toFixed(2);}
+    const holColorEl=document.getElementById('s-hol-color');if(holColorEl){const v=p.holidayOpacity||12;holColorEl.style.opacity=(0.3+(v/40)*0.7).toFixed(2);}
+    /* Holiday empty-hint: show link to Holidays section when no holidays exist */
+    const holHint=document.getElementById('hol-shading-empty-hint');
+    if(holHint){holHint.classList.toggle('hidden',p.holidays.length>0);const goLink=document.getElementById('hol-shading-go-add');if(goLink)goLink.onclick=e=>{e.preventDefault();const s=document.getElementById('sect-holidays');if(s)s.scrollIntoView({behavior:'smooth',block:'start'})}}
+    const holBackLink=document.getElementById('hol-back-to-shading');if(holBackLink)holBackLink.onclick=e=>{e.preventDefault();const s=document.getElementById('sect-appearance');if(s)s.scrollIntoView({behavior:'smooth',block:'start'})};
     document.getElementById('s-sched-around').checked=p.scheduleAroundNonWorking!==false;
     document.getElementById('s-auto-sort-swim').checked=!!p.autoSortSwimlanes;
     /* --- Auto Arrange: simple slider + advanced panel binding --- */
@@ -2793,9 +2805,20 @@ const App={
     document.getElementById('s-wm-owner').checked=p.wmShowOwner;
     const dfEl=document.getElementById('s-default-folder');if(dfEl)dfEl.value=p.defaultFolder||'';
     const tttChk=document.getElementById('s-ttt-enabled');const tttOpts=document.getElementById('ttt-opts');const tttSel=document.getElementById('s-ttt-milestone');
-    if(tttChk){tttChk.checked=p.tttEnabled;tttOpts.style.display=p.tttEnabled?'':'none';
-      tttChk.onchange=function(){tttOpts.style.display=this.checked?'':'none'}}
+    if(tttChk){tttChk.checked=p.tttEnabled;tttOpts.style.display=p.tttEnabled?'':'none'}
     if(tttSel){tttSel.innerHTML='<option value="">— Select —</option>'+p.items.filter(i=>i.type==='milestone').map(i=>`<option value="${i.id}" ${i.id===p.tttMilestoneId?'selected':''}>${U.esc(i.name)}</option>`).join('')}
+    /* Collapsible panels: Watermark & TTT — toggle body + arrow, reactive summary */
+    const _collToggle=(id,summaryFn)=>{const el=document.getElementById(id);if(!el)return;const hdr=el.querySelector('.settings-collapsible-header');const body=el.querySelector('.settings-collapsible-body');const arrow=el.querySelector('.settings-collapsible-arrow');if(!hdr||!body)return;hdr.onclick=()=>{const open=body.classList.toggle('hidden');if(arrow)arrow.classList.toggle('open',!open)};if(summaryFn)summaryFn()};
+    /* Summaries read FORM state so they update reactively when user toggles checkboxes */
+    const wmChk=this.$.s_watermark,wmPos=this.$.s_wm_pos;
+    const _wmSummary=()=>{const s=document.getElementById('sett-wm-summary');if(s)s.textContent=wmChk.checked?('— '+(wmPos.value||'bottom-center').split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ')):'— Off'};
+    const _tttSummary=()=>{const s=document.getElementById('sett-ttt-summary');if(!s)return;if(!tttChk||!tttChk.checked){s.textContent='— Off';return}const selOpt=tttSel?.selectedOptions?.[0];s.textContent=(selOpt&&selOpt.value)?('— '+selOpt.textContent):'— No milestone'};
+    _collToggle('sett-coll-watermark',_wmSummary);_collToggle('sett-coll-ttt',_tttSummary);
+    /* Hook onchange to update summaries + toggle sub-opts */
+    wmChk.onchange=function(){document.getElementById('watermark-opts').classList.toggle('hidden',!this.checked);_wmSummary()};
+    wmPos.onchange=_wmSummary;
+    if(tttChk){tttChk.onchange=function(){tttOpts.style.display=this.checked?'':'none';_tttSummary()}}
+    if(tttSel)tttSel.onchange=_tttSummary;
     // Scheduling mode cards
     try{
     const smCards=document.getElementById('sched-mode-cards');
@@ -2858,6 +2881,7 @@ const App={
     }
   },
   applySettings(){
+    this._settingsOrigTheme=null;/* clear before reset so theme isn't reverted */
     this._resetSettingsLive();
     this.snap();const p=this.proj;p.name=this.$.s_name.value;p.owner=this.$.s_owner.value;
     p.timelineStart=this.$.s_start.value;p.timelineEnd=this.$.s_end.value;
@@ -3646,6 +3670,7 @@ const App={
   renderHolList(){
     const p=this.proj,list=document.getElementById('hol-list'),ct=document.getElementById('hol-count');
     if(!list||!ct)return;ct.textContent=p.holidays.length;
+    const holHint=document.getElementById('hol-shading-empty-hint');if(holHint)holHint.classList.toggle('hidden',p.holidays.length>0);
     if(!p.holidays.length){list.innerHTML='<div style="padding:8px;color:var(--tx3);text-align:center">No holidays — use + Add or Import to add</div>';return}
     list.innerHTML=p.holidays.map((h,i)=>{
       const rangeStr=h.start===h.end?U.fmt(h.start,p.dateFormat):`${U.fmt(h.start,p.dateFormat)} – ${U.fmt(h.end,p.dateFormat)}`;

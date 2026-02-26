@@ -341,28 +341,96 @@
       <div class="modal-body settings-modal-body">
         <nav class="settings-nav" id="settings-nav">
           <a href="#sect-project" class="active">Project</a>
-          <a href="#sect-range">Range</a>
+          <a href="#sect-appearance">Appearance</a>
           <a href="#sect-scheduling">Scheduling</a>
-          <a href="#sect-theme">Theme</a>
-          <a href="#sect-display">Display</a>
+          <a href="#sect-holidays">Holidays</a>
           <a href="#sect-status">Status</a>
-          <a href="#sect-format">Format</a>
-          <a href="#sect-watermark">Watermark</a>
-          <a href="#sect-ttt">Time-to-Target</a>
+          <a href="#sect-layout">Layout</a>
           <a href="#sect-export">Export</a>
           <a href="#sect-shortcuts">Shortcuts</a>
-          <a href="#sect-links">URL Links</a>
+          <a href="#sect-links">Links</a>
           <a href="#sect-advanced">Advanced</a>
         </nav>
         <div class="settings-content" id="settings-content">
-        <div class="settings-section" id="sect-project"><div class="settings-section-title">Project Info</div>
+
+        <!-- ═══ PROJECT (merged: Project Info + Timeline Range) ═══ -->
+        <div class="settings-section" id="sect-project"><div class="settings-section-title">Project</div>
           <div class="form-group"><label>Project Name</label><input type="text" id="s-name" class="form-input"></div>
           <div class="form-group"><label>Project Owner</label><input type="text" id="s-owner" class="form-input" placeholder="e.g. John Smith"></div>
-        </div>
-        <div class="settings-section" id="sect-range"><div class="settings-section-title">Timeline Range</div>
+          <div class="settings-sub-heading">Timeline Range</div>
           <div class="form-group"><label><input type="checkbox" id="s-auto-range" checked> Auto-fit timeline range to data</label></div>
           <div class="form-row"><div class="form-group"><label>Start</label><input type="date" id="s-start" class="form-input"></div><div class="form-group"><label>End</label><input type="date" id="s-end" class="form-input"></div></div>
         </div>
+
+        <!-- ═══ APPEARANCE (merged: Theme + Display toggles + Shading + Format + collapsible Watermark/TTT) ═══ -->
+        <div class="settings-section" id="sect-appearance"><div class="settings-section-title">Appearance</div>
+          <!-- Theme -->
+          <div class="settings-sub-heading">Theme</div>
+          <div class="form-group"><div class="theme-grid"><div class="theme-card active" data-theme="default"><div class="theme-preview tp-default"></div><span>Default</span></div><div class="theme-card" data-theme="claude"><div class="theme-preview tp-claude"></div><span>Claude</span></div><div class="theme-card" data-theme="light"><div class="theme-preview tp-light"></div><span>Light</span></div><div class="theme-card" data-theme="midnight"><div class="theme-preview tp-midnight"></div><span>Midnight</span></div></div></div>
+          <!-- Visibility -->
+          <div class="settings-sub-heading">Visibility</div>
+          <div class="settings-group-box">
+            <div class="form-row"><div class="form-group"><label>Show Today Marker</label><label class="toggle-switch"><input type="checkbox" id="s-today" checked><span class="toggle-slider"></span></label></div><div class="form-group"><label>Show Dependencies</label><label class="toggle-switch"><input type="checkbox" id="s-deps" checked><span class="toggle-slider"></span></label></div></div>
+            <div class="settings-group-divider"></div>
+            <div class="shading-block">
+              <div class="shading-primary-row">
+                <label class="shading-label"><input type="checkbox" id="s-show-weekends"> Show Weekend Shading</label>
+                <div class="shading-controls hidden" id="weekend-inline">
+                  <div class="shading-color-box" id="s-wknd-color-box" style="background:rgba(0,0,0,0.15)" title="Fixed grey"><span class="shading-color-box-label">fixed</span></div>
+                  <span style="font-size:9px;color:var(--tx3)">Lighter</span><input type="range" id="s-wknd-opacity" min="1" max="30" value="8" style="width:100px"><span style="font-size:9px;color:var(--tx3)">Darker</span><span id="s-wknd-opval" style="font-size:10px;color:var(--tx3);min-width:28px">8%</span>
+                </div>
+              </div>
+              <div class="shading-sub-opts hidden" id="weekend-opts">
+                <label><input type="checkbox" id="s-wknd-auto" checked> Auto-hide at Year scale</label>
+              </div>
+            </div>
+            <div class="settings-group-divider"></div>
+            <div class="shading-block">
+              <div class="shading-primary-row">
+                <label class="shading-label"><input type="checkbox" id="s-show-holidays"> Show Holiday Shading</label>
+                <div class="shading-controls hidden" id="holiday-inline">
+                  <div class="shading-color-wrap"><input type="color" id="s-hol-color" value="#e5534b" class="shading-color-picker" title="Holiday color"><span class="shading-color-box-label">selectable</span></div>
+                  <span style="font-size:9px;color:var(--tx3)">Lighter</span><input type="range" id="s-hol-opacity" min="1" max="40" value="12" style="width:100px"><span style="font-size:9px;color:var(--tx3)">Darker</span><span id="s-hol-opval" style="font-size:10px;color:var(--tx3);min-width:28px">12%</span>
+                </div>
+              </div>
+              <div class="shading-sub-opts hidden" id="holiday-opts">
+                <label><input type="checkbox" id="s-hol-labels" checked> Show holiday names on timeline</label>
+                <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4;margin-bottom:4px">Displays holiday names as text labels on the shaded regions in the timeline.</div>
+              </div>
+            </div>
+            <div id="hol-shading-empty-hint" class="hidden" style="font-size:9.5px;color:var(--tx3);margin-top:4px;padding-left:18px">No holidays added yet. <a href="#" id="hol-shading-go-add" style="color:var(--acc);text-decoration:underline;cursor:pointer">Add holidays</a> to see shading on the timeline.</div>
+          </div>
+          <!-- Date & Text -->
+          <div class="settings-sub-heading">Date &amp; Text</div>
+          <div class="settings-group-box">
+            <div class="form-group"><label>Date Format</label>
+              <select id="s-date-fmt" class="form-input"><option value="MMM D, YYYY">Jan 1, 2026</option><option value="MM/DD/YYYY">01/01/2026</option><option value="DD/MM/YYYY">01/01/2026 (EU)</option><option value="YYYY-MM-DD">2026-01-01</option><option value="M/D">1/1</option><option value="MMM D">Jan 1</option><option value="MMM YYYY">Jan 2026</option><option value="custom">Custom Format…</option></select>
+            </div>
+            <div class="form-group" id="custom-fmt-group" style="display:none"><label>Custom Pattern <span style="font-weight:400;color:var(--tx3)">(DD=01, D=1, MMM=Jan, MMMM=January, MM=01, M=1, YYYY=2026, YY=26)</span></label><input type="text" id="s-custom-fmt" class="form-input" value="DDMMMYY" placeholder="e.g. DDMMMYY → 01Jan26"></div>
+            <div class="form-group"><label>Default Font Size (px)</label><input type="number" id="s-fontsize" class="form-input" value="11" min="8" max="20" style="width:80px"></div>
+          </div>
+          <!-- Collapsible: Watermark -->
+          <div class="settings-collapsible" id="sett-coll-watermark">
+            <div class="settings-collapsible-header"><span class="settings-collapsible-arrow">▸</span> Watermark <span class="settings-collapsible-summary" id="sett-wm-summary">— Off</span></div>
+            <div class="settings-collapsible-body hidden">
+              <div class="settings-collapsible-desc">Adds a "Last Updated" date stamp to your timeline. Visible on screen and included in exported images (SVG/PNG).</div>
+              <div class="form-group"><label><input type="checkbox" id="s-watermark"> Show "Last Updated" stamp</label></div>
+              <div class="form-row hidden" id="watermark-opts"><div class="form-group"><label>Date</label><input type="date" id="s-wm-date" class="form-input"></div><div class="form-group"><label>Position</label><select id="s-wm-pos" class="form-input"><option value="bottom-center">Bottom Center</option><option value="bottom-left">Bottom Left</option><option value="bottom-right">Bottom Right</option><option value="top-center">Top Center</option><option value="top-left">Top Left</option><option value="top-right">Top Right</option></select></div></div>
+              <div class="form-group"><label><input type="checkbox" id="s-wm-owner"> Show Project Owner with stamp</label></div>
+            </div>
+          </div>
+          <!-- Collapsible: Time-to-Target -->
+          <div class="settings-collapsible" id="sett-coll-ttt">
+            <div class="settings-collapsible-header"><span class="settings-collapsible-arrow">▸</span> Time-to-Target <span class="settings-collapsible-summary" id="sett-ttt-summary">— Off</span></div>
+            <div class="settings-collapsible-body hidden">
+              <div class="settings-collapsible-desc">Shows the number of weeks between each item and a target milestone (e.g. &lsquo;-12&rsquo; = 12 weeks before launch). Gives a quick visual sense of how far out each item is from the target date.</div>
+              <div class="form-group"><label><input type="checkbox" id="s-ttt-enabled"> Time-to-Target Labels</label></div>
+              <div class="form-row" id="ttt-opts" style="display:none"><div class="form-group"><label>Reference Milestone</label><select id="s-ttt-milestone" class="form-input"><option value="">— Select —</option></select></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ SCHEDULING (gains: Schedule Around) ═══ -->
         <div class="settings-section" id="sect-scheduling"><div class="settings-section-title">Scheduling</div>
           <div class="form-group"><label>Scheduling Mode</label>
             <div id="sched-mode-cards" style="display:flex;gap:8px;margin-top:4px">
@@ -376,34 +444,69 @@
               </div>
             </div>
           </div>
-        </div>
-        <div class="settings-section" id="sect-theme"><div class="settings-section-title">Theme</div>
-          <div class="form-group"><div class="theme-grid"><div class="theme-card active" data-theme="default"><div class="theme-preview tp-default"></div><span>Default</span></div><div class="theme-card" data-theme="claude"><div class="theme-preview tp-claude"></div><span>Claude</span></div><div class="theme-card" data-theme="light"><div class="theme-preview tp-light"></div><span>Light</span></div><div class="theme-card" data-theme="midnight"><div class="theme-preview tp-midnight"></div><span>Midnight</span></div></div></div>
-        </div>
-        <div class="settings-section" id="sect-display"><div class="settings-section-title">Display</div>
-          <div class="form-row"><div class="form-group"><label>Show Today Marker</label><label class="toggle-switch"><input type="checkbox" id="s-today" checked><span class="toggle-slider"></span></label></div><div class="form-group"><label>Show Dependencies</label><label class="toggle-switch"><input type="checkbox" id="s-deps" checked><span class="toggle-slider"></span></label></div></div>
-          <div class="form-group"><label><input type="checkbox" id="s-show-weekends"> Show Weekend Shading</label></div>
-          <div class="form-row hidden" id="weekend-opts">
-            <div class="form-group"><label>Opacity</label><div style="display:flex;align-items:center;gap:6px"><input type="range" id="s-wknd-opacity" min="1" max="30" value="8" style="width:120px"><span id="s-wknd-opval" style="font-size:10px;color:var(--tx3)">8%</span></div></div>
-            <div class="form-group"><label><input type="checkbox" id="s-wknd-auto" checked> Auto-hide at Year scale</label></div>
+          <div class="form-group" style="margin-top:8px"><label><input type="checkbox" id="s-sched-around" checked> Schedule around weekends &amp; holidays</label>
+            <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">When enabled, items set to <strong>Work</strong> duration mode (in the Properties Panel) will skip weekends and holidays marked with the <strong>Sched</strong> checkbox in the Holidays section during Propagate and Auto-Schedule. Items set to <strong>Cal</strong> mode always use calendar days and are not affected.</div>
           </div>
-          <div class="form-group" style="margin-top:8px"><label><input type="checkbox" id="s-show-holidays"> Show Holiday Shading</label></div>
-          <div class="hidden" id="holiday-opts">
-            <div class="form-row">
-              <div class="form-group"><label>Color</label><input type="color" id="s-hol-color" value="#e5534b" class="form-input" style="width:48px;height:28px;padding:1px"></div>
-              <div class="form-group"><label>Opacity</label><div style="display:flex;align-items:center;gap:6px"><input type="range" id="s-hol-opacity" min="1" max="40" value="12" style="width:120px"><span id="s-hol-opval" style="font-size:10px;color:var(--tx3)">12%</span></div></div>
+        </div>
+
+        <!-- ═══ HOLIDAYS (promoted to own section) ═══ -->
+        <div class="settings-section" id="sect-holidays"><div class="settings-section-title">Holidays</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label style="margin:0;font-weight:600;font-size:11px">Holidays (<span id="hol-count">0</span>)</label>
+            <div style="display:flex;gap:4px">
+              <button class="btn btn-secondary" id="btn-hol-add" style="font-size:10px;padding:3px 8px" type="button">+ Add</button>
+              <button class="btn btn-secondary" id="btn-hol-import" style="font-size:10px;padding:3px 8px" type="button">📋 Import</button>
+              <button class="btn btn-secondary" id="btn-hol-clear" style="font-size:10px;padding:3px 8px;color:#e55" type="button">✕ Clear All</button>
             </div>
-            <div class="form-group"><label><input type="checkbox" id="s-hol-labels" checked> Show labels on timeline</label></div>
           </div>
-          <div class="form-group"><label><input type="checkbox" id="s-sched-around" checked> Schedule around weekends &amp; holidays</label>
-            <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">When enabled, Propagate and Auto-Schedule will push dates past weekends and holidays marked with the <strong>Sched</strong> checkbox below.</div>
+          <div id="hol-add-box" class="hidden" style="margin-bottom:6px;padding:8px;border:1px solid var(--acc);border-radius:6px;background:var(--bg2)">
+            <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">
+              <div style="flex:1;min-width:120px"><label style="font-size:10px;font-weight:600;color:var(--tx2);margin-bottom:2px;display:block">Name</label><input type="text" id="hol-add-name" class="form-input" style="font-size:11px;padding:4px 6px" placeholder="e.g. Memorial Day"></div>
+              <div style="min-width:120px"><label style="font-size:10px;font-weight:600;color:var(--tx2);margin-bottom:2px;display:block">Start Date</label><input type="date" id="hol-add-start" class="form-input" style="font-size:11px;padding:4px 6px"></div>
+              <div style="min-width:120px"><label style="font-size:10px;font-weight:600;color:var(--tx2);margin-bottom:2px;display:block">End Date <span style="font-weight:400;color:var(--tx3)">(optional)</span></label><input type="date" id="hol-add-end" class="form-input" style="font-size:11px;padding:4px 6px"></div>
+              <button class="btn btn-primary" id="btn-hol-do-add" type="button" style="font-size:10px;padding:5px 12px;white-space:nowrap">Add</button>
+            </div>
+          </div>
+          <div id="hol-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--brd);border-radius:4px;font-size:10px"></div>
+          <div id="hol-import-box" class="hidden" style="margin-top:6px;padding:8px;border:1px solid var(--brd);border-radius:6px;background:var(--bg2)">
+            <div style="font-size:10px;color:var(--tx3);margin-bottom:4px"><strong>Paste holidays</strong> — one per line: <code>Name &lt;tab&gt; Date</code> or <code>Name &lt;tab&gt; Start &lt;tab&gt; End</code></div>
+            <textarea id="hol-paste-ta" rows="5" class="form-input" style="font-family:monospace;font-size:10px;width:100%" placeholder="New Year's Day&#x09;2026-01-01&#x0a;Spring Break&#x09;2026-03-16&#x09;2026-03-20"></textarea>
+            <div style="display:flex;gap:6px;margin-top:4px;align-items:center"><button class="btn btn-primary" id="btn-hol-do-import" type="button" style="font-size:10px;padding:3px 10px">Add Holidays</button><span id="hol-paste-prev" style="font-size:10px;color:var(--tx3)"></span></div>
+          </div>
+          <div style="margin-top:8px;font-size:10px"><a href="#" id="hol-back-to-shading" style="color:var(--acc);text-decoration:none;cursor:pointer">&larr; Back to shading &amp; appearance options</a></div>
+        </div>
+
+        <!-- ═══ STATUS (unchanged) ═══ -->
+        <div class="settings-section" id="sect-status"><div class="settings-section-title">Status</div>
+          <div class="form-group"><label><input type="checkbox" id="s-status-show" checked> Show status on timeline items</label></div>
+          <div id="status-display-opts">
+            <div class="form-row">
+              <div class="form-group"><label>Display Mode</label><select id="s-status-mode" class="form-input"><option value="emoji">Emoji</option><option value="shortName">Short Name Badge</option><option value="text">Full Text</option></select></div>
+              <div class="form-group"><label>Badge Position</label><select id="s-status-pos" class="form-input"><option value="inline">Inline</option><option value="bottom-right">Bottom Right</option><option value="top-left">Top Left</option></select></div>
+            </div>
+            <div class="form-group"><label><input type="checkbox" id="s-status-color-override"> Override item colors with status colors</label><div style="font-size:10px;color:var(--tx3);margin-top:2px;margin-left:18px">(visual only — individual item colors are preserved)</div></div>
+            <div class="form-group" id="s-blank-color-group" style="display:none;margin-left:18px"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="s-status-blank-on"> Also color items that have no status set</label><div id="s-blank-color-picker" style="display:none;margin-top:4px;margin-left:18px;display:flex;align-items:center;gap:8px"><input type="color" id="s-status-blank-color" value="#6b7280" style="width:32px;height:24px;padding:0;border:1px solid var(--brd);border-radius:3px;cursor:pointer"><span style="font-size:10px;color:var(--tx3)">Choose a uniform color for unset items</span></div></div>
           </div>
           <div class="form-group" style="margin-top:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <label style="margin:0;font-weight:600;font-size:11px">Status Definitions</label>
+              <div style="display:flex;gap:4px">
+                <button class="btn btn-secondary" id="btn-status-add" style="font-size:10px;padding:3px 8px" type="button">+ Add</button>
+                <button class="btn btn-secondary" id="btn-status-reset" style="font-size:10px;padding:3px 8px;color:#e55" type="button">Reset Defaults</button>
+              </div>
+            </div>
+            <div id="status-def-list" style="border:1px solid var(--brd);border-radius:6px;overflow:hidden"></div>
+          </div>
+        </div>
+
+        <!-- ═══ LAYOUT (extracted from Display) ═══ -->
+        <div class="settings-section" id="sect-layout"><div class="settings-section-title">Layout</div>
+          <div class="form-group">
             <div style="display:flex;justify-content:space-between;align-items:center">
               <label style="font-weight:600;font-size:11px">Auto Arrange</label>
               <button class="btn btn-secondary" id="btn-arrange-reset" type="button" style="font-size:9px;padding:2px 8px">Reset Defaults</button>
             </div>
-            <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4;margin-bottom:6px">Controls how Auto Arrange and imported items are distributed across rows. Imported items are always auto-arranged when no Row column is mapped.</div>
+            <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4;margin-bottom:6px">Controls how Auto Arrange and imported items are distributed across rows. Select items on the timeline, then right-click &rarr; <strong>Auto Arrange</strong> to apply. Imported items are always auto-arranged when no Row column is mapped.</div>
             <!-- Simple slider -->
             <div class="form-group">
               <label>Layout Style</label>
@@ -453,82 +556,25 @@
                   <label><input type="checkbox" id="s-arrange-labels"> Consider label width</label>
                   <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">When enabled, label text width is included in collision detection so labels don't overlap. Disable for tighter packing, then adjust label positions (center, left, etc.) as needed.</div>
                 </div>
+                <div class="form-group">
+                  <label><input type="checkbox" id="s-auto-sort-swim"> Sort swimlanes by date gravity</label>
+                  <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">Reorders swimlanes and sub-swimlanes chronologically by weighted average date. Tasks carry more weight than milestones. Automatically applied during import when swimlane/sub-swimlane columns are mapped.</div>
+                </div>
               </div>
             </div>
             <div class="form-group">
               <label><input type="checkbox" id="s-arrange-live"> Live preview</label>
-              <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">⚠️ Applies sliders to <strong>all items</strong> in real time. The settings window will become movable so you can see the timeline update as you drag the sliders.</div>
+              <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4"><strong style="color:#d97706">&#9888;&#65039; Warning:</strong> Applies sliders to <strong>all items</strong> in real time. The settings window will become movable so you can see the timeline update as you drag the sliders.</div>
             </div>
-            <div class="form-group">
-              <label><input type="checkbox" id="s-auto-sort-swim"> Sort swimlanes by date gravity</label>
-              <div style="font-size:9.5px;color:var(--tx3);margin-top:2px;line-height:1.4">Reorders swimlanes and sub-swimlanes chronologically by weighted average date. Tasks carry more weight than milestones. Automatically applied during import when swimlane/sub-swimlane columns are mapped.</div>
-            </div>
-          </div>
-          <div class="form-group" id="sect-holidays">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <label style="margin:0;font-weight:600;font-size:11px">Holidays (<span id="hol-count">0</span>)</label>
-              <div style="display:flex;gap:4px">
-                <button class="btn btn-secondary" id="btn-hol-add" style="font-size:10px;padding:3px 8px" type="button">+ Add</button>
-                <button class="btn btn-secondary" id="btn-hol-import" style="font-size:10px;padding:3px 8px" type="button">📋 Import</button>
-                <button class="btn btn-secondary" id="btn-hol-clear" style="font-size:10px;padding:3px 8px;color:#e55" type="button">✕ Clear All</button>
-              </div>
-            </div>
-            <div id="hol-add-box" class="hidden" style="margin-bottom:6px;padding:8px;border:1px solid var(--acc);border-radius:6px;background:var(--bg2)">
-              <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">
-                <div style="flex:1;min-width:120px"><label style="font-size:10px;font-weight:600;color:var(--tx2);margin-bottom:2px;display:block">Name</label><input type="text" id="hol-add-name" class="form-input" style="font-size:11px;padding:4px 6px" placeholder="e.g. Memorial Day"></div>
-                <div style="min-width:120px"><label style="font-size:10px;font-weight:600;color:var(--tx2);margin-bottom:2px;display:block">Start Date</label><input type="date" id="hol-add-start" class="form-input" style="font-size:11px;padding:4px 6px"></div>
-                <div style="min-width:120px"><label style="font-size:10px;font-weight:600;color:var(--tx2);margin-bottom:2px;display:block">End Date <span style="font-weight:400;color:var(--tx3)">(optional)</span></label><input type="date" id="hol-add-end" class="form-input" style="font-size:11px;padding:4px 6px"></div>
-                <button class="btn btn-primary" id="btn-hol-do-add" type="button" style="font-size:10px;padding:5px 12px;white-space:nowrap">Add</button>
-              </div>
-            </div>
-            <div id="hol-list" style="max-height:160px;overflow-y:auto;border:1px solid var(--bd);border-radius:4px;font-size:10px"></div>
-          </div>
-          <div id="hol-import-box" class="hidden" style="margin-top:6px;padding:8px;border:1px solid var(--bd);border-radius:6px;background:var(--bg2)">
-            <div style="font-size:10px;color:var(--tx3);margin-bottom:4px"><strong>Paste holidays</strong> — one per line: <code>Name &lt;tab&gt; Date</code> or <code>Name &lt;tab&gt; Start &lt;tab&gt; End</code></div>
-            <textarea id="hol-paste-ta" rows="5" class="form-input" style="font-family:monospace;font-size:10px;width:100%" placeholder="New Year's Day&#x09;2026-01-01&#x0a;Spring Break&#x09;2026-03-16&#x09;2026-03-20"></textarea>
-            <div style="display:flex;gap:6px;margin-top:4px;align-items:center"><button class="btn btn-primary" id="btn-hol-do-import" type="button" style="font-size:10px;padding:3px 10px">Add Holidays</button><span id="hol-paste-prev" style="font-size:10px;color:var(--tx3)"></span></div>
           </div>
         </div>
-        <div class="settings-section" id="sect-status"><div class="settings-section-title">Status</div>
-          <div class="form-group"><label><input type="checkbox" id="s-status-show" checked> Show status on timeline items</label></div>
-          <div id="status-display-opts">
-            <div class="form-row">
-              <div class="form-group"><label>Display Mode</label><select id="s-status-mode" class="form-input"><option value="emoji">Emoji</option><option value="shortName">Short Name Badge</option><option value="text">Full Text</option></select></div>
-              <div class="form-group"><label>Badge Position</label><select id="s-status-pos" class="form-input"><option value="inline">Inline</option><option value="bottom-right">Bottom Right</option><option value="top-left">Top Left</option></select></div>
-            </div>
-            <div class="form-group"><label><input type="checkbox" id="s-status-color-override"> Override item colors with status colors</label><div style="font-size:10px;color:var(--tx3);margin-top:2px;margin-left:18px">(visual only — individual item colors are preserved)</div></div>
-            <div class="form-group" id="s-blank-color-group" style="display:none;margin-left:18px"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="s-status-blank-on"> Also color items that have no status set</label><div id="s-blank-color-picker" style="display:none;margin-top:4px;margin-left:18px;display:flex;align-items:center;gap:8px"><input type="color" id="s-status-blank-color" value="#6b7280" style="width:32px;height:24px;padding:0;border:1px solid var(--brd);border-radius:3px;cursor:pointer"><span style="font-size:10px;color:var(--tx3)">Choose a uniform color for unset items</span></div></div>
-          </div>
-          <div class="form-group" style="margin-top:8px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <label style="margin:0;font-weight:600;font-size:11px">Status Definitions</label>
-              <div style="display:flex;gap:4px">
-                <button class="btn btn-secondary" id="btn-status-add" style="font-size:10px;padding:3px 8px" type="button">+ Add</button>
-                <button class="btn btn-secondary" id="btn-status-reset" style="font-size:10px;padding:3px 8px;color:#e55" type="button">Reset Defaults</button>
-              </div>
-            </div>
-            <div id="status-def-list" style="border:1px solid var(--brd);border-radius:6px;overflow:hidden"></div>
-          </div>
-        </div>
-        <div class="settings-section" id="sect-format"><div class="settings-section-title">Date &amp; Format</div>
-          <div class="form-group"><label>Date Format</label>
-            <select id="s-date-fmt" class="form-input"><option value="MMM D, YYYY">Jan 1, 2026</option><option value="MM/DD/YYYY">01/01/2026</option><option value="DD/MM/YYYY">01/01/2026 (EU)</option><option value="YYYY-MM-DD">2026-01-01</option><option value="M/D">1/1</option><option value="MMM D">Jan 1</option><option value="MMM YYYY">Jan 2026</option><option value="custom">Custom Format…</option></select>
-          </div>
-          <div class="form-group" id="custom-fmt-group" style="display:none"><label>Custom Pattern <span style="font-weight:400;color:var(--tx3)">(DD=01, D=1, MMM=Jan, MMMM=January, MM=01, M=1, YYYY=2026, YY=26)</span></label><input type="text" id="s-custom-fmt" class="form-input" value="DDMMMYY" placeholder="e.g. DDMMMYY → 01Jan26"></div>
-          <div class="form-group"><label>Default Font Size (px)</label><input type="number" id="s-fontsize" class="form-input" value="11" min="8" max="20" style="width:80px"></div>
-        </div>
-        <div class="settings-section" id="sect-watermark"><div class="settings-section-title">Watermark</div>
-          <div class="form-group"><label><input type="checkbox" id="s-watermark"> Show "Last Updated" stamp</label></div>
-          <div class="form-row hidden" id="watermark-opts"><div class="form-group"><label>Date</label><input type="date" id="s-wm-date" class="form-input"></div><div class="form-group"><label>Position</label><select id="s-wm-pos" class="form-input"><option value="bottom-center">Bottom Center</option><option value="bottom-left">Bottom Left</option><option value="bottom-right">Bottom Right</option><option value="top-center">Top Center</option><option value="top-left">Top Left</option><option value="top-right">Top Right</option></select></div></div>
-          <div class="form-group"><label><input type="checkbox" id="s-wm-owner"> Show Project Owner with stamp</label></div>
-        </div>
-        <div class="settings-section" id="sect-ttt"><div class="settings-section-title">Time-to-Target</div>
-          <div class="form-group"><label><input type="checkbox" id="s-ttt-enabled"> Time-to-Target Labels</label></div>
-          <div class="form-row" id="ttt-opts" style="display:none"><div class="form-group"><label>Reference Milestone</label><select id="s-ttt-milestone" class="form-input"><option value="">— Select —</option></select></div></div>
-        </div>
+
+        <!-- ═══ EXPORT ═══ -->
         <div class="settings-section" id="sect-export"><div class="settings-section-title">Export</div>
           <div class="export-options"><button class="export-opt" id="btn-exp-svg">🖼 SVG</button><button class="export-opt" id="btn-exp-png">📷 PNG</button><button class="export-opt" id="btn-exp-json">📄 JSON</button><button class="export-opt" id="btn-exp-csv">📊 CSV</button></div>
         </div>
+
+        <!-- ═══ SHORTCUTS (unchanged) ═══ -->
         <div class="settings-section" id="sect-shortcuts"><div class="settings-section-title">Keyboard Shortcuts</div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <div style="font-size:10px;color:var(--tx3)">Click a binding to change it. Press <kbd style="background:var(--bg2);padding:1px 4px;border-radius:3px;border:1px solid var(--brd);font-size:9px">Esc</kbd> to cancel recording.</div>
@@ -537,12 +583,17 @@
           <div id="sc-conflict-msg" class="hidden" style="padding:6px 10px;background:#fef3c7;border:1px solid #f59e0b;border-radius:5px;font-size:10px;color:#92400e;margin-bottom:8px"></div>
           <div id="sc-list" style="max-height:340px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px"></div>
         </div>
-        <div class="settings-section" id="sect-links"><div class="settings-section-title">🌐 URL Links</div>
+
+        <!-- ═══ LINKS (renamed from URL Links) ═══ -->
+        <div class="settings-section" id="sect-links"><div class="settings-section-title">Links</div>
           <div id="settings-links-list" style="font-size:11px"></div>
         </div>
+
+        <!-- ═══ ADVANCED ═══ -->
         <div class="settings-section" id="sect-advanced"><div class="settings-section-title">Advanced</div>
           <div class="form-group"><label>Default Project Folder</label><input type="text" id="s-default-folder" class="form-input" placeholder="e.g. C:\Users\You\Documents\Timeline Studio"></div>
         </div>
+
         </div>
       </div>
       <div class="modal-footer settings-modal-footer"><button class="btn btn-secondary" data-close-modal>Cancel</button><button class="btn btn-primary" id="btn-s-apply">Apply</button></div>
