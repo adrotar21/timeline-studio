@@ -1,4 +1,4 @@
-/* Timeline Studio v0.42.4 — B49 share link: Office truncation advisory in share modal, failure toast when decompression fails, reverted %23p= fallback. */
+/* Timeline Studio v0.42.5 — B50 bug sweep: XSS fix in tooltip (escape project name/filename in HTML tooltips), _packProj vLine default comparison fixed (was comparing against item color instead of #999999), addSubSw deferred item mutation to saveSwM (prevents non-undoable changes on cancel), doPaste now initializes status/statusDate/vLine/links/durMode, dead first parameter removed from buildHdrRows month/year callbacks. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -596,7 +596,7 @@ const App={
       if(!it.labelPosition||it.labelPosition==='right')delete it.labelPosition;
       if(it.vLine){
         const v=it.vLine;
-        if(!v.enabled&&v.style==='dashed'&&v.color===it.color&&v.direction==='both'&&v.extent==='swim')delete it.vLine;
+        if(!v.enabled&&v.style==='dashed'&&v.color==='#999999'&&v.direction==='both'&&v.extent==='swim')delete it.vLine;
       }
       if(!it.links||!it.links.length)delete it.links;
       delete it._float;
@@ -830,8 +830,8 @@ const App={
     if(pnd){
       const projName=this.proj?.name||'Untitled';
       let tip='Double-click to edit project name';
-      if(fname)tip=projName+'<br>'+fname+(dirty?' (unsaved changes)':'')+'<br><br>Double-click to edit name';
-      else tip=projName+'<br><br>Double-click to edit name';
+      if(fname)tip=U.esc(projName)+'<br>'+U.esc(fname)+(dirty?' (unsaved changes)':'')+'<br><br>Double-click to edit name';
+      else tip=U.esc(projName)+'<br><br>Double-click to edit name';
       pnd.dataset.tooltip=tip;
     }
   },
@@ -2388,12 +2388,13 @@ const App={
   addSubSw(){
     if(this._tmpSubs.length===0&&this._esl){
       const defId=U.id();this._tmpSubs.push({id:defId,name:this._esl.name+' (Default)',height:0,collapsed:'expanded'});
-      this.proj.items.filter(i=>i.swimlaneId===this._esl.id&&!i.subSwimId).forEach(i=>i.subSwimId=defId);
+      this._tmpDefSubId=defId;
     }
     this._tmpSubs.push({id:U.id(),name:'Sub-lane '+(this._tmpSubs.length+1),height:0,collapsed:'expanded'});this.renderSSW()
   },
   saveSwM(){
     this.snap();const name=this.$.sw_name.value.trim()||'Untitled';const color=this.$.sw_color.value;
+    if(this._tmpDefSubId&&this._esl){this.proj.items.filter(i=>i.swimlaneId===this._esl.id&&!i.subSwimId).forEach(i=>i.subSwimId=this._tmpDefSubId);this._tmpDefSubId=null}
     const fs=parseFloat(document.getElementById('sw-fontsize')?.value)||0;
     const subs=this._tmpSubs.filter(s=>s.name.trim()).map(s=>({id:s.id,name:s.name.trim(),height:s.height||0,collapsed:s.collapsed||'expanded',fontSize:s.fontSize||0,links:s.links||[]}));
     const slLinks=(this._tmpSlLinks||[]).filter(lk=>lk.url&&lk.url.trim());
@@ -2954,7 +2955,7 @@ const App={
   showPaste(){this.$.paste_sw.innerHTML=this.proj.swimlanes.map(s=>`<option value="${s.id}">${U.esc(s.name)}</option>`).join('');this.$.paste_ta.value='';this.$.paste_prev.textContent='';this._impData=null;this._impMappings=[];this._impOverloads=[];this._impSelSrc=null;this._impStatusMap={};if(this.$.imp_file_name)this.$.imp_file_name.textContent='No file selected';if(this.$.imp_file_input)this.$.imp_file_input.value='';if(this.$.imp_map_area)this.$.imp_map_area.classList.add('hidden');if(this.$.imp_status_area)this.$.imp_status_area.classList.add('hidden');if(this.$.imp_perfect_match)this.$.imp_perfect_match.classList.add('hidden');if(this.$.imp_preview_wrap){this.$.imp_preview_wrap.classList.add('hidden');this.$.imp_preview_wrap.innerHTML=''}if(this.$.imp_overload_area){this.$.imp_overload_area.classList.add('hidden');this.$.imp_overload_area.innerHTML=''}if(this.$.imp_status)this.$.imp_status.textContent='';if(this.$.btn_imp_do)this.$.btn_imp_do.classList.add('hidden');if(this.$.imp_adv_toggle)this.$.imp_adv_toggle.classList.remove('open');if(this.$.imp_adv_body)this.$.imp_adv_body.classList.add('hidden');this.showModal('paste-modal');this.$.paste_ta.focus()},
   previewPaste(){const r=this.parsePaste(this.$.paste_ta.value);this.$.paste_prev.textContent=r.length?`Found ${r.length} items`:''},
   parsePaste(text){return text.trim().split('\n').filter(l=>l.trim()).map(line=>{const c=line.split('\t').map(s=>s.trim());if(c.length<2||!c[0])return null;if(c.length>=3){const d1=U.parseDate(c[1]),d2=U.parseDate(c[2]);if(d1&&d2)return{name:c[0],type:'task',startDate:U.iso(d1),endDate:U.iso(d2)};if(d1)return{name:c[0],type:'milestone',date:U.iso(d1)}}if(c.length>=2){const d=U.parseDate(c[1]);if(d)return{name:c[0],type:'milestone',date:U.iso(d)}}return null}).filter(Boolean)},
-  doPaste(){const rows=this.parsePaste(this.$.paste_ta.value);if(!rows.length){this.toast('No valid data','error');return}this.snap();const tgt=this.$.paste_sw.value;rows.forEach((r,i)=>{const it={id:U.id(),type:r.type,name:r.name,swimlaneId:tgt,subSwimId:'',subRow:i%3,color:COLORS[i%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:''};if(r.type==='milestone')it.date=r.date;else{it.startDate=r.startDate;it.endDate=r.endDate;it.duration=U.days(r.startDate,r.endDate)+1}this.proj.items.push(it)});if(this.proj.autoRange)this.autoRange();document.getElementById('paste-modal').classList.add('hidden');this.sched();this.autoSave();this.toast(`Imported ${rows.length} items`)},
+  doPaste(){const rows=this.parsePaste(this.$.paste_ta.value);if(!rows.length){this.toast('No valid data','error');return}this.snap();const tgt=this.$.paste_sw.value;rows.forEach((r,i)=>{const it={id:U.id(),type:r.type,name:r.name,swimlaneId:tgt,subSwimId:'',subRow:i%3,color:COLORS[i%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:'',status:'',statusDate:'',vLine:{enabled:false,style:'dashed',color:'#999999',direction:'both',extent:'swim'},links:[]};if(r.type==='milestone')it.date=r.date;else{it.startDate=r.startDate;it.endDate=r.endDate;it.durMode='cal';it.duration=U.days(r.startDate,r.endDate)+1}this.proj.items.push(it)});if(this.proj.autoRange)this.autoRange();document.getElementById('paste-modal').classList.add('hidden');this.sched();this.autoSave();this.toast(`Imported ${rows.length} items`)},
 
   /* ===== ADVANCED IMPORT (F35) ===== */
   _IMP_TGT_FIELDS:['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Predecessors','Status','StatusDate','Progress','Notes','Color','Pinned','Hidden','LabelPos','FontSize','TextColor','DateFormat','ShowDate'],
@@ -4166,7 +4167,7 @@ const App={
     if(layers>=3&&(ts==='days'||ts==='weeks'||ts==='months')){
       if(ts==='days'||ts==='weeks'){
         rows.push(buildBoundaryRow(
-          (d,first)=>{const y=first?d.getFullYear():d.getFullYear()+1;return new Date(y+(first?1:0),0,1)},
+          (d)=>new Date(d.getFullYear()+1,0,1),
           d=>String(d.getFullYear())
         ));
       }else{const g=[];let cy=null,cn=0;tl.cols.forEach(c=>{if(c.year!==cy){if(cy!==null)g.push({label:String(cy),span:cn});cy=c.year;cn=1}else cn++});if(cy!==null)g.push({label:String(cy),span:cn});rows.push(g)}
@@ -4174,7 +4175,7 @@ const App={
     if(layers>=2){
       if(ts==='days'||ts==='weeks'){
         rows.push(buildBoundaryRow(
-          (d,first)=>{const m=first?d.getMonth()+1:d.getMonth()+1;return new Date(d.getFullYear(),m,1)},
+          (d)=>new Date(d.getFullYear(),d.getMonth()+1,1),
           d=>monthLabel(d.getMonth())
         ));
       }
