@@ -1,4 +1,4 @@
-/* Timeline Studio v0.42.5 — B50 bug sweep: XSS fix in tooltip (escape project name/filename in HTML tooltips), _packProj vLine default comparison fixed (was comparing against item color instead of #999999), addSubSw deferred item mutation to saveSwM (prevents non-undoable changes on cancel), doPaste now initializes status/statusDate/vLine/links/durMode, dead first parameter removed from buildHdrRows month/year callbacks. */
+/* Timeline Studio v0.42.6 — F47 Import shortcut: added "Import..." entry to the Add dropdown (+ button) that opens the paste/import modal directly, making the import flow discoverable without hunting through File menu or Data View. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -1348,6 +1348,7 @@ const App={
     on('btn-add-ms',()=>{this.$.add_dropdown.classList.add('hidden');this.addItem('milestone')});
     on('btn-add-task',()=>{this.$.add_dropdown.classList.add('hidden');this.addItem('task')});
     on('btn-add-sw',()=>{this.$.add_dropdown.classList.add('hidden');this.showSwM()});
+    on('btn-add-import',()=>{this.$.add_dropdown.classList.add('hidden');this.showPaste()});
     on('btn-undo',()=>this.undo());on('btn-redo',()=>this.redo());
     // View dropdown
     on('btn-view-menu',()=>{this.closeAllDD();this.$.view_dropdown.classList.toggle('hidden');this.posDD(this.$.view_dropdown)});
