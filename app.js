@@ -1,4 +1,4 @@
-/* Timeline Studio v0.43.0 — F54 Settings modal reorganization: 13→10 nav sections (Project, Appearance, Scheduling, Holidays, Status, Layout, Export, Shortcuts, Links, Advanced). Collapsible Watermark/TTT panels with descriptions and reactive summaries. Inline shading controls with color preview boxes (live opacity preview). Promoted Holidays to own section with cross-links. Live theme preview. Toggle switch depth. Auto Arrange right-click hint. */
+/* Timeline Studio v0.44.1 — F56 Open in New Tab/Window: ⧉ button on MRU entries opens recent files in new tab (left-click) or window (right-click popover). Reads latest from disk via FileSystemFileHandle, compresses through share link pipeline (#p= URL hash), new tab auto-links back to disk file via ?mru= query param + IDB handle reconnect. Unsaved changes block (must save first). MRU dropdown auto-collapses on close. Vertical guide line replaces indentation. Popover dismiss pattern documented. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -175,7 +175,7 @@ const App={
   _dirty:false,_dataDirty:false,_raf:null,_unsaved:false,_shareMode:false,_fileHintShown:false,_storedHandle:null,
   _sortCol:null,_sortDir:'asc',
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
-  _fileHandle:null,_mruCache:[],_mruValidated:false,_mruExpanded:false,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
+  _fileHandle:null,_mruCache:[],_mruValidated:false,_mruExpanded:false,_mruLinkId:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
   _lassoMode:false,_panMode:false,_panning:false,_fpMode:false,_fpPersist:false,_fpStaged:false,_fpSourceId:null,_fpSourceData:null,_collapsedSl:new Set(),_pendingFit:false,
   _impData:null,_impMappings:[],_impOverloads:[],_impSelSrc:null,_impStatusMap:{},_impLinkColors:['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'],
   _scMap:{},_scOverrides:null,_scRecording:null,_nudgeSnapped:false,_nudgeSnapTimer:null,_scMsgTimer:null,
@@ -302,6 +302,7 @@ const App={
         const st=e._state||'nameonly';const isCur=curName&&e.name===curName;
         const tip=e.projectName?U.esc(e.projectName):'';
         html+='<div class="mru-entry'+(isCur?' mru-current':'')+'" data-mru-id="'+U.esc(e.id)+'"'+(tip?' data-tooltip="'+tip+'"':'')+'>';
+        if(e.handle)html+='<span class="mru-ext" data-mru-ext="'+U.esc(e.id)+'" data-tooltip="Open in new tab (right-click for options)">\u29C9</span>';
         html+='<span class="mru-name">'+U.esc(e.name)+'</span>';
         if(isCur)html+='<span class="mru-badge mru-badge-cur" data-mru-badge="'+U.esc(e.id)+'" data-tooltip="Currently open">&#10003;</span>';
         else if(st==='orphaned')html+='<span class="mru-badge mru-badge-warn" data-mru-badge="'+U.esc(e.id)+'" data-tooltip="File not found \u2014 may have been moved or deleted">\u26A0</span>';
@@ -311,13 +312,20 @@ const App={
         html+='</div>'});
       html+='</div>'}
     sec.innerHTML=html;
-    /* Bind MRU entry clicks (on name area, not the × button) */
-    sec.querySelectorAll('.mru-entry').forEach(el=>{el.addEventListener('click',ev=>{
-      if(ev.target.closest('.mru-remove'))return;/* let remove handler handle it */
-      this.$.file_dropdown.classList.add('hidden');this._mruExpanded=false;this._openFromMRU(el.dataset.mruId)})});
+    /* Bind MRU entry clicks and right-click popover */
+    sec.querySelectorAll('.mru-entry').forEach(el=>{
+      el.addEventListener('click',ev=>{
+        if(ev.target.closest('.mru-remove')||ev.target.closest('.mru-ext'))return;
+        this.$.file_dropdown.classList.add('hidden');this._mruExpanded=false;this._openFromMRU(el.dataset.mruId)});
+      /* Right-click anywhere on the entry → popover (if entry has a handle) */
+      const extBtn=el.querySelector('.mru-ext');
+      if(extBtn)el.addEventListener('contextmenu',ev=>{ev.preventDefault();ev.stopPropagation();this._showExtPopover(extBtn,el.dataset.mruId)})});
     /* Bind individual remove buttons */
     sec.querySelectorAll('.mru-remove').forEach(el=>{el.addEventListener('click',async ev=>{
       ev.stopPropagation();await this._removeMRUEntry(el.dataset.mruRm);this._renderMRUDropdown()})});
+    /* Bind ⧉ left-click: open in new tab */
+    sec.querySelectorAll('.mru-ext').forEach(el=>{
+      el.addEventListener('click',ev=>{ev.stopPropagation();this._openInNewTab(el.dataset.mruExt,false)})});
     const browseBtn=document.getElementById('btn-browse');
     if(browseBtn)browseBtn.addEventListener('click',()=>{this.$.file_dropdown.classList.add('hidden');this._mruExpanded=false;this.openFile()});
     /* Kick off async validation */
@@ -370,6 +378,48 @@ const App={
       if(e instanceof SyntaxError)this.toast('Invalid file','error');
       else{entry._state='orphaned';this._syncMRUCache();this._renderMRUBadges();this.toast('File not found \u2014 may have been moved or deleted','error')}
     }
+  },
+  async _openInNewTab(id,asWindow){
+    const entry=this._mruCache.find(e=>e.id===id);if(!entry||!entry.handle)return;
+    const st=entry._state||'nameonly';
+    if(st==='orphaned'){this.toast('File not found \u2014 may have been moved or deleted','error');return}
+    /* Block unsaved current file */
+    let isCur=!!(this._fileHandle&&entry.handle);
+    if(isCur){try{isCur=await this._fileHandle.isSameEntry(entry.handle)}catch(e){isCur=false}}
+    if(isCur&&this._unsaved){this.toast('Save your changes first \u2014 the new tab loads from disk','error',4000);return}
+    /* Request permission if stale/denied */
+    if(st==='stale'||st==='denied'){
+      try{const perm=await entry.handle.requestPermission({mode:'read'});
+        if(perm!=='granted'){this.toast('Permission denied','error');return}
+      }catch(e){this.toast('Permission denied','error');return}
+    }
+    /* Read file from disk, compress, open */
+    try{
+      const file=await entry.handle.getFile();const text=await file.text();const proj=JSON.parse(text);
+      const packed=this._packProj(proj);const encoded=_skEnc(packed);
+      const json=JSON.stringify(encoded);const compressed=await this._compress(json);
+      const url=location.origin+location.pathname+'?mru='+encodeURIComponent(entry.id)+'#p='+compressed;
+      if(url.length>11500){this.toast('Project too large to open in a new tab','error',4000);return}
+      if(asWindow){window.open(url,'_blank','width=1200,height=800,menubar=no,toolbar=no')}
+      else{window.open(url,'_blank')}
+      this.toast('Opened in new '+(asWindow?'window':'tab'),'info')
+    }catch(e){
+      if(e instanceof SyntaxError)this.toast('Invalid file','error');
+      else this.toast('Could not open file','error')
+    }
+  },
+  _showExtPopover(anchor,id){
+    this._hideExtPopover();
+    const pop=document.createElement('div');pop.className='mru-ext-pop';
+    pop.innerHTML='<div class="mru-ext-opt" data-act="tab">\u2197 Open in new tab</div><div class="mru-ext-opt" data-act="win">\u29C9 Open in new window</div>';
+    const rect=anchor.getBoundingClientRect();pop.style.top=(rect.bottom+2)+'px';pop.style.left=rect.left+'px';
+    document.body.appendChild(pop);
+    pop.querySelectorAll('.mru-ext-opt').forEach(opt=>{opt.addEventListener('click',ev=>{
+      ev.stopPropagation();this._hideExtPopover();this._openInNewTab(id,opt.dataset.act==='win')})});
+    this._extPop=pop
+  },
+  _hideExtPopover(){
+    if(this._extPop){this._extPop.remove();this._extPop=null}
   },
   _scDispatch:{
     undo(){this.undo()},
@@ -469,6 +519,22 @@ const App={
     if(this.panelCollapsed){this.$.panel_tab.classList.remove('hidden');this.$.props_panel.classList.add('panel-hidden');this._syncLockTab()}else{this._renderEmptyPanel()}
     this._syncPanelPad();this.applyTheme();this.bind();this.sched();if(this.proj.items.length)this._pendingFit=true;
     if(this._shareMode){this._showShareBanner();this.markClean();this.toast('Shared timeline loaded','info',3000)}
+    /* F56: Reconnect file handle when opened from MRU in new tab */
+    if(this._mruLinkId){(async()=>{
+      try{
+        await this._loadMRU();
+        const entry=this._mruCache.find(e=>e.id===this._mruLinkId);
+        if(entry&&entry.handle){
+          const perm=await entry.handle.queryPermission({mode:'readwrite'});
+          if(perm==='granted'){this._fileHandle=entry.handle;this._storeHandle(entry.handle);
+            try{localStorage.setItem('tls3_fileName',entry.handle.name)}catch(e){}
+            this.markClean();this._updateFileIndicator()
+          }else{this._storedHandle=entry.handle;this._updateFileIndicator();
+            setTimeout(()=>this.toast(entry.name+' \u2014 click filename to reconnect','info',4000),600)}
+        }
+        this._mruLinkId=null
+      }catch(e){this._mruLinkId=null}
+    })()}
     /* F53: File handle reconnect on startup */
     if(!this._shareMode&&this.proj.items.length){(async()=>{
       const stored=await this._loadHandle();
@@ -677,11 +743,15 @@ const App={
       if(!json)throw new Error('decompress failed');
       const parsed=JSON.parse(json);
       this.proj=_skDec(parsed);
-      this._shareMode=true;
+      /* F56: Check if this is a local MRU open (not a remote share link) */
+      const params=new URLSearchParams(location.search);
+      const mruId=params.get('mru');
+      if(mruId){this._shareMode=false;this._mruLinkId=mruId}
+      else{this._shareMode=true}
       this._fileHandle=null;
-      history.replaceState(null,'',location.pathname+location.search);
+      history.replaceState(null,'',location.pathname);
       return true;
-    }catch(e){console.warn('Share link load failed:',e);if(location.hash.startsWith('#p=')){this._shareLoadFailed=true;history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>App.toast('Share link may be truncated \u2014 copy-paste the full URL directly','error',6000),500)}return false}
+    }catch(e){console.warn('Share link load failed:',e);if(location.hash.startsWith('#p=')){this._shareLoadFailed=true;history.replaceState(null,'',location.pathname);setTimeout(()=>App.toast('Share link may be truncated \u2014 copy-paste the full URL directly','error',6000),500)}return false}
   },
   toast(m,t='success',dur=2200){const el=document.createElement('div');el.className=`toast toast-${t}`;el.textContent=m;const active=document.querySelectorAll('.toast');const offset=active.length*40;el.style.bottom=(18+offset)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),dur)},
 
@@ -694,8 +764,8 @@ const App={
     const fn=(this.proj.name||'timeline')+'.tlproj';const b=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;a.click();URL.revokeObjectURL(a.href);this.markClean();this.toast('Downloaded!');this.autoSave();try{localStorage.setItem('tls3_fileName',fn)}catch(e){}this._updateFileIndicator();this._updateMRU(null,fn,this.proj.name)
   },
   /* ── Share-link compression pipeline ── */
-  _packProj(){
-    const p=U.deep(this.proj);
+  _packProj(src){
+    const p=U.deep(src||this.proj);
     const def=newProj();
     /* project-level: strip fields matching defaults */
     const projStrip=['owner','dateFormat','timescale','headerLayers','autoRange','showToday','showDeps',
@@ -1466,10 +1536,6 @@ const App={
     // File dropdown
     on('btn-file-menu',()=>{
       this.closeAllDD();
-      /* Restore MRU expansion state from session */
-      const sec=document.getElementById('mru-section');const arrow=document.getElementById('mru-arrow');
-      if(sec&&this._mruExpanded){sec.classList.remove('hidden');if(arrow)arrow.classList.add('open');this._renderMRUDropdown()}
-      else if(sec){sec.classList.add('hidden');if(arrow)arrow.classList.remove('open')}
       this.$.file_dropdown.classList.toggle('hidden');this.posDD(this.$.file_dropdown)
     });
     on('btn-open-recent',e=>{e.stopPropagation();this._toggleMRU()});
@@ -1689,6 +1755,7 @@ const App={
       if(!e.target.closest('#sl-fmt-popover')&&!(e.target.closest('.sl-lbl')&&(e.ctrlKey||e.metaKey)))this._hideSlFmtPopover();
       if(!e.target.closest('#hdr-fmt-popover'))this._hideHdrFmtPopover();
       if(!e.target.closest('#fp-popover')&&!e.target.closest('#fp-split')){if(this._fpStaged)this.deactivateFP();else this._hideFPPopover()}
+      if(!e.target.closest('.mru-ext-pop'))this._hideExtPopover();
     });
     this.$.ctx_menu.addEventListener('click',e=>{const a=e.target.closest('[data-action]')?.dataset.action;if(a&&!e.target.closest('.ctx-disabled'))this.ctxAct(a);this.$.ctx_menu.classList.add('hidden')});
     // DT context menu
@@ -1839,7 +1906,9 @@ const App={
     requestAnimationFrame(()=>{const newTl=this.met();const newPx=this.dX(anchorDate,newTl);if(newPx!=null)bs.scrollLeft=Math.max(0,newPx-anchorScreenX)});
   },
   doZoomTo(t){this.doZoom(t-(this.proj.zoom||100))},
-  closeAllDD(){['file_dropdown','add_dropdown','view_dropdown','tools_dropdown'].forEach(k=>{if(this.$[k])this.$[k].classList.add('hidden')})},
+  closeAllDD(){['file_dropdown','add_dropdown','view_dropdown','tools_dropdown'].forEach(k=>{if(this.$[k])this.$[k].classList.add('hidden')});
+    this._mruExpanded=false;const sec=document.getElementById('mru-section');const arrow=document.getElementById('mru-arrow');
+    if(sec)sec.classList.add('hidden');if(arrow)arrow.classList.remove('open')},
   posDD(dd){
     if(!dd)return;
     dd.style.left='';dd.style.right='';
@@ -4634,7 +4703,7 @@ const App={
     if(e.button===1){e.preventDefault();this.startPan(e);return}
     if(e.button===0&&this._panMode){this.startPan(e);return}
     if(e.button!==0)return;
-    this.closeAllDD();this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');this._hideHdrFmtPopover();
+    this.closeAllDD();this.$.ctx_menu.classList.add('hidden');this.$.dt_ctx_menu.classList.add('hidden');this._hideHdrFmtPopover();this._hideExtPopover();
     if(e.altKey||this._lassoMode||(e.ctrlKey&&!e.target.closest('.tl-item'))){e.preventDefault();e.stopPropagation();this.startLasso(e);return}
     if(this._fpMode){const fpEl=e.target.closest('.tl-item');if(fpEl){e.preventDefault();e.stopPropagation();this.fpApply(fpEl.dataset.iid)}return}
     const rh=e.target.closest('.tl-task-rs');if(rh&&!this.proj.locked){this.startTR(e,rh);return}const iEl=e.target.closest('.tl-item');if(iEl){const id=iEl.dataset.iid;if(e.ctrlKey||e.metaKey){const idx=this.sel.indexOf(id);if(idx>=0)this.sel.splice(idx,1);else this.sel.push(id)}else if(!this.sel.includes(id))this.sel=[id];this._clearSlSel();

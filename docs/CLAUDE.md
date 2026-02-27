@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.44.0` — F55 Recent Files (MRU): collapsible "Open & Recent" submenu in File dropdown with file handle state machine and lazy validation. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.44.1` — F56 Open in New Tab/Window: ⧉ button on MRU entries, right-click popover for tab vs window, disk file reconnect via ?mru= param, auto-collapse MRU, vertical guide line, popover dismiss pattern. Live at `https://adrotar21.github.io/timeline-studio/`.
 - Version history tracked in `docs/BACKLOG.md` (recent) and `docs/VERSION_HISTORY.md` (archive), plus **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 
@@ -179,6 +179,31 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 - `hideMode OFF + item.hidden` → render with `opacity: 0.3` (greyed out, included in fit)
 - **Collapsed swimlane items** → excluded from fit extents (both on-screen and export), swimlane renders at 0px (hidden) or 28px (minimized) with no item content
 - Hidden swimlanes (`sl.collapsed === 'collapsed'`) contribute 0px in export — no rects, no visual trace
+
+## Popover Dismiss Pattern (Critical)
+
+> **Any new popover MUST follow this two-layer pattern. Ad-hoc `document.addEventListener('click', close)` listeners DO NOT WORK reliably because `onTlMD()` and other handlers call `stopPropagation()`, preventing clicks from reaching `document`.**
+
+### The Problem
+Clicking on the timeline body area does not always bubble `click` events to `document`. The `onTlMD()` handler (mousedown on timeline) calls `e.stopPropagation()` in multiple branches (lasso mode, format painter, item drag). Any popover relying solely on a `document`-level click listener will fail to dismiss when the user clicks on the timeline.
+
+### The Two-Layer Solution
+Every popover in this app uses the same proven pattern:
+
+1. **Layer 1 — `onTlMD()` (mousedown):** Explicitly call `_hideMyPopover()` at the top of `onTlMD()` alongside the other popover dismissals. This fires **before** any `stopPropagation()` branch, so it always runs when clicking the timeline.
+
+2. **Layer 2 — Global `document` click handler (safety net):** Add a `closest()` check in the global `document.addEventListener('click', ...)` block (around line 1755). This catches clicks on the toolbar, sidebar, panels, and other areas outside the timeline.
+
+### Current Popovers Using This Pattern
+- **Header format popover** (`#hdr-fmt-popover`): `_hideHdrFmtPopover()` in `onTlMD()` + `closest()` check in global click
+- **Swimlane format popover** (`#sl-fmt-popover`): `_hideSlFmtPopover()` in `_clearSlSel()` (called from `onTlMD()`) + `closest()` check in global click
+- **Format Painter popover** (`#fp-popover`): handled via global click `closest()` check
+- **MRU external popover** (`.mru-ext-pop`): `_hideExtPopover()` in `onTlMD()` + `closest()` check in global click
+
+### Checklist for New Popovers
+1. Add `this._hideMyPopover()` call to `onTlMD()` (line ~4709)
+2. Add `if(!e.target.closest('#my-popover'))this._hideMyPopover()` to the global `document` click handler (line ~1755)
+3. Do NOT rely on ad-hoc `document.addEventListener('click', fn, {once:true})` — it will miss timeline clicks
 
 ## Running Tests
 
