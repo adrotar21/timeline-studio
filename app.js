@@ -175,7 +175,7 @@ const App={
   _dirty:false,_dataDirty:false,_raf:null,_unsaved:false,_shareMode:false,_fileHintShown:false,_storedHandle:null,
   _sortCol:null,_sortDir:'asc',
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
-  _fileHandle:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
+  _fileHandle:null,_mruCache:[],_mruValidated:false,_mruExpanded:false,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
   _lassoMode:false,_panMode:false,_panning:false,_fpMode:false,_fpPersist:false,_fpStaged:false,_fpSourceId:null,_fpSourceData:null,_collapsedSl:new Set(),_pendingFit:false,
   _impData:null,_impMappings:[],_impOverloads:[],_impSelSrc:null,_impStatusMap:{},_impLinkColors:['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'],
   _scMap:{},_scOverrides:null,_scRecording:null,_nudgeSnapped:false,_nudgeSnapTimer:null,_scMsgTimer:null,
@@ -222,12 +222,155 @@ const App={
     else s=s.replace(/([⌘⇧⌥])([a-z])$/,(_, mod, c)=>mod+c.toUpperCase());
     return s;
   },
-  /* ── IndexedDB File Handle Store (F53) ── */
-  _openHandleDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open('tls3_handles',1);req.onupgradeneeded=()=>req.result.createObjectStore('handles');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})},
+  /* ── IndexedDB File Handle Store (F53) + MRU (F55) ── */
+  _MRU_MAX:8,
+  _openHandleDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open('tls3_handles',2);req.onupgradeneeded=e=>{const db=req.result;if(!db.objectStoreNames.contains('handles'))db.createObjectStore('handles');if(!db.objectStoreNames.contains('recentFiles'))db.createObjectStore('recentFiles',{keyPath:'id'})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})},
   async _storeHandle(handle){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readwrite');tx.objectStore('handles').put(handle,'fileHandle');await new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=j});db.close()}catch(e){}},
   async _loadHandle(){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readonly');const req=tx.objectStore('handles').get('fileHandle');const handle=await new Promise((r,j)=>{req.onsuccess=()=>r(req.result);req.onerror=j});db.close();return handle||null}catch(e){return null}},
   async _clearHandle(){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readwrite');tx.objectStore('handles').delete('fileHandle');db.close()}catch(e){}},
   async _tryReconnect(){const handle=await this._loadHandle();if(!handle)return false;try{const perm=await handle.requestPermission({mode:'readwrite'});if(perm==='granted'){this._fileHandle=handle;this._updateFileIndicator();this.toast('Reconnected to '+handle.name);return true}}catch(e){}return false},
+  /* ── MRU Storage (F55) ── */
+  async _loadMRU(){
+    try{const db=await this._openHandleDB();const tx=db.transaction('recentFiles','readonly');const store=tx.objectStore('recentFiles');
+      const all=await new Promise((r,j)=>{const req=store.getAll();req.onsuccess=()=>r(req.result);req.onerror=j});
+      db.close();all.sort((a,b)=>b.lastOpened-a.lastOpened);this._mruCache=all;return all}catch(e){return this._readMRUCache()}
+  },
+  async _storeMRUEntry(entry){
+    try{
+      /* Phase 1: Read existing entries (read-only tx, closes before async work) */
+      const db=await this._openHandleDB();
+      const readTx=db.transaction('recentFiles','readonly');
+      const all=await new Promise((r,j)=>{const req=readTx.objectStore('recentFiles').getAll();req.onsuccess=()=>r(req.result);req.onerror=j});
+      /* Phase 2: Find duplicates via async isSameEntry (NO active IDB tx) */
+      const deleteIds=[];
+      for(const ex of all){
+        let same=false;
+        if(entry.handle&&ex.handle){try{same=await entry.handle.isSameEntry(ex.handle)}catch(e){}}
+        else if(!entry.handle&&!ex.handle&&entry.name===ex.name)same=true;
+        if(same&&ex.id!==entry.id)deleteIds.push(ex.id)
+      }
+      /* Phase 3: Write in a single synchronous tx (no async gaps) */
+      const writeTx=db.transaction('recentFiles','readwrite');const store=writeTx.objectStore('recentFiles');
+      for(const id of deleteIds)store.delete(id);
+      store.put(entry);
+      const afterReq=store.getAll();
+      afterReq.onsuccess=()=>{const after=afterReq.result;if(after.length>this._MRU_MAX){after.sort((a,b)=>b.lastOpened-a.lastOpened);for(let i=this._MRU_MAX;i<after.length;i++)store.delete(after[i].id)}};
+      await new Promise((r,j)=>{writeTx.oncomplete=r;writeTx.onerror=j});db.close();
+      await this._loadMRU();this._syncMRUCache()
+    }catch(e){}
+  },
+  async _removeMRUEntry(id){
+    try{const db=await this._openHandleDB();const tx=db.transaction('recentFiles','readwrite');tx.objectStore('recentFiles').delete(id);
+      await new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=j});db.close();
+      await this._loadMRU();this._syncMRUCache()}catch(e){}
+  },
+  async _clearMRUList(){
+    try{const db=await this._openHandleDB();const tx=db.transaction('recentFiles','readwrite');tx.objectStore('recentFiles').clear();
+      await new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=j});db.close();
+      this._mruCache=[];this._syncMRUCache()}catch(e){}
+  },
+  _syncMRUCache(){try{const data=this._mruCache.map(e=>({id:e.id,name:e.name,projectName:e.projectName,lastOpened:e.lastOpened,lastState:e._state||'nameonly'}));localStorage.setItem('tls3_recentNames',JSON.stringify(data))}catch(e){}},
+  _readMRUCache(){try{const s=localStorage.getItem('tls3_recentNames');if(s){const arr=JSON.parse(s);return arr.map(e=>({id:e.id,name:e.name,projectName:e.projectName,lastOpened:e.lastOpened,handle:null,_state:e.lastState||'nameonly'}))}return[]}catch(e){return[]}},
+  async _updateMRU(handle,fileName,projectName){
+    const entry={id:'mru_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),name:fileName,projectName:projectName||'',handle:handle||null,lastOpened:Date.now()};
+    await this._storeMRUEntry(entry)
+  },
+  /* ── MRU Validation & UI (F55) ── */
+  async _validateMRUEntry(entry){
+    if(!entry.handle)return 'nameonly';
+    try{const perm=await entry.handle.queryPermission({mode:'readwrite'});
+      if(perm==='granted'){try{await entry.handle.getFile();return 'ready'}catch(e){return 'orphaned'}}
+      if(perm==='denied')return 'denied';
+      return 'stale'}catch(e){return 'stale'}
+  },
+  async _validateMRU(){
+    if(!this._mruCache.length)return;
+    const results=await Promise.allSettled(this._mruCache.map(e=>this._validateMRUEntry(e)));
+    results.forEach((r,i)=>{if(r.status==='fulfilled')this._mruCache[i]._state=r.value;else this._mruCache[i]._state='nameonly'});
+    this._mruValidated=true;this._syncMRUCache();this._renderMRUBadges()
+  },
+  _renderMRUDropdown(){
+    const sec=document.getElementById('mru-section');if(!sec)return;
+    const list=this._mruCache.length?this._mruCache:this._readMRUCache();
+    const curName=this._fileHandle?this._fileHandle.name:null;
+    let html='';
+    /* Browse always first */
+    html+='<div class="mru-browse" id="btn-browse">Browse\u2026</div>';
+    if(!list.length){html+='<div class="mru-hint">No recent files</div>'}
+    else{html+='<div class="mru-sep"></div><div class="mru-list">';
+      list.forEach(e=>{
+        const st=e._state||'nameonly';const isCur=curName&&e.name===curName;
+        const tip=e.projectName?U.esc(e.projectName):'';
+        html+='<div class="mru-entry'+(isCur?' mru-current':'')+'" data-mru-id="'+U.esc(e.id)+'"'+(tip?' data-tooltip="'+tip+'"':'')+'>';
+        html+='<span class="mru-name">'+U.esc(e.name)+'</span>';
+        if(isCur)html+='<span class="mru-badge mru-badge-cur" data-mru-badge="'+U.esc(e.id)+'" data-tooltip="Currently open">&#10003;</span>';
+        else if(st==='orphaned')html+='<span class="mru-badge mru-badge-warn" data-mru-badge="'+U.esc(e.id)+'" data-tooltip="File not found \u2014 may have been moved or deleted">\u26A0</span>';
+        else if(st==='stale'||st==='denied')html+='<span class="mru-badge mru-badge-stale" data-mru-badge="'+U.esc(e.id)+'" data-tooltip="Permission needed \u2014 click to reconnect">\u26BF</span>';
+        else html+='<span class="mru-badge" data-mru-badge="'+U.esc(e.id)+'"></span>';
+        html+='<span class="mru-remove" data-mru-rm="'+U.esc(e.id)+'" data-tooltip="Remove from recent files">\u00d7</span>';
+        html+='</div>'});
+      html+='</div>'}
+    sec.innerHTML=html;
+    /* Bind MRU entry clicks (on name area, not the × button) */
+    sec.querySelectorAll('.mru-entry').forEach(el=>{el.addEventListener('click',ev=>{
+      if(ev.target.closest('.mru-remove'))return;/* let remove handler handle it */
+      this.$.file_dropdown.classList.add('hidden');this._mruExpanded=false;this._openFromMRU(el.dataset.mruId)})});
+    /* Bind individual remove buttons */
+    sec.querySelectorAll('.mru-remove').forEach(el=>{el.addEventListener('click',async ev=>{
+      ev.stopPropagation();await this._removeMRUEntry(el.dataset.mruRm);this._renderMRUDropdown()})});
+    const browseBtn=document.getElementById('btn-browse');
+    if(browseBtn)browseBtn.addEventListener('click',()=>{this.$.file_dropdown.classList.add('hidden');this._mruExpanded=false;this.openFile()});
+    /* Kick off async validation */
+    if(window.showOpenFilePicker&&this._mruCache.some(e=>e.handle))this._validateMRU()
+  },
+  _renderMRUBadges(){
+    const sec=document.getElementById('mru-section');if(!sec)return;
+    const curName=this._fileHandle?this._fileHandle.name:null;
+    this._mruCache.forEach(e=>{
+      const badge=sec.querySelector('[data-mru-badge="'+e.id+'"]');if(!badge)return;
+      const st=e._state||'nameonly';const isCur=curName&&e.name===curName;
+      if(isCur){badge.className='mru-badge mru-badge-cur';badge.innerHTML='&#10003;';badge.dataset.tooltip='Currently open'}
+      else if(st==='orphaned'){badge.className='mru-badge mru-badge-warn';badge.textContent='\u26A0';badge.dataset.tooltip='File not found \u2014 may have been moved or deleted'}
+      else if(st==='stale'||st==='denied'){badge.className='mru-badge mru-badge-stale';badge.textContent='\u26BF';badge.dataset.tooltip='Permission needed \u2014 click to reconnect'}
+      else{badge.className='mru-badge';badge.textContent='';delete badge.dataset.tooltip}
+    })
+  },
+  _toggleMRU(){
+    const sec=document.getElementById('mru-section');const arrow=document.getElementById('mru-arrow');
+    if(!sec)return;
+    this._mruExpanded=!this._mruExpanded;
+    if(this._mruExpanded){sec.classList.remove('hidden');if(arrow)arrow.classList.add('open');this._renderMRUDropdown()}
+    else{sec.classList.add('hidden');if(arrow)arrow.classList.remove('open')}
+  },
+  async _openFromMRU(id){
+    const entry=this._mruCache.find(e=>e.id===id);if(!entry)return;
+    /* If this is already the current file, no-op */
+    if(this._fileHandle&&entry.handle){try{if(await this._fileHandle.isSameEntry(entry.handle)){this.toast('Already open','info');return}}catch(e){}}
+    if(this._unsaved&&!confirm('Unsaved changes will be lost. Continue?'))return;
+    const st=entry._state||'nameonly';
+    if(st==='orphaned'){this.toast('File not found \u2014 may have been moved or deleted','error');return}
+    if(st==='nameonly'){/* No handle: open standard file picker */this.openFile();return}
+    /* STALE or DENIED: request permission first */
+    if(st==='stale'||st==='denied'){
+      try{const perm=await entry.handle.requestPermission({mode:'readwrite'});
+        if(perm!=='granted'){this.toast('Permission denied','error');entry._state='denied';this._syncMRUCache();this._renderMRUBadges();return}
+      }catch(e){this.toast('Permission denied','error');return}
+    }
+    /* READY (or just became ready): load the file */
+    try{const file=await entry.handle.getFile();const text=await file.text();
+      this.snap();this.proj=JSON.parse(text);this.migrate();this.applyTheme();this.sel=[];
+      this._fileHandle=entry.handle;this._storeHandle(entry.handle);
+      try{localStorage.setItem('tls3_fileName',entry.handle.name)}catch(e){}
+      this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();
+      /* Update MRU entry: bump to top, refresh name in case file was renamed */
+      const freshName=entry.handle.name||entry.name;
+      this._updateMRU(entry.handle,freshName,this.proj.name);
+      this.toast('Loaded!')
+    }catch(e){
+      if(e instanceof SyntaxError)this.toast('Invalid file','error');
+      else{entry._state='orphaned';this._syncMRUCache();this._renderMRUBadges();this.toast('File not found \u2014 may have been moved or deleted','error')}
+    }
+  },
   _scDispatch:{
     undo(){this.undo()},
     redo(){this.redo()},
@@ -336,6 +479,8 @@ const App={
         if(!this._fileHintShown){this._fileHintShown=true;const fn=stored.name||localStorage.getItem('tls3_fileName')||'';if(fn)setTimeout(()=>this.toast(fn+' \u2014 click filename to reconnect','info',4000),600)}
       }else if(!this._fileHandle){this._updateFileIndicator()}
     })()}
+    /* F55: Warm MRU cache on startup (non-blocking) */
+    this._loadMRU().catch(()=>{});
     this.$.tl_body_scroll.addEventListener('scroll',()=>{
       this.$.tl_sl_labels.scrollTop=this.$.tl_body_scroll.scrollTop;
       this.$.tl_hdr_scroll.scrollLeft=this.$.tl_body_scroll.scrollLeft;
@@ -544,9 +689,9 @@ const App={
     const data=JSON.stringify(this.proj,null,2);
     /* F53: Try stored handle if no active handle (auto-reconnect on Ctrl+S) */
     if(!saveAs&&!this._fileHandle){const stored=await this._loadHandle();if(stored){try{const perm=await stored.requestPermission({mode:'readwrite'});if(perm==='granted')this._fileHandle=stored}catch(e){}}}
-    if(!saveAs&&this._fileHandle){try{const w=await this._fileHandle.createWritable();await w.write(data);await w.close();this.markClean();this.toast('Saved!');this.autoSave();try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();return}catch(e){}}
-    if(window.showSaveFilePicker){try{const prevHandle=saveAs?this._fileHandle:null;const h=await window.showSaveFilePicker({suggestedName:(this.proj.name||'timeline')+'.tlproj',types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}]});const w=await h.createWritable();await w.write(data);await w.close();this._fileHandle=saveAs&&prevHandle?prevHandle:h;this.markClean();this.toast(saveAs?'Saved copy!':'Saved!');this.autoSave();this._storeHandle(this._fileHandle);try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();return}catch(e){if(e.name==='AbortError')return}}
-    const b=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.tlproj';a.click();URL.revokeObjectURL(a.href);this.markClean();this.toast('Downloaded!');this.autoSave();try{localStorage.setItem('tls3_fileName',(this.proj.name||'timeline')+'.tlproj')}catch(e){}this._updateFileIndicator()
+    if(!saveAs&&this._fileHandle){try{const w=await this._fileHandle.createWritable();await w.write(data);await w.close();this.markClean();this.toast('Saved!');this.autoSave();try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();this._updateMRU(this._fileHandle,this._fileHandle.name,this.proj.name);return}catch(e){}}
+    if(window.showSaveFilePicker){try{const prevHandle=saveAs?this._fileHandle:null;const h=await window.showSaveFilePicker({suggestedName:(this.proj.name||'timeline')+'.tlproj',types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}]});const w=await h.createWritable();await w.write(data);await w.close();this._fileHandle=saveAs&&prevHandle?prevHandle:h;this.markClean();this.toast(saveAs?'Saved copy!':'Saved!');this.autoSave();this._storeHandle(this._fileHandle);try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();this._updateMRU(this._fileHandle,this._fileHandle.name,this.proj.name);return}catch(e){if(e.name==='AbortError')return}}
+    const fn=(this.proj.name||'timeline')+'.tlproj';const b=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;a.click();URL.revokeObjectURL(a.href);this.markClean();this.toast('Downloaded!');this.autoSave();try{localStorage.setItem('tls3_fileName',fn)}catch(e){}this._updateFileIndicator();this._updateMRU(null,fn,this.proj.name)
   },
   /* ── Share-link compression pipeline ── */
   _packProj(){
@@ -708,12 +853,12 @@ const App={
     if(window.showOpenFilePicker){
       try{const[handle]=await window.showOpenFilePicker({types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}],multiple:false});
         const file=await handle.getFile();const text=await file.text();
-        try{this.snap();this.proj=JSON.parse(text);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=handle;this._storeHandle(handle);try{localStorage.setItem('tls3_fileName',handle.name)}catch(e){}this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}
+        try{this.snap();this.proj=JSON.parse(text);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=handle;this._storeHandle(handle);try{localStorage.setItem('tls3_fileName',handle.name)}catch(e){}this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this._updateMRU(handle,handle.name,this.proj.name);this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}
         return}catch(e){if(e.name==='AbortError')return}
     }
     this.$.file_input.click()
   },
-  handleOpen(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{this.snap();this.proj=JSON.parse(ev.target.result);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=null;try{localStorage.setItem('tls3_fileName',f.name)}catch(e2){}this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}};r.readAsText(f);e.target.value=''},
+  handleOpen(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{this.snap();this.proj=JSON.parse(ev.target.result);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=null;try{localStorage.setItem('tls3_fileName',f.name)}catch(e2){}this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this._updateMRU(null,f.name,this.proj.name);this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}};r.readAsText(f);e.target.value=''},
   newProjAct(){this.showModal('new-proj-modal');this.$.np_name.value='New Timeline';document.getElementById('np-template').value='blank'},
   createFromTemplate(){
     const tpl=document.getElementById('np-template').value,name=this.$.np_name.value.trim()||'New Timeline';
@@ -1319,9 +1464,16 @@ const App={
   bind(){
     const on=(id,fn)=>{const e=document.getElementById(id);if(e)e.addEventListener('click',fn)};
     // File dropdown
-    on('btn-file-menu',()=>{this.closeAllDD();this.$.file_dropdown.classList.toggle('hidden');this.posDD(this.$.file_dropdown)});
+    on('btn-file-menu',()=>{
+      this.closeAllDD();
+      /* Restore MRU expansion state from session */
+      const sec=document.getElementById('mru-section');const arrow=document.getElementById('mru-arrow');
+      if(sec&&this._mruExpanded){sec.classList.remove('hidden');if(arrow)arrow.classList.add('open');this._renderMRUDropdown()}
+      else if(sec){sec.classList.add('hidden');if(arrow)arrow.classList.remove('open')}
+      this.$.file_dropdown.classList.toggle('hidden');this.posDD(this.$.file_dropdown)
+    });
+    on('btn-open-recent',e=>{e.stopPropagation();this._toggleMRU()});
     on('btn-new',()=>{this.$.file_dropdown.classList.add('hidden');this.newProjAct()});
-    on('btn-open',()=>{this.$.file_dropdown.classList.add('hidden');this.openFile()});
     on('btn-save',()=>{this.$.file_dropdown.classList.add('hidden');this._shareMode=false;this.saveFile()});
     on('btn-save-as',()=>{this.$.file_dropdown.classList.add('hidden');this._shareMode=false;this.saveFile(true)});
     on('btn-share',()=>{this.$.file_dropdown.classList.add('hidden');this.shareProject()});

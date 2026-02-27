@@ -72,6 +72,26 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .save-dd-item.dd-disabled{opacity:.35;cursor:default}
 .save-dd-item.dd-disabled:hover{background:transparent;color:var(--tx2)}
 .dd-hint{padding:0 12px 6px 32px;font-size:9.5px;color:var(--tx3);font-style:italic;line-height:1.3}
+/* MRU Recent Files (F55) */
+#file-dropdown{min-width:220px}
+.mru-toggle{position:relative}
+.mru-arrow{font-size:8px;color:var(--tx3);transition:transform .15s;display:inline-block;margin-left:2px}
+.mru-arrow.open{transform:rotate(90deg)}
+.mru-list{max-height:240px;overflow-y:auto;padding:2px 0}
+.mru-entry{padding:5px 12px 5px 24px;cursor:pointer;font-size:11px;color:var(--tx2);transition:background .1s;display:flex;align-items:center;gap:6px}
+.mru-entry:hover{background:var(--bg3);color:var(--tx1)}
+.mru-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mru-current .mru-name{font-weight:600}
+.mru-badge{font-size:9px;flex-shrink:0;margin-left:auto}
+.mru-badge-cur{color:var(--acc)}
+.mru-badge-warn{color:var(--danger)}
+.mru-badge-stale{color:var(--warn)}
+.mru-sep{height:1px;background:var(--brd);margin:2px 12px 2px 20px;opacity:.5}
+.mru-browse{padding:5px 12px 5px 24px;cursor:pointer;font-size:11px;color:var(--tx2);transition:background .1s;display:flex;align-items:center;gap:6px}
+.mru-browse:hover{background:var(--bg3);color:var(--tx1)}
+.mru-remove{font-size:11px;color:var(--danger);cursor:pointer;transition:color .15s,text-shadow .15s;flex-shrink:0;padding:0 2px;opacity:.45;line-height:1}
+.mru-remove:hover{opacity:1;text-shadow:0 0 6px var(--danger)}
+.mru-hint{padding:5px 12px 5px 24px;font-size:10.5px;color:var(--tx3);font-style:italic}
 .dd-hint-sm{font-size:8.5px;padding-left:12px}
 .view-toggle{display:flex;background:var(--bg2);border-radius:6px;padding:2px}
 .view-btn{padding:4px 12px;border:none;background:transparent;color:var(--tx3);border-radius:5px;cursor:pointer;font-family:var(--font);font-size:11.5px;font-weight:500;transition:all .12s}

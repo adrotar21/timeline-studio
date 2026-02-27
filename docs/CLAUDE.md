@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.40.8` — UX: shorter tools call-out, Lock Shift+drag tooltip, lasso Escape priority, settings scroll-spy fix. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.44.0` — F55 Recent Files (MRU): collapsible "Open & Recent" submenu in File dropdown with file handle state machine and lazy validation. Live at `https://adrotar21.github.io/timeline-studio/`.
 - Version history tracked in `docs/BACKLOG.md` (recent) and `docs/VERSION_HISTORY.md` (archive), plus **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 
@@ -64,8 +64,9 @@ TimelineProject/
 - **SVG** for dependency arrow rendering and export
 - **Canvas API** for PNG export/screenshot (with DPI scaling)
 - **CSS custom properties** for theme system
-- **localStorage** for auto-save (key: `tls3`) and keyboard shortcut overrides (key: `tls3_shortcuts`)
-- **File System Access API** for native save/open dialogs
+- **localStorage** for auto-save (key: `tls3`), keyboard shortcut overrides (key: `tls3_shortcuts`), and MRU cache (key: `tls3_recentNames`)
+- **IndexedDB** (`tls3_handles` v2) for file handle persistence (`handles` store) and MRU entries (`recentFiles` store)
+- **File System Access API** for native save/open dialogs and MRU handle reconnection
 - `.tlproj` files are JSON with a version field for migration
 
 ## Architecture
@@ -93,6 +94,16 @@ TimelineProject/
 - **Key recorder**: Capture-phase listener absorbs keydown during recording in Settings → Shortcuts. Conflict detection prevents duplicate bindings.
 - **Ctrl+Shift+K** opens Settings scrolled to the Shortcuts section (reserved shortcut).
 - **Help modal** dynamically generates shortcut table from `SHORTCUT_ACTIONS` + overrides. Customized bindings marked with accent `*`.
+
+### MRU (Most Recently Used) File System (F55)
+- **Storage**: IndexedDB `tls3_handles` v2 with `recentFiles` object store (keyPath: `id`). Each entry: `{id, name, projectName, handle, lastOpened}`. Max 8 entries (`_MRU_MAX`).
+- **Cache**: `localStorage['tls3_recentNames']` mirrors IDB entries (minus handles) for synchronous menu rendering. Kept in sync via `_syncMRUCache()` after every IDB write.
+- **Five handle states** (computed, not stored): READY (green ✓), STALE (amber ⦿, needs re-grant), DENIED (amber ⦿), ORPHANED (red ⚠, file moved/deleted), NAME_ONLY (no handle, Firefox/Safari fallback).
+- **Validation**: Lazy on menu open — `_validateMRU()` runs `queryPermission()` + `getFile()` in parallel via `Promise.allSettled`, progressively updates badges via `_renderMRUBadges()`.
+- **IDB transaction safety**: `_storeMRUEntry()` uses 3-phase pattern (read tx → async `isSameEntry()` comparison → write tx) to avoid transaction auto-close from async gaps.
+- **UI**: Collapsible "Open & Recent ▸" row in File dropdown. `_mruExpanded` state persists within session. Per-entry × remove buttons. Browse link always at top of expansion.
+- **Hooks**: `_updateMRU()` called from `openFile()`, `handleOpen()`, and all 3 `saveFile()` paths.
+- **Fallback**: Firefox/Safari get NAME_ONLY entries (filename + projectName from localStorage, no handle). Clicking opens standard file picker.
 
 ### Rendering Pipeline
 ```
