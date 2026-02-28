@@ -13,7 +13,7 @@ body.theme-light{--bg0:#f5f6f8;--bg1:#fff;--bg2:#e8ecf0;--bg3:#d4dbe3;--brd:#c8d
 body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--brd:#374151;--brd2:#4b5563;--acc:#818cf8;--acc2:#6366f1;--accL:rgba(129,140,248,.15);--tx1:#f3f4f6;--tx2:#d1d5db;--tx3:#9ca3af;--tl-tx:#e5e7eb;--tl-tx2:#9ca3af}
 
 /* Tooltip */
-.tooltip{position:fixed;z-index:10000;background:#1a1a2e;color:#e0e0e0;padding:5px 9px;border-radius:5px;font-size:11px;max-width:260px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);transition:opacity .15s;opacity:0}
+.tooltip{position:fixed;z-index:10000;background:var(--bg1);color:var(--tx1);padding:5px 9px;border-radius:5px;font-size:11px;max-width:260px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.4);border:1px solid var(--brd);transition:opacity .15s;opacity:0}
 .tooltip.visible{opacity:1}
 
 /* Toolbar */
@@ -364,7 +364,8 @@ body.theme-midnight #props-panel{box-shadow:-4px 0 20px rgba(0,0,0,.4)}
 .sl-collapse-btn{position:absolute;top:2px;left:2px;width:16px;height:16px;border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:2px;cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center;opacity:.6;transition:opacity .15s;z-index:2}
 .sl-collapse-btn:hover{opacity:1;background:rgba(255,255,255,.3)}
 .sl-lbl.collapsed .sl-btn-expand{left:2px}
-.sl-lbl.collapsed .sl-btn-hide{left:20px}
+.sl-lbl.collapsed .sl-btn-hide{left:20px;font-size:10px;line-height:14px;color:#fca5a5}
+.sl-lbl.collapsed .sl-btn-hide:hover{color:#fca5a5;background:rgba(239,68,68,.3)}
 .sl-lbl.collapsed .sl-collapse-btn{width:14px;height:14px;font-size:8px}
 .sl-hidden-indicator{cursor:pointer;transition:all .15s}
 .sl-lbl.sl-hidden-indicator{opacity:.6;border-radius:0 0 8px 8px;border-bottom:2px solid rgba(255,255,255,0.5)!important}

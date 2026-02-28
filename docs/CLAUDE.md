@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.44.3` — B52 fix (shift+drag off-by-one day), B51 fix (right-click bulk status edit). Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.44.4` — F57 swimlane hide icon clarity (✕→👁, theme-aware tooltips, tooltip exclusivity fix). Live at `https://adrotar21.github.io/timeline-studio/`.
 - **Beta feedback (Feb 2026):** Two PgM beta testers validated the core product. Discoverability is the #1 gap — see BACKLOG.md for F48 (P1) and related items.
 - Version history tracked in `docs/BACKLOG.md` (recent) and `docs/VERSION_HISTORY.md` (archive), plus **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
@@ -34,7 +34,7 @@ This is a non-negotiable design constraint. The three-file architecture is what 
 ```
 TimelineProject/
 ├── index.html                      # Complete DOM structure, modals, inline styles
-├── app.js                          # All application logic (~5990 lines)
+├── app.js                          # All application logic (~5997 lines)
 ├── styles.css                      # Theming via CSS custom properties, layout
 ├── Showcase.tlproj                 # Example project file (JSON)
 ├── README.md                       # Project README (stays at root for GitHub)

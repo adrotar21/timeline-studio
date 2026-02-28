@@ -3,7 +3,7 @@
 **A cross-platform, zero-dependency Gantt chart tool for project managers.**
 Download three files. Open `index.html`. Done.
 
-![Version](https://img.shields.io/badge/version-0.44.3-blue)
+![Version](https://img.shields.io/badge/version-0.44.4-blue)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Files](https://img.shields.io/badge/architecture-3_files-orange)
 

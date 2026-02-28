@@ -8,6 +8,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| **0.44.4** | 2026-02-27 | F57: Swimlane hide icon clarity. Replaced ✕ with 👁 eye icon on minimized swimlane hide button — both beta testers thought ✕ meant delete. Enhanced tooltip explains hide action and how to restore. Red-tinted eye icon (`#fca5a5`) matches existing hidden visual cues (`.pill-hide`). Switched all swimlane/sub-swimlane collapse buttons from native `title` to `data-tooltip` system — fixes overlapping tooltips where parent "Double-click to edit" tooltip fired simultaneously with button tooltips. Made tooltip CSS theme-aware via CSS variables (`var(--bg1)`, `var(--tx1)`, `var(--brd)`) instead of hardcoded dark colors. Updated help modal. |
 | **0.44.3** | 2026-02-27 | B52 fix: shift+drag off-by-one day. The `dX()→xD()` pixel round-trip is lossy (`Math.round` in `xD()` can shift ±1 at fractional day boundaries). During shift+drag, `style.left` never changes but the drop handler still ran `xD()` on the unchanged value. Fix: skip date update when `nL===d.oL` (item didn't move horizontally) in 3 locations — drop handler, drag feedback tooltip, ghost snap preview. Correctly handles all drag scenarios: pure shift+drag, mid-drag Shift toggle, bulk drag, escape, lock mode. |
 | **0.44.2** | 2026-02-27 | B51 fix: right-click bulk status edit in Data View restored. The B45 `<select>` guard (v0.41.0) was running before the B37 right-click guard, collapsing multi-selection before `contextmenu` fired. Fix: swapped guard order in `tb.onmousedown` so right-click on a selected row preserves multi-selection. Docs updated with beta user feedback (Feb 2026): added B51, B52, F57–F60 to backlog; elevated F48 to P1, bumped F50 to P2; added beta feedback summary section; enriched F13, F26, F27 descriptions with user validation notes; updated README competitive positioning and version/test counts; updated CLAUDE.md and MEMORY.md. |
 | **0.44.1** | 2026-02-27 | F56 Open in New Tab/Window: ⧉ button on each MRU entry opens recent files in a new browser tab (left-click) or window (right-click popover with "↗ Open in new tab" / "⧉ Open in new window"). Reads file fresh from disk via stored FileSystemFileHandle, compresses through existing share link pipeline (`_packProj` → `_skEnc` → `_compress` → `#p=` URL hash). New tab auto-links back to disk file via `?mru=` query parameter + IDB handle reconnect (no share banner, Save works). Unsaved changes on current file blocked with toast. `_packProj(src)` refactored to accept optional source project. MRU dropdown auto-collapses when File menu closes. Vertical guide line (`border-left` on `#mru-section`) replaces 24px indentation, reclaiming horizontal space. Right-click popover opens from anywhere on the entry row. Popover dismiss follows proven two-layer pattern (explicit call in `onTlMD()` + `closest()` safety net in global click handler). Popover dismiss pattern documented in CLAUDE.md and MEMORY.md. |
@@ -73,8 +74,7 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
-| B51 | **Multi-status right-click broken** | Reported by beta user (Sean): applying status to multiple selected items via right-click context menu appears broken — B45 `<select>` guard ran before B37 right-click guard, collapsing multi-selection before contextmenu fired. Fix: swapped guard order in `tb.onmousedown`. **Source:** Beta user feedback (Feb 2026). | XS | :orange_circle: P1 | :white_check_mark: Done (0.44.2) |
-| B52 | **Shift+drag off-by-one day** | The `dX()→xD()` pixel round-trip is lossy — `Math.round()` in `xD()` can shift dates by ±1 at fractional day boundaries. During shift+drag (vertical only), `style.left` never changes but the drop handler still ran `xD()` on the unchanged position, potentially getting a different date back. Fix: skip date update when `nL===d.oL` (item didn't move horizontally) in drop handler, drag feedback tooltip, and ghost snap preview. Handles all scenarios: pure shift+drag, mid-drag Shift toggle, bulk drag, escape, lock mode. B28 (v0.29.2) fixed a related `parseInt→parseFloat` issue; this was a deeper rounding problem. **Source:** Beta user feedback (Feb 2026, Sean). | XS | :yellow_circle: P2 | :white_check_mark: Done (0.44.3) |
+| | _No open bugs_ | | | | |
 
 ---
 
@@ -84,7 +84,6 @@
 
 | # | Title | Description | Size | Priority | Status |
 |---|-------|-------------|------|----------|--------|
-| F57 | **Swimlane hide icon clarity** | Both beta testers (Feb 2026) thought the X button on a collapsed/minimized swimlane would delete it. The tooltip explains the action, but users don't read tooltips before clicking. **Fix:** Replace the X icon with an eye-slash (⊘ or 👁‍🗨) or add a brief "Hide" label next to it so the intent is visually obvious. The current X icon reads as "delete" or "close" to new users. | XS | :orange_circle: P1 | :white_circle: Open |
 | F58 | **Pinning friction / confirmation** | Beta user (Shivani, Feb 2026) accidentally pinned items during normal editing, which caused confusion when auto-schedule didn't move them as expected. Pinning currently happens too easily as a side effect of manual date edits in auto-scheduled mode. **Options:** (1) Confirmation toast with undo when an item becomes pinned ("Item pinned — dates won't auto-schedule. Undo?"). (2) Make pinning a deliberate action only (right-click → Pin, or explicit pin button) rather than implicit on edit. (3) Visual warning when propagate/auto-schedule skips pinned items. | XS–S | :orange_circle: P1 | :white_circle: Open |
 | F43 | **Import scheduling options** | Expand the import flow with scheduling-aware options: (1) **Working vs Calendar days** toggle — determines how imported durations are interpreted. (2) **Manual vs Auto-Scheduled mode** selector with explanatory tooltip (e.g., "Auto for critical-path imports from other tools"). (3) **Same-day dependency start option** — accounts for the off-by-one issue where some tools (e.g., SmartSheet) allow a dependent milestone/task to start on the same end date as its predecessor rather than the next day. When enabled, applies a `-1` lag offset to imported FS dependencies. Research needed: what is the official name for this setting across tools (SmartSheet, MS Project, Primavera)? Does it apply only to milestone→task links or also task→task? This may be part of a broader "import strategy" configuration panel that surfaces the right options based on source tool conventions. | L | :orange_circle: P1 | :white_circle: Open |
 | F13 | **Keyboard shortcut discoverability** | Surface keyboard shortcuts and power-user actions in the UI for new users. Options include a cheatsheet panel, tooltip hints, or help modal section. Bundle with F48 discoverability pass. **Beta feedback (Feb 2026):** Both testers needed feature walkthroughs — shortcuts were never discovered organically. | M | :yellow_circle: P2 | :white_circle: Open |
@@ -117,14 +116,11 @@
 _All P0 items resolved in v0.14.0._
 
 ### :orange_circle: P1 — High Priority for V1
-- **B51** — ~~Multi-status right-click broken (XS)~~ — Done (0.44.2)
 - **F43** — Import scheduling options (L)
 - **F48** — New user onboarding highlights (S–M) — **elevated from P2** per beta feedback; discoverability is the #1 launch blocker
-- **F57** — Swimlane hide icon clarity (XS) — beta users thought X = delete
 - **F58** — Pinning friction / confirmation (XS–S) — accidental pinning broke auto-schedule UX
 
 ### :yellow_circle: P2 — Nice to Have for V1
-- **B52** — ~~Shift+drag off-by-one day (XS)~~ — Done (0.44.3)
 - **F13** — Keyboard shortcut discoverability (M) — bundle with F48 discoverability pass
 - **F59** — Scheduling mode indicator & explainer (S) — neither beta user discovered manual vs auto mode
 - **F60** — Dependency display filtering (S–M) — beta user request for intra-swimlane-only view
