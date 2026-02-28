@@ -117,7 +117,7 @@
 _All P0 items resolved in v0.14.0._
 
 ### :orange_circle: P1 — High Priority for V1
-- **B51** — Multi-status right-click broken (XS–S) — beta user report
+- **B51** — ~~Multi-status right-click broken (XS)~~ — Done (0.44.2)
 - **F43** — Import scheduling options (L)
 - **F48** — New user onboarding highlights (S–M) — **elevated from P2** per beta feedback; discoverability is the #1 launch blocker
 - **F57** — Swimlane hide icon clarity (XS) — beta users thought X = delete
