@@ -136,6 +136,8 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 @keyframes pill-glow-hide{0%{box-shadow:0 0 0 0 rgba(239,68,68,0)}30%{box-shadow:0 0 8px 3px rgba(239,68,68,.5)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
 .pill-lock.pill-hint{animation:pill-glow-lock 1s ease-out}
 .pill-hide.pill-hint{animation:pill-glow-hide 1s ease-out}
+@keyframes pin-flash{0%{transform:scale(1);filter:drop-shadow(0 0 1px rgba(0,0,0,.3))}40%{transform:scale(2);filter:drop-shadow(0 0 6px rgba(234,179,8,.7))}100%{transform:scale(1);filter:drop-shadow(0 0 1px rgba(0,0,0,.3))}}
+.tl-pin-badge.pin-flash{animation:pin-flash .8s ease-out}
 /* Theme: Light */
 body.theme-light .pill-lock{background:rgba(234,179,8,.12);color:#92400e}
 body.theme-light .pill-hide{background:rgba(239,68,68,.1);color:#b91c1c}
@@ -607,7 +609,8 @@ body.theme-light .toggle-slider::after{background:#fff;box-shadow:0 1px 3px rgba
 .dep-item-info{font-size:11px;color:var(--tx2)}
 .dep-item-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);padding:8px 18px;border-radius:7px;font-size:12px;font-weight:500;z-index:9999;animation:toastIn .25s;box-shadow:0 4px 12px rgba(0,0,0,.3)}
-.toast-success{background:var(--success);color:#fff}.toast-error{background:var(--danger);color:#fff}.toast-info{background:#1a2332;color:#fff}
+.toast-success{background:var(--success);color:#fff}.toast-error{background:var(--danger);color:#fff}.toast-info{background:#1a2332;color:#fff}.toast-warn{background:var(--warn);color:#1a1a1a}
+.toast-action{margin-left:10px;text-decoration:underline;cursor:pointer;opacity:.9;font-weight:600}.toast-action:hover{opacity:1}
 @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}}
 @media print{#toolbar,#props-panel,#data-container,.modal,#ctx-menu,#dt-ctx-menu,#dt-ctx-input,#tooltip,#data-filter-bar{display:none!important}#tl-container{overflow:visible!important}#tl-watermark{display:block!important}}
 /* Settings sections */

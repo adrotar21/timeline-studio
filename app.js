@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.4 — F57: Swimlane hide icon clarity. Replaced ✕ with 👁 eye icon on minimized swimlane hide button — both beta testers thought ✕ meant delete. Enhanced tooltip explains hide action and how to restore. Red-tinted eye icon matches existing hidden visual cues. Switched all swimlane/sub-swimlane collapse buttons from native title to data-tooltip system, fixing overlapping tooltips (parent tooltip no longer fires when hovering child buttons). Tooltips now theme-aware via CSS variables. Updated help modal text. */
+/* Timeline Studio v0.44.5 — F58: Pinning friction/confirmation. Auto-pin-on-drag in scheduled mode now shows an amber warning toast with clickable Undo button (5s duration). Smart undo: if no intervening actions, full undo reverts drag+pin; if other edits occurred, only unpins the specific items. Pin badge flashes with yellow glow animation (scale 1→2→1, 0.8s) when drag-pinned. Snap-back toast improved to explain why: "← Snapped back — can't start before dependencies allow." Bulk drags aggregate into single toast. toast() method extended with optional actionLabel/actionFn parameters. New .toast-warn (amber) and .toast-action (underlined clickable) CSS classes. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -753,7 +753,7 @@ const App={
       return true;
     }catch(e){console.warn('Share link load failed:',e);if(location.hash.startsWith('#p=')){this._shareLoadFailed=true;history.replaceState(null,'',location.pathname);setTimeout(()=>App.toast('Share link may be truncated \u2014 copy-paste the full URL directly','error',6000),500)}return false}
   },
-  toast(m,t='success',dur=2200){const el=document.createElement('div');el.className=`toast toast-${t}`;el.textContent=m;const active=document.querySelectorAll('.toast');const offset=active.length*40;el.style.bottom=(18+offset)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),dur)},
+  toast(m,t='success',dur=2200,actionLabel=null,actionFn=null){const el=document.createElement('div');el.className=`toast toast-${t}`;if(actionLabel&&actionFn){el.innerHTML=U.esc(m)+` <span class="toast-action">${U.esc(actionLabel)}</span>`;el.querySelector('.toast-action').onclick=()=>{el.remove();actionFn()}}else{el.textContent=m}const active=document.querySelectorAll('.toast');const offset=active.length*40;el.style.bottom=(18+offset)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),dur)},
 
   async saveFile(saveAs=false){
     const data=JSON.stringify(this.proj,null,2);
@@ -4589,6 +4589,7 @@ const App={
       bodyH+=`<div style="position:absolute;left:${vl.x}px;top:${top}px;height:${bot-top}px;${dash};pointer-events:none;z-index:2;opacity:0.6"></div>`}
     bodyH+=`<svg id="dep-svg" style="width:${tl.tw}px;height:100%"></svg>`;
     this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this._tlTW=tl.tw;this.$.tl_body.style.width=tl.tw+(this.panelCollapsed?28:290)+'px';
+    if(this._pinFlashIds&&this._pinFlashIds.size)requestAnimationFrame(()=>{if(this._pinFlashIds)this._pinFlashIds.clear()});
     /* Empty-state hint for new users */
     if(p.items.length===0){const _hc=th.tlTx,_hc2=th.tlTx2;this.$.tl_body.innerHTML+=`<div class="tl-empty-hint" style="color:${_hc}"><div style="font-size:28px;margin-bottom:8px">📋</div><div>Click <strong>+ Task</strong> or <strong>+ Milestone</strong> in the toolbar to add your first item.</div><div style="margin-top:6px;font-size:11px;color:${_hc2}">Or choose a template from <strong style="color:${_hc}">New</strong> (📄).<br>Right-click the timeline to add at a specific date.</div></div>`}
 
@@ -4650,7 +4651,7 @@ const App={
       if(it.showStartDate)h+=`<div class="tl-edge-label tl-edge-left" style="color:${etc};font-size:${Math.max(8,fs-1)}px">${U.fmt(it.startDate,fmt)}</div>`;
       if(it.showEndDate)h+=`<div class="tl-edge-label tl-edge-right" style="color:${etc};font-size:${Math.max(8,fs-1)}px">${U.fmt(it.endDate,fmt)}</div>`;
     }else{const ic=ICONS.find(i=>i.id===it.iconType)||ICONS[0];h+=`<div class="tl-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="${renderColor}" stroke="${renderColor}" stroke-width="0.5"><path d="${ic.p}"/></svg></div>`}
-    if(it.pinned)h+=`<div class="tl-pin-badge">📌</div>`;
+    if(it.pinned){const pf=this._pinFlashIds&&this._pinFlashIds.has(it.id)?' pin-flash':'';h+=`<div class="tl-pin-badge${pf}">📌</div>`}
     /* URL link badge (editor only — NOT in export) */
     if(it.links&&it.links.length){const lkLeft=(sd&&sdShow&&sdPos==='bottom-left')?-16:-4;h+=`<div class="tl-link-badge" style="left:${lkLeft}px">🌐</div>`}
     /* Status badge (non-inline positions only) */
@@ -4947,6 +4948,7 @@ const App={
       _cssRevertAll();_activeExpandId='';
       if(this.proj.autoRange)this.autoRange();
       if(this.proj.schedulingMode==='scheduled'){
+        const pinnedIds=[],snapped=[];
         dragItems.forEach(d=>{
           if(!d.item.deps?.length||d.item.pinned)return;
           const earliest=this._computeEarliestStart(d.item);
@@ -4955,12 +4957,23 @@ const App={
           if(curStart<earliest){
             if(d.item.type==='task'){d.item.startDate=earliest;d.item.endDate=this._calcEndDate(d.item)}
             else d.item.date=earliest;
-            this.toast('Snapped to calculated position','info')
+            snapped.push(d.item.id);
           }else if(curStart>earliest){
             d.item.pinned=true;
-            this.toast('Item pinned at new date','info')
+            pinnedIds.push(d.item.id);
+            if(!this._pinFlashIds)this._pinFlashIds=new Set();
+            this._pinFlashIds.add(d.item.id);
           }
         });
+        if(snapped.length)this.toast('\u2190 Snapped back \u2014 can\u2019t start before dependencies allow','info');
+        if(pinnedIds.length){
+          const undoDepth=this.undoStack.length;const pIds=[...pinnedIds];
+          const msg=pIds.length===1?'\ud83d\udccc Pinned \u2014 scheduling will skip this item':'\ud83d\udccc Pinned '+pIds.length+' items \u2014 scheduling will skip them';
+          this.toast(msg,'warn',5000,'Undo',()=>{
+            if(this.undoStack.length===undoDepth){this.undo()}
+            else{this.snap();let n=0;pIds.forEach(id=>{const it=this.gi(id);if(it&&it.pinned){it.pinned=false;n++}});if(n){this.sched();this.autoSave();this.refreshPanel();this.toast('Unpinned '+n+' item'+(n>1?'s':''),'info')}}
+          });
+        }
       }
       this.sched();this.autoSave();
       if(this.sel.length===1){const selIt=this.gi(this.sel[0]);if(selIt)this.openPanel(selIt)}else if(this.sel.length>1)this.openBulkPanel()}};
