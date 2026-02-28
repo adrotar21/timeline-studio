@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.1 — F56 Open in New Tab/Window: ⧉ button on MRU entries opens recent files in new tab (left-click) or window (right-click popover). Reads latest from disk via FileSystemFileHandle, compresses through share link pipeline (#p= URL hash), new tab auto-links back to disk file via ?mru= query param + IDB handle reconnect. Unsaved changes block (must save first). MRU dropdown auto-collapses on close. Vertical guide line replaces indentation. Popover dismiss pattern documented. */
+/* Timeline Studio v0.44.2 — B51 fix: right-click bulk status edit in Data View restored. B45 select guard was running before B37 right-click guard, collapsing multi-selection before contextmenu fired. Swapped guard order so right-click on a selected row preserves multi-selection. Docs updated with beta user feedback (Feb 2026): new items F57–F60, B51–B52, priority changes (F48→P1, F50→P2), competitive validation, user model confirmation. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -5480,11 +5480,14 @@ const App={
       const cb=e.target.closest('.dt-cb');
       if(cb&&e.shiftKey&&this._lastShiftSel){e.preventDefault();this._dtSelect(cb.dataset.id,true,false);return}
       if(e.target.closest('.dt-cb,.dt-pin,.dt-hid'))return;
+      // B37: Right-click on an already-selected row preserves multi-selection
+      if(e.button===2&&this.sel.includes(row.dataset.iid))return;
       /* B45: Clicking a <select> (status dropdown) silently sets selection without
          triggering sched()/re-render so the native dropdown stays open. The row gets
-         visually selected on the next render (triggered by onchange). */
+         visually selected on the next render (triggered by onchange).
+         NOTE: Must run AFTER B37 guard — otherwise right-click on a status cell
+         collapses multi-selection before contextmenu fires (B51 regression). */
       if(e.target.closest('select')){const id=row.dataset.iid;if(!(this.sel.length===1&&this.sel[0]===id)){this.sel=[id];this._lastShiftSel=id}return}
-      if(e.button===2&&this.sel.includes(row.dataset.iid))return;
       this._dtSelect(row.dataset.iid,e.shiftKey,e.ctrlKey||e.metaKey);
     };
     this.$.dt_head.onclick=e=>{const th=e.target.closest('th[data-sortable]');if(!th)return;const col=th.dataset.col;if(this._sortCol===col)this._sortDir=this._sortDir==='asc'?'desc':'asc';else{this._sortCol=col;this._sortDir='asc'}this.sched(false,true)};

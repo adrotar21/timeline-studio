@@ -3,7 +3,7 @@
 **A cross-platform, zero-dependency Gantt chart tool for project managers.**
 Download three files. Open `index.html`. Done.
 
-![Version](https://img.shields.io/badge/version-0.31.0-blue)
+![Version](https://img.shields.io/badge/version-0.44.2-blue)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Files](https://img.shields.io/badge/architecture-3_files-orange)
 
@@ -24,7 +24,7 @@ Download three files. Open `index.html`. Done.
 
 ### Where it fits
 
-Timeline Studio lives in the same space as Office Timeline Pro (~$149/yr), but works cross-platform and doesn't require PowerPoint, plugins, or a license. Compared to open source options like Frappe Gantt (a library with no swimlanes or scheduling engine), it offers a more complete feature set out of the box -- dependencies, auto-scheduling, multiple export formats, and a built-in data table. And unlike heavyweight tools like MS Project or Smartsheet, it's designed for the PM who needs a clean timeline for a leadership review, not an enterprise resource planner.
+Timeline Studio lives in the same space as Office Timeline Pro (~$149/yr), but works cross-platform and doesn't require PowerPoint, plugins, or a license. PMs on Mac or locked-down corporate machines can't use Office Timeline Pro at all -- Timeline Studio fills that gap. Compared to open source options like Frappe Gantt (a library with no swimlanes or scheduling engine), it offers a more complete feature set out of the box -- dependencies, auto-scheduling, multiple export formats, and a built-in data table. And unlike heavyweight tools like MS Project (overwhelmingly detailed for exec presentations) or Smartsheet (license friction, concurrent editing that adds complexity without value), it's designed for the PM who owns a timeline, needs leadership-quality output, and wants something fast and stable -- not an enterprise resource planner.
 
 ---
 
@@ -177,7 +177,7 @@ The entire application is three files. This is a deliberate architectural constr
 ```
 index.html          # UI structure and modals
 styles.css          # Theming via CSS custom properties
-app.js              # All application logic (~4,400 lines)
+app.js              # All application logic (~5,990 lines)
 Showcase.tlproj     # Example project file
 tests/              # Test suites (not required to run the app)
 screenshots/        # README images
@@ -224,7 +224,7 @@ No build step. Edit the three files directly and refresh your browser.
 **Run tests** (Node.js CLI, zero dependencies):
 
 ```bash
-node tests/run-all.js              # 2,112 tests across 18 files
+node tests/run-all.js              # 2,912 tests across 23 files
 ```
 
 **Tech stack:** Vanilla JavaScript (ES6+), SVG for dependency arrows, Canvas API for PNG export with DPI scaling, CSS custom properties for theming, localStorage for session recovery.
@@ -235,7 +235,7 @@ See [`docs/CLAUDE.md`](docs/CLAUDE.md) for full architecture documentation inclu
 
 ## Roadmap
 
-Timeline Studio is currently in beta. We're looking for users and feedback to help shape the 1.0 release.
+Timeline Studio is in beta and actively used by project managers for real leadership presentations. The core feature set -- dependencies, swimlanes, drag-and-drop, export, and auto-scheduling -- is validated and stable. We're focused on discoverability and onboarding improvements ahead of the 1.0 release.
 
 If you find it useful, have suggestions, or run into issues, please [open an issue](../../issues) or start a [discussion](../../discussions).
 

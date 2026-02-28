@@ -14,7 +14,8 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.44.1` — F56 Open in New Tab/Window: ⧉ button on MRU entries, right-click popover for tab vs window, disk file reconnect via ?mru= param, auto-collapse MRU, vertical guide line, popover dismiss pattern. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.44.2` — B51 fix (right-click bulk status edit in Data View restored), docs updated with beta user feedback. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Beta feedback (Feb 2026):** Two PgM beta testers validated the core product. Discoverability is the #1 gap — see BACKLOG.md for F48 (P1) and related items.
 - Version history tracked in `docs/BACKLOG.md` (recent) and `docs/VERSION_HISTORY.md` (archive), plus **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
 
@@ -33,7 +34,7 @@ This is a non-negotiable design constraint. The three-file architecture is what 
 ```
 TimelineProject/
 ├── index.html                      # Complete DOM structure, modals, inline styles
-├── app.js                          # All application logic (~5200 lines)
+├── app.js                          # All application logic (~5990 lines)
 ├── styles.css                      # Theming via CSS custom properties, layout
 ├── Showcase.tlproj                 # Example project file (JSON)
 ├── README.md                       # Project README (stays at root for GitHub)
@@ -47,7 +48,7 @@ TimelineProject/
 │   ├── autofit-analysis.md         # Auto-fit analysis document
 │   └── timeline-studio-layout-engine-analysis.md  # Layout engine analysis
 ├── screenshots/                    # README screenshots (5 PNGs)
-└── tests/                         # 2,489 tests across 22 files
+└── tests/                         # 2,912 tests across 23 files
     ├── helpers/                    # Shared assert lib, mock engine, builder factories
     ├── core/                       # Scheduling engine, dependency type tests
     ├── features/                   # Per-feature: status, shortcuts, swimlane, fit, data table, CSV, SVG
@@ -130,6 +131,7 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 - **v1→v2 migration**: changed from exclusive to inclusive end dates
 - **Calendar vs. working day** durations handled consistently across all operations
 - **Pinned items** are protected from auto-scheduling and propagation
+- **Single-editor model (validated)**: The PgM owns the timeline — concurrent multi-editor is not needed. Both beta testers (Feb 2026) explicitly confirmed this. One noted Smartsheet's concurrent editing was "not useful." This validates deferring F27 (multi-instance sync) to V3+.
 - **`proj.labelWidth`**: swimlane header column width in px (default 160, range 80–400). Stored in project, flows through CSS `--sl-w`, on-screen rendering, export SVG, and watermark positioning
 
 ## Export & Rendering Quirks
