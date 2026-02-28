@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.2 — B51 fix: right-click bulk status edit in Data View restored. B45 select guard was running before B37 right-click guard, collapsing multi-selection before contextmenu fired. Swapped guard order so right-click on a selected row preserves multi-selection. Docs updated with beta user feedback (Feb 2026): new items F57–F60, B51–B52, priority changes (F48→P1, F50→P2), competitive validation, user model confirmation. */
+/* Timeline Studio v0.44.3 — B52 fix: shift+drag off-by-one day. The dX()→xD() round-trip is lossy (Math.round in xD can shift ±1 at fractional day boundaries). Fix: skip date update when item didn't move horizontally (nL===d.oL) in drop handler, drag feedback tooltip, and ghost snap preview. Handles all drag scenarios: pure shift+drag, mid-drag Shift toggle, bulk drag, escape, lock mode. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -4866,7 +4866,8 @@ const App={
             const ghostItems=showAll?dragItems:[primaryD];
             const _foundSlId=found?.dataset?.slId||'';if(ghostRow!==_foundSlId||ghostEls.length!==ghostItems.length){ghostEls.forEach(g=>g.el.remove());ghostEls=[];ghostItems.forEach(d=>{const g=document.createElement('div');g.className=d.id===it.id?'drag-ghost drag-ghost-primary':'drag-ghost drag-ghost-secondary';found.appendChild(g);ghostEls.push({el:g,d})});ghostRow=_foundSlId}
             ghostEls.forEach(({el:g,d})=>{const dIt=d.item,gIsT=dIt.type==='task';
-              const dCurL=parseFloat(d.el.style.left),dNx=dCurL+(gIsT?0:8),dSnap=this.xD(dNx,tl);
+              const dCurL=parseFloat(d.el.style.left);
+              const dSnap=dCurL===d.oL?(gIsT?dIt.startDate:dIt.date):(()=>{const dNx=dCurL+(gIsT?0:8);return this.xD(dNx,tl)})();
               const gX=gIsT?this.dX(dSnap,tl):this.dXMid(dSnap,tl)-8;
               const gEnd=gIsT?this._calcEndDate({startDate:dSnap,duration:dIt.duration,durMode:dIt.durMode}):null;
               const gW=gIsT?Math.max(8,(this.dXEnd(gEnd,tl)||0)-(this.dX(dSnap,tl)||0)):16;
@@ -4878,7 +4879,7 @@ const App={
       /* --- Drag date feedback (works regardless of lockV) --- */
       {const primaryD=dragItems.find(d=>d.id===it.id);
         if(primaryD){const isT=it.type==='task',curL=parseFloat(primaryD.el.style.left);
-          const nx=curL+(isT?0:8),snapDate=this.xD(nx,tl);
+          const snapDate=curL===primaryD.oL?origDate:(()=>{const nx=curL+(isT?0:8);return this.xD(nx,tl)})();
           const newEnd=isT?this._calcEndDate({startDate:snapDate,duration:it.duration,durMode:it.durMode}):null;
           const delta=U.days(origDate,snapDate);
           // Delta badge at cursor
@@ -4906,7 +4907,11 @@ const App={
     const _cleanFeedback=()=>{if(tipEl){tipEl.remove();tipEl=null}if(stripEl){stripEl.remove();stripEl=null}const hdrRows=this.$.tl_hdr.querySelectorAll('.th-row');const lastRow=hdrRows[hdrRows.length-1];if(lastRow){for(const c of lastRow.children)c.classList.remove('drag-target')}prevHdrStart=prevHdrEnd=-1};
     const up=ev=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('keydown',esc);dragItems.forEach(d=>d.el.classList.remove('dragging'));if(hlEl){hlEl.remove();hlEl=null;hlRow=null}ghostEls.forEach(g=>g.el.remove());ghostEls=[];ghostRow=null;_cleanFeedback();if(!dr){this.sched();return}if(dr){
       dragItems.forEach(d=>{
-        const nL=parseFloat(d.el.style.left),nx=nL+(d.item.type==='milestone'?8:0),nd=this.xD(nx,tl);
+        const nL=parseFloat(d.el.style.left);
+        // B52: skip date update if item didn't move horizontally (shift+drag / lockH)
+        // — the dX()→xD() round-trip is lossy (Math.round in xD can shift by ±1 at boundary fractions)
+        if(nL===d.oL)return;
+        const nx=nL+(d.item.type==='milestone'?8:0),nd=this.xD(nx,tl);
         if(!this.proj.lockH){if(d.item.type==='milestone')d.item.date=nd;else{d.item.startDate=nd;d.item.endDate=this._calcEndDate(d.item)}}
       });
       const origSlId=it.swimlaneId;
