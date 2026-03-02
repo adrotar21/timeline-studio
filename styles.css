@@ -334,15 +334,15 @@ body.theme-midnight #props-panel{box-shadow:-4px 0 20px rgba(0,0,0,.4)}
 #tl-container{flex-direction:column;overflow:hidden;position:relative;background:#fff}
 #tl-scroll{display:flex;flex-direction:column;flex:1;overflow:hidden}
 #tl-hdr-wrap{display:flex;flex-shrink:0;z-index:20}
-#tl-hdr-corner{width:var(--sl-w);min-width:var(--sl-w);border-right:1px solid rgba(255,255,255,.1);z-index:21}
+#tl-hdr-corner{width:var(--sl-w);min-width:var(--sl-w);border-right:1px solid rgba(255,255,255,.1);z-index:21;box-sizing:border-box}
 #tl-hdr-scroll{flex:1;overflow:hidden}
 #tl-hdr{display:flex;flex-direction:column}
-.th-row{display:flex;white-space:nowrap}
-.th-cell{display:flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:600;padding:3px 0;border-right:1px solid rgba(255,255,255,.18);border-bottom:1px solid rgba(255,255,255,.15);flex-shrink:0;overflow:hidden;text-overflow:clip;white-space:nowrap}
+.th-row{position:relative;white-space:nowrap}
+.th-cell{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:600;padding:3px 0;border-right:1px solid rgba(255,255,255,.18);border-bottom:1px solid rgba(255,255,255,.15);overflow:hidden;text-overflow:clip;white-space:nowrap;box-sizing:border-box}
 .th-cell-boundary{border-left:1px solid rgba(255,255,255,.35)}
-.th-day-weekend{position:relative}.th-day-weekend::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:rgba(255,255,255,.25)}
-.th-day-holiday{color:#ff6b6b;position:relative}.th-day-holiday::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:#e5534b}
-.th-cell-hybrid{position:relative}.th-day-letter{position:absolute;top:1px;right:2px;font-size:7px;font-weight:500;opacity:.55;line-height:1}
+.th-day-weekend::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:rgba(255,255,255,.25)}
+.th-day-holiday{color:#ff6b6b}.th-day-holiday::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:#e5534b}
+.th-day-letter{position:absolute;top:1px;right:2px;font-size:7px;font-weight:500;opacity:.55;line-height:1}
 #tl-body-wrap{display:flex;flex:1;overflow:hidden;position:relative}
 #tl-sl-labels{width:var(--sl-w);min-width:var(--sl-w);overflow-y:auto;overflow-x:hidden;z-index:10;scrollbar-width:none;padding-bottom:18px}
 #tl-sl-labels::-webkit-scrollbar{display:none}

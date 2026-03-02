@@ -134,6 +134,18 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 - **Single-editor model (validated)**: The PgM owns the timeline — concurrent multi-editor is not needed. Both beta testers (Feb 2026) explicitly confirmed this. One noted Smartsheet's concurrent editing was "not useful." This validates deferring F27 (multi-instance sync) to V3+.
 - **`proj.labelWidth`**: swimlane header column width in px (default 160, range 80–400). Stored in project, flows through CSS `--sl-w`, on-screen rendering, export SVG, and watermark positioning
 
+### Header/Body Scroll Architecture (B53)
+The timeline uses two scroll containers that must stay in perfect sync:
+- **Header** (`#tl-hdr-scroll`, `overflow:hidden`): scroll driven by JS, synced from body
+- **Body** (`#tl-body-scroll`, `overflow:auto`): scroll driven by user, has vertical scrollbar
+
+**Three constraints maintain alignment:**
+1. **Integer pixel coordinates**: `met()` rounds `cw` (column width) to integer. `dX()`/`dXMid()` return `Math.round()` values. This prevents subpixel rounding divergence between containers.
+2. **Matching content width**: Header `#tl-hdr` width = `tw + panelPad + scrollbarWidth`. Body `#tl-body` width = `tw + panelPad`. The extra `scrollbarWidth` on the header compensates for the body's vertical scrollbar, ensuring both containers have the same `maxScrollLeft`.
+3. **`box-sizing:border-box`** on `#tl-hdr-corner`: ensures the header corner (with `border-right:1px`) occupies the same total width as `#tl-sl-labels` (no border), so both scroll containers start at the same horizontal origin.
+
+**Scrollbar width** is measured dynamically via `offsetWidth - clientWidth` on the body scroll container — adapts to any browser, OS, or scrollbar style.
+
 ## Export & Rendering Quirks
 
 > **Important context for anyone modifying export or fit-to-content logic.**

@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.5 — F58: Pinning friction/confirmation. Auto-pin-on-drag in scheduled mode now shows an amber warning toast with clickable Undo button (5s duration). Smart undo: if no intervening actions, full undo reverts drag+pin; if other edits occurred, only unpins the specific items. Pin badge flashes with yellow glow animation (scale 1→2→1, 0.8s) when drag-pinned. Snap-back toast improved to explain why: "← Snapped back — can't start before dependencies allow." Bulk drags aggregate into single toast. toast() method extended with optional actionLabel/actionFn parameters. New .toast-warn (amber) and .toast-action (underlined clickable) CSS classes. */
+/* Timeline Studio v0.44.6 — B53: Header/body scroll alignment fix. Three root causes fixed: (1) Fractional column widths caused subpixel rounding divergence between header and body scroll containers — met() now rounds cw to integer, dX()/dXMid() return Math.round() values, weekend shading uses integer tiling formula. (2) Body had panel padding in its width but header didn't, causing different scrollWidth — header now includes panel padding. (3) Body's vertical scrollbar consumed ~15px, giving it a larger max scrollLeft than the header (overflow:hidden) — header width now includes measured scrollbar width so both containers have matching scroll ranges. Also fixed header corner box-sizing (border-box) to match labels column width exactly. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -4075,7 +4075,9 @@ const App={
   },
   _syncPanelPad(){
     const w=this.panelCollapsed?28:290;
+    const sbW=this.$.tl_body_scroll.offsetWidth-this.$.tl_body_scroll.clientWidth;
     this.$.tl_body.style.width=(this._tlTW||0)+w+'px';
+    this.$.tl_hdr.style.width=(this._tlTW||0)+w+sbW+'px';
     if(this.$.data_table_wrap)this.$.data_table_wrap.style.paddingRight=w+'px';
     const dtb=document.getElementById('data-toolbar');if(dtb)dtb.style.paddingRight=w+'px';
     const dfb=this.$.data_filter_bar;if(dfb)dfb.style.paddingRight=w+'px'
@@ -4359,7 +4361,11 @@ const App={
     q('pp-link-bulk')?.addEventListener('click',()=>App.showBulkLinks(it));
   },
 
-  /* ===== TIMELINE METRICS ===== */
+  /* ===== TIMELINE METRICS =====
+   * Returns {start, end, cols[], cw, tw, z}.
+   * cw (column width) is always an integer to prevent subpixel rounding
+   * drift between the header and body scroll containers. All downstream
+   * consumers (dX, grid-cols, header cells, shading) inherit this. */
   met(){
     const p=this.proj,start=new Date(p.timelineStart+'T12:00:00'),end=new Date(p.timelineEnd+'T12:00:00'),z=(p.zoom||100)/100;
     const cols=[],cur=new Date(start);
@@ -4370,19 +4376,21 @@ const App={
     else if(p.timescale==='quarters'){cur.setMonth(Math.floor(cur.getMonth()/3)*3);cur.setDate(1);while(cur<=end){const q=Math.floor(cur.getMonth()/3)+1;cols.push({label:`Q${q}`,start:U.iso(cur),end:U.iso(new Date(cur.getFullYear(),cur.getMonth()+3,0)),year:cur.getFullYear(),quarter:q});cur.setMonth(cur.getMonth()+3)}}
     else{cur.setMonth(0);cur.setDate(1);while(cur<=end){cols.push({label:String(cur.getFullYear()),start:U.iso(cur),end:`${cur.getFullYear()}-12-31`,year:cur.getFullYear()});cur.setFullYear(cur.getFullYear()+1)}}
     const dayCw={compact:20,normal:28,wide:36}[p.dayColumnWidth||'normal']||28;
-    const cw=(p.timescale==='days'?dayCw:{weeks:60,months:100,quarters:200,years:400}[p.timescale]||100)*z;
-    return{start,end,cols,cw,tw:cols.length*cw,z}
+    const cwR=Math.round((p.timescale==='days'?dayCw:{weeks:60,months:100,quarters:200,years:400}[p.timescale]||100)*z);
+    return{start,end,cols,cw:cwR,tw:cols.length*cwR,z}
   },
+  /* dX: date → integer pixel position. Always returns a rounded integer
+   * to match the integer cw from met() and prevent subpixel drift. */
   dX(ds,tl){if(!ds||!tl.cols.length)return null;const d=new Date(ds+'T12:00:00');
     for(let i=0;i<tl.cols.length;i++){const c=tl.cols[i],cs=new Date(c.start+'T12:00:00'),ce=new Date(c.end+'T12:00:00');
-      if(d>=cs&&d<=ce){const cd=Math.max(1,U.days(c.start,c.end)+1);return i*tl.cw+(U.days(c.start,ds)/cd)*tl.cw}}
+      if(d>=cs&&d<=ce){const cd=Math.max(1,U.days(c.start,c.end)+1);return Math.round(i*tl.cw+(U.days(c.start,ds)/cd)*tl.cw)}}
     const f=tl.cols[0],l=tl.cols[tl.cols.length-1];
-    if(d<new Date(f.start+'T12:00:00')){const cd=Math.max(1,U.days(f.start,f.end)+1);return -(U.days(ds,f.start)/cd)*tl.cw}
-    const cd=Math.max(1,U.days(l.start,l.end)+1);return(tl.cols.length-1)*tl.cw+(U.days(l.start,ds)/cd)*tl.cw},
+    if(d<new Date(f.start+'T12:00:00')){const cd=Math.max(1,U.days(f.start,f.end)+1);return Math.round(-(U.days(ds,f.start)/cd)*tl.cw)}
+    const cd=Math.max(1,U.days(l.start,l.end)+1);return Math.round((tl.cols.length-1)*tl.cw+(U.days(l.start,ds)/cd)*tl.cw)},
   /* dXEnd: pixel position at the END of a day (for task bar right edges) */
   dXEnd(ds,tl){return this.dX(U.addDays(ds,1),tl)},
-  /* dXMid: pixel position at the CENTER of a day (for milestone icons) */
-  dXMid(ds,tl){const a=this.dX(ds,tl),b=this.dX(U.addDays(ds,1),tl);return(a!=null&&b!=null)?(a+b)/2:a},
+  /* dXMid: integer pixel position at the CENTER of a day (for milestone icons) */
+  dXMid(ds,tl){const a=this.dX(ds,tl),b=this.dX(U.addDays(ds,1),tl);return(a!=null&&b!=null)?Math.round((a+b)/2):a},
   xD(x,tl){if(!tl.cols.length)return U.iso(tl.start);const ci=Math.floor(x/tl.cw),frac=(x-ci*tl.cw)/tl.cw;
     const col=tl.cols[U.clamp(ci,0,tl.cols.length-1)];if(!col)return U.iso(tl.start);
     const cd=Math.max(1,U.days(col.start,col.end)+1);return U.addDays(col.start,Math.round(frac*cd))},
@@ -4442,10 +4450,15 @@ const App={
     const hFs=p.headerFontSize||10.5;
     const isDaysHybrid=p.timescale==='days'&&(p.dayLabelFormat||'letter')==='hybrid';
     const _holDateSet=new Set();if(p.timescale==='days'&&p.holidays&&p.holidays.length){for(const hol of p.holidays){const hs=new Date(hol.start+'T12:00:00'),he=new Date(hol.end+'T12:00:00');const cur=new Date(hs);while(cur<=he){_holDateSet.add(U.iso(cur));cur.setDate(cur.getDate()+1)}}}
-    let hh='';hR.forEach((row,ri)=>{hh+=`<div class="th-row" style="background:${hc};height:${rowH}px">`;row.forEach((cell,ci)=>{const w=cell.width!=null?cell.width:cell.span*tl.cw;let xCls=cell.boundary?' th-cell-boundary':'';if(p.timescale==='days'&&ri===hR.length-1){const col=tl.cols[ci];if(col){if(_holDateSet.has(col.start))xCls+=' th-day-holiday';else if(col.isWeekend)xCls+=' th-day-weekend'}}if(isDaysHybrid&&ri===hR.length-1&&cell.dayLetter){hh+=`<div class="th-cell th-cell-hybrid${xCls}" style="width:${w}px;min-width:${w}px;font-size:${hFs}px">${cell.label}<span class="th-day-letter">${cell.dayLetter}</span></div>`}else{hh+=`<div class="th-cell${xCls}" style="width:${w}px;min-width:${w}px;font-size:${hFs}px">${cell.label}</div>`}});hh+=`</div>`});
-    this.$.tl_hdr.style.width=tl.tw+'px';this.$.tl_hdr.innerHTML=hh;
+    let hh='';hR.forEach((row,ri)=>{hh+=`<div class="th-row" style="background:${hc};height:${rowH}px;width:${tl.tw}px">`;let cellLeft=0;row.forEach((cell,ci)=>{const w=cell.width!=null?cell.width:cell.span*tl.cw;const x=cell.width!=null?cellLeft:cellLeft;let xCls=cell.boundary?' th-cell-boundary':'';if(p.timescale==='days'&&ri===hR.length-1){const col=tl.cols[ci];if(col){if(_holDateSet.has(col.start))xCls+=' th-day-holiday';else if(col.isWeekend)xCls+=' th-day-weekend'}}if(isDaysHybrid&&ri===hR.length-1&&cell.dayLetter){hh+=`<div class="th-cell th-cell-hybrid${xCls}" style="left:${x}px;width:${w}px;font-size:${hFs}px">${cell.label}<span class="th-day-letter">${cell.dayLetter}</span></div>`}else{hh+=`<div class="th-cell${xCls}" style="left:${x}px;width:${w}px;font-size:${hFs}px">${cell.label}</div>`}cellLeft+=w});hh+=`</div>`});
+    const _panPad=this.panelCollapsed?28:290;
+    /* Add scrollbar width to header so max scrollLeft matches body.
+     * Body has overflow:auto (vertical scrollbar), header has overflow:hidden (no scrollbar).
+     * Without this, the header's max scrollLeft is ~15px less than the body's,
+     * causing the body to keep scrolling while the header is clamped at the far right. */
+    const _sbW=this.$.tl_body_scroll.offsetWidth-this.$.tl_body_scroll.clientWidth;
+    this.$.tl_hdr.style.width=(tl.tw+_panPad+_sbW)+'px';this.$.tl_hdr.innerHTML=hh;
     this.$.tl_hdr_scroll.scrollLeft=this.$.tl_body_scroll.scrollLeft;
-
     let labelsH='',bodyH='';const violatedIds=this.getViolatedDepIds();
     const critIds=this._critPath?this.getCriticalPath():null;
     const vLines=[];
@@ -4547,8 +4560,8 @@ const App={
         while(cur<=ce){
           if(cur.getDay()===0||cur.getDay()===6){
             const dayIdx=U.days(c.start,U.iso(cur));
-            const dayX=ci*tl.cw+(dayIdx/numDays)*tl.cw;
-            const dayW=tl.cw/numDays;
+            const dayX=Math.round(ci*tl.cw+(dayIdx/numDays)*tl.cw);
+            const dayW=Math.round(ci*tl.cw+((dayIdx+1)/numDays)*tl.cw)-dayX;
             bodyH+=`<div class="wknd-shade" style="left:${dayX}px;width:${Math.max(1,dayW)}px;height:${slYAccum}px;opacity:${opacity}"></div>`;
           }
           cur.setDate(cur.getDate()+1);
@@ -5048,8 +5061,8 @@ const App={
         while(cur<=ce){
           if(cur.getDay()===0||cur.getDay()===6){
             const dayIdx=U.days(c.start,U.iso(cur));
-            const dayX=ci*tl.cw+(dayIdx/numDays)*tl.cw-vpX+lw;
-            const dayW=tl.cw/numDays;
+            const dayX=Math.round(ci*tl.cw+(dayIdx/numDays)*tl.cw)-vpX+lw;
+            const dayW=Math.round(ci*tl.cw+((dayIdx+1)/numDays)*tl.cw)-Math.round(ci*tl.cw+(dayIdx/numDays)*tl.cw);
             if(dayX+dayW>lw&&dayX<W)svg+=`<rect x="${dayX}" y="${totalHdrH}" width="${Math.max(1,dayW)}" height="${vpH}" fill="#000" opacity="${wkOp}"/>`;
           }
           cur.setDate(cur.getDate()+1);
