@@ -3,7 +3,7 @@
 **A cross-platform, zero-dependency Gantt chart tool for project managers.**
 Download three files. Open `index.html`. Done.
 
-![Version](https://img.shields.io/badge/version-0.44.5-blue)
+![Version](https://img.shields.io/badge/version-0.44.7-blue)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Files](https://img.shields.io/badge/architecture-3_files-orange)
 
@@ -224,7 +224,7 @@ No build step. Edit the three files directly and refresh your browser.
 **Run tests** (Node.js CLI, zero dependencies):
 
 ```bash
-node tests/run-all.js              # 2,912 tests across 23 files
+node tests/run-all.js              # 3,053 tests across 24 files
 ```
 
 **Tech stack:** Vanilla JavaScript (ES6+), SVG for dependency arrows, Canvas API for PNG export with DPI scaling, CSS custom properties for theming, localStorage for session recovery.

@@ -119,6 +119,11 @@
           <div class="dd-sep"></div>
           <div class="save-dd-item" id="btn-show-float"><span>📊</span> Show Float</div>
           <div class="dd-sep"></div>
+          <div class="dd-section" id="view-dep-section">
+            <div class="dd-section-label">Dependencies</div>
+            <div class="dd-inline hdr-fmt-row"><label class="hdr-fmt-lbl">Show</label><select id="view-dep-filter" class="toolbar-select hdr-fmt-sel"><option value="off">Off</option><option value="all" selected>All</option><option value="swimlane">Within Swimlane</option></select></div>
+          </div>
+          <div class="dd-sep"></div>
           <div class="dd-section">
             <div class="dd-section-label">Swimlanes</div>
             <div class="dd-inline" style="gap:4px">
@@ -372,7 +377,15 @@
           <!-- Visibility -->
           <div class="settings-sub-heading">Visibility</div>
           <div class="settings-group-box">
-            <div class="form-row"><div class="form-group"><label>Show Today Marker</label><label class="toggle-switch"><input type="checkbox" id="s-today" checked><span class="toggle-slider"></span></label></div><div class="form-group"><label>Show Dependencies</label><label class="toggle-switch"><input type="checkbox" id="s-deps" checked><span class="toggle-slider"></span></label></div></div>
+            <div class="form-group" style="display:flex;align-items:center;justify-content:space-between"><label>Show Today Marker</label><label class="toggle-switch"><input type="checkbox" id="s-today" checked><span class="toggle-slider"></span></label></div>
+            <div class="settings-group-divider"></div>
+            <div class="shading-block">
+              <div class="shading-primary-row"><label class="shading-label"><input type="checkbox" id="s-deps" checked> Show Dependencies</label></div>
+              <div class="shading-sub-opts hidden" id="deps-opts">
+                <label><input type="radio" name="s-dep-filter" value="all" checked> All dependencies</label>
+                <label><input type="radio" name="s-dep-filter" value="swimlane"> Within swimlane only</label>
+              </div>
+            </div>
             <div class="settings-group-divider"></div>
             <div class="shading-block">
               <div class="shading-primary-row">

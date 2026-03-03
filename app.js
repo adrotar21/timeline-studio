@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.6 — B53: Header/body scroll alignment fix. Three root causes fixed: (1) Fractional column widths caused subpixel rounding divergence between header and body scroll containers — met() now rounds cw to integer, dX()/dXMid() return Math.round() values, weekend shading uses integer tiling formula. (2) Body had panel padding in its width but header didn't, causing different scrollWidth — header now includes panel padding. (3) Body's vertical scrollbar consumed ~15px, giving it a larger max scrollLeft than the header (overflow:hidden) — header width now includes measured scrollbar width so both containers have matching scroll ranges. Also fixed header corner box-sizing (border-box) to match labels column width exactly. */
+/* Timeline Studio v0.44.7 — F60: Dependency display filtering. New depFilter project property ('all'|'swimlane') with sub-options under Show Dependencies in Settings. "Within swimlane only" hides cross-swimlane dependency arrows while preserving scheduling engine behavior. View dropdown Dependencies section with Off/All/Within Swimlane selector. cycleDeps keyboard shortcut action (no default binding). Filter applied in both on-screen rDeps() and export SVG rendering. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -60,6 +60,7 @@ const SHORTCUT_ACTIONS=[
   {id:'expandAll',cat:'View',label:'Expand All Swimlanes',defaults:[],ctx:'tl'},
   {id:'collapseAll',cat:'View',label:'Collapse All Swimlanes',defaults:[],ctx:'tl'},
   {id:'showFloat',cat:'View',label:'Toggle Float Labels',defaults:[],ctx:'tl'},
+  {id:'cycleDeps',cat:'View',label:'Cycle Dependency Filter',defaults:[],ctx:'tl'},
   {id:'autoFitHeights',cat:'View',label:'Auto Fit Heights',defaults:[],ctx:'tl'},
   {id:'cycleDayFmt',cat:'View',label:'Cycle Day Label Format',defaults:[],ctx:'tl'},
   {id:'cycleScale',cat:'View',label:'Cycle Timescale',defaults:[],ctx:'tl'},
@@ -114,7 +115,7 @@ const BROWSER_RESERVED=new Set(['Ctrl+t','Ctrl+w','Ctrl+Tab','Ctrl+Shift+Tab','C
 const SK={
   /* project-level */
   version:'V',name:'n',owner:'o',dateFormat:'df',timescale:'ts',headerLayers:'hl',
-  timelineStart:'a',timelineEnd:'b',autoRange:'ar',showToday:'st',showDeps:'sd',
+  timelineStart:'a',timelineEnd:'b',autoRange:'ar',showToday:'st',showDeps:'sd',depFilter:'dP',
   locked:'lk',lockH:'lh',lockV:'lv',hideMode:'hm',theme:'th',bgColor:'bc',
   headerColor:'hc',zoom:'z',fontSize:'fs',monthFormat:'mF',quarterFormat:'qF',headerFontSize:'hF',dayLabelFormat:'dL',dayColumnWidth:'dW',
   watermark:'wm',wmDate:'wd',wmPos:'wp',
@@ -166,7 +167,7 @@ function _skDec(o){
   return o;
 }
 
-function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,monthFormat:'short',quarterFormat:'withYear',headerFontSize:10.5,dayLabelFormat:'letter',dayColumnWidth:'normal',watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
+function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,depFilter:'all',locked:false,lockH:false,lockV:false,hideMode:false,theme:'default',bgColor:'#ffffff',headerColor:'#1a2332',zoom:100,fontSize:11,monthFormat:'short',quarterFormat:'withYear',headerFontSize:10.5,dayLabelFormat:'letter',dayColumnWidth:'normal',watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
 const App={
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
@@ -175,7 +176,8 @@ const App={
   _dirty:false,_dataDirty:false,_raf:null,_unsaved:false,_shareMode:false,_fileHintShown:false,_storedHandle:null,
   _sortCol:null,_sortDir:'asc',
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
-  _fileHandle:null,_mruCache:[],_mruValidated:false,_mruExpanded:false,_mruLinkId:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
+  _fileHandle:null,_fileLastModified:0,_mruCache:[],_mruValidated:false,_mruExpanded:false,_mruLinkFile:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
+  _tabSessionId:(typeof sessionStorage!=='undefined'&&sessionStorage.getItem('tls3_tabId'))||(()=>{const id='tab_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);try{sessionStorage.setItem('tls3_tabId',id)}catch(e){}return id})(),
   _lassoMode:false,_panMode:false,_panning:false,_fpMode:false,_fpPersist:false,_fpStaged:false,_fpSourceId:null,_fpSourceData:null,_collapsedSl:new Set(),_pendingFit:false,
   _impData:null,_impMappings:[],_impOverloads:[],_impSelSrc:null,_impStatusMap:{},_impLinkColors:['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'],
   _scMap:{},_scOverrides:null,_scRecording:null,_nudgeSnapped:false,_nudgeSnapTimer:null,_scMsgTimer:null,
@@ -225,10 +227,10 @@ const App={
   /* ── IndexedDB File Handle Store (F53) + MRU (F55) ── */
   _MRU_MAX:8,
   _openHandleDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open('tls3_handles',2);req.onupgradeneeded=e=>{const db=req.result;if(!db.objectStoreNames.contains('handles'))db.createObjectStore('handles');if(!db.objectStoreNames.contains('recentFiles'))db.createObjectStore('recentFiles',{keyPath:'id'})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})},
-  async _storeHandle(handle){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readwrite');tx.objectStore('handles').put(handle,'fileHandle');await new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=j});db.close()}catch(e){}},
-  async _loadHandle(){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readonly');const req=tx.objectStore('handles').get('fileHandle');const handle=await new Promise((r,j)=>{req.onsuccess=()=>r(req.result);req.onerror=j});db.close();return handle||null}catch(e){return null}},
-  async _clearHandle(){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readwrite');tx.objectStore('handles').delete('fileHandle');db.close()}catch(e){}},
-  async _tryReconnect(){const handle=await this._loadHandle();if(!handle)return false;try{const perm=await handle.requestPermission({mode:'readwrite'});if(perm==='granted'){this._fileHandle=handle;this._updateFileIndicator();this.toast('Reconnected to '+handle.name);return true}}catch(e){}return false},
+  async _storeHandle(handle){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readwrite');tx.objectStore('handles').put(handle,this._tabSessionId);await new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=j});db.close()}catch(e){}},
+  async _loadHandle(){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readonly');const req=tx.objectStore('handles').get(this._tabSessionId);const handle=await new Promise((r,j)=>{req.onsuccess=()=>r(req.result);req.onerror=j});db.close();return handle||null}catch(e){return null}},
+  async _clearHandle(){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readwrite');tx.objectStore('handles').delete(this._tabSessionId);db.close()}catch(e){}},
+  async _tryReconnect(){const handle=await this._loadHandle();if(!handle)return false;try{const perm=await handle.requestPermission({mode:'readwrite'});if(perm==='granted'){this._fileHandle=handle;try{const rf=await handle.getFile();this._fileLastModified=rf.lastModified}catch(e){}this._updateFileIndicator();this.toast('Reconnected to '+handle.name);return true}}catch(e){}return false},
   /* ── MRU Storage (F55) ── */
   async _loadMRU(){
     try{const db=await this._openHandleDB();const tx=db.transaction('recentFiles','readonly');const store=tx.objectStore('recentFiles');
@@ -287,19 +289,23 @@ const App={
     if(!this._mruCache.length)return;
     const results=await Promise.allSettled(this._mruCache.map(e=>this._validateMRUEntry(e)));
     results.forEach((r,i)=>{if(r.status==='fulfilled')this._mruCache[i]._state=r.value;else this._mruCache[i]._state='nameonly'});
+    /* Fix B: Mark current file by handle identity, not filename */
+    if(this._fileHandle){
+      const curChecks=await Promise.allSettled(this._mruCache.map(e=>e.handle?this._fileHandle.isSameEntry(e.handle):Promise.resolve(false)));
+      this._mruCache.forEach((e,i)=>{e._isCurrent=curChecks[i].status==='fulfilled'&&curChecks[i].value===true})}
+    else{this._mruCache.forEach(e=>{e._isCurrent=false})}
     this._mruValidated=true;this._syncMRUCache();this._renderMRUBadges()
   },
   _renderMRUDropdown(){
     const sec=document.getElementById('mru-section');if(!sec)return;
     const list=this._mruCache.length?this._mruCache:this._readMRUCache();
-    const curName=this._fileHandle?this._fileHandle.name:null;
     let html='';
     /* Browse always first */
     html+='<div class="mru-browse" id="btn-browse">Browse\u2026</div>';
     if(!list.length){html+='<div class="mru-hint">No recent files</div>'}
     else{html+='<div class="mru-sep"></div><div class="mru-list">';
       list.forEach(e=>{
-        const st=e._state||'nameonly';const isCur=curName&&e.name===curName;
+        const st=e._state||'nameonly';const isCur=!!e._isCurrent;
         const tip=e.projectName?U.esc(e.projectName):'';
         html+='<div class="mru-entry'+(isCur?' mru-current':'')+'" data-mru-id="'+U.esc(e.id)+'"'+(tip?' data-tooltip="'+tip+'"':'')+'>';
         if(e.handle)html+='<span class="mru-ext" data-mru-ext="'+U.esc(e.id)+'" data-tooltip="Open in new tab (right-click for options)">\u29C9</span>';
@@ -333,10 +339,9 @@ const App={
   },
   _renderMRUBadges(){
     const sec=document.getElementById('mru-section');if(!sec)return;
-    const curName=this._fileHandle?this._fileHandle.name:null;
     this._mruCache.forEach(e=>{
       const badge=sec.querySelector('[data-mru-badge="'+e.id+'"]');if(!badge)return;
-      const st=e._state||'nameonly';const isCur=curName&&e.name===curName;
+      const st=e._state||'nameonly';const isCur=!!e._isCurrent;
       if(isCur){badge.className='mru-badge mru-badge-cur';badge.innerHTML='&#10003;';badge.dataset.tooltip='Currently open'}
       else if(st==='orphaned'){badge.className='mru-badge mru-badge-warn';badge.textContent='\u26A0';badge.dataset.tooltip='File not found \u2014 may have been moved or deleted'}
       else if(st==='stale'||st==='denied'){badge.className='mru-badge mru-badge-stale';badge.textContent='\u26BF';badge.dataset.tooltip='Permission needed \u2014 click to reconnect'}
@@ -367,7 +372,7 @@ const App={
     /* READY (or just became ready): load the file */
     try{const file=await entry.handle.getFile();const text=await file.text();
       this.snap();this.proj=JSON.parse(text);this.migrate();this.applyTheme();this.sel=[];
-      this._fileHandle=entry.handle;this._storeHandle(entry.handle);
+      this._fileHandle=entry.handle;this._fileLastModified=file.lastModified;this._storeHandle(entry.handle);
       try{localStorage.setItem('tls3_fileName',entry.handle.name)}catch(e){}
       this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();
       /* Update MRU entry: bump to top, refresh name in case file was renamed */
@@ -398,7 +403,7 @@ const App={
       const file=await entry.handle.getFile();const text=await file.text();const proj=JSON.parse(text);
       const packed=this._packProj(proj);const encoded=_skEnc(packed);
       const json=JSON.stringify(encoded);const compressed=await this._compress(json);
-      const url=location.origin+location.pathname+'?mru='+encodeURIComponent(entry.id)+'#p='+compressed;
+      const url=location.origin+location.pathname+'?mruFile='+encodeURIComponent(entry.handle.name)+'#p='+compressed;
       if(url.length>11500){this.toast('Project too large to open in a new tab','error',4000);return}
       if(asWindow){window.open(url,'_blank','width=1200,height=800,menubar=no,toolbar=no')}
       else{window.open(url,'_blank')}
@@ -441,6 +446,7 @@ const App={
     expandAll(){this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')},
     collapseAll(){this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')},
     showFloat(){this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')},
+    cycleDeps(){const p=this.proj;if(!p.showDeps){p.showDeps=true;p.depFilter='all';this.toast('Dependencies: All')}else if((p.depFilter||'all')==='all'){p.depFilter='swimlane';this.toast('Dependencies: Within swimlane')}else{p.showDeps=false;this.toast('Dependencies: Off')}this.sched();this.autoSave();const vdf=document.getElementById('view-dep-filter');if(vdf)vdf.value=p.showDeps?(p.depFilter||'all'):'off'},
     autoFitHeights(){this.autoFitHeights()},
     propagate(){if(this.sel.length&&this.proj.schedulingMode!=='scheduled')this.propagateFrom(this.sel)},
     toggleLock(){this.proj.locked=!this.proj.locked;this.proj.lockH=this.proj.locked;this.proj.lockV=this.proj.locked;this.sched();this.autoSave();this.toast(this.proj.locked?'Locked':'Unlocked')},
@@ -520,27 +526,28 @@ const App={
     this._syncPanelPad();this.applyTheme();this.bind();this.sched();if(this.proj.items.length)this._pendingFit=true;
     if(this._shareMode){this._showShareBanner();this.markClean();this.toast('Shared timeline loaded','info',3000)}
     /* F56: Reconnect file handle when opened from MRU in new tab */
-    if(this._mruLinkId){(async()=>{
+    if(this._mruLinkFile){(async()=>{
       try{
         await this._loadMRU();
-        const entry=this._mruCache.find(e=>e.id===this._mruLinkId);
+        const entry=this._mruCache.find(e=>e.name===this._mruLinkFile);
         if(entry&&entry.handle){
           const perm=await entry.handle.queryPermission({mode:'readwrite'});
           if(perm==='granted'){this._fileHandle=entry.handle;this._storeHandle(entry.handle);
+            try{const rf=await entry.handle.getFile();this._fileLastModified=rf.lastModified}catch(e){}
             try{localStorage.setItem('tls3_fileName',entry.handle.name)}catch(e){}
             this.markClean();this._updateFileIndicator()
           }else{this._storedHandle=entry.handle;this._updateFileIndicator();
             setTimeout(()=>this.toast(entry.name+' \u2014 click filename to reconnect','info',4000),600)}
         }
-        this._mruLinkId=null
-      }catch(e){this._mruLinkId=null}
+        this._mruLinkFile=null
+      }catch(e){this._mruLinkFile=null}
     })()}
     /* F53: File handle reconnect on startup */
     if(!this._shareMode&&this.proj.items.length){(async()=>{
       const stored=await this._loadHandle();
       if(stored){
         this._storedHandle=stored;
-        try{const perm=await stored.queryPermission({mode:'readwrite'});if(perm==='granted'){this._fileHandle=stored;this._updateFileIndicator();return}}catch(e){}
+        try{const perm=await stored.queryPermission({mode:'readwrite'});if(perm==='granted'){this._fileHandle=stored;try{const rf=await stored.getFile();this._fileLastModified=rf.lastModified}catch(e){}this._updateFileIndicator();return}}catch(e){}
         this._updateFileIndicator();
         if(!this._fileHintShown){this._fileHintShown=true;const fn=stored.name||localStorage.getItem('tls3_fileName')||'';if(fn)setTimeout(()=>this.toast(fn+' \u2014 click filename to reconnect','info',4000),600)}
       }else if(!this._fileHandle){this._updateFileIndicator()}
@@ -566,7 +573,7 @@ const App={
     if(!p.dayLabelFormat||!['letter','number','hybrid'].includes(p.dayLabelFormat))p.dayLabelFormat='letter';
     if(!p.dayColumnWidth||!['compact','normal','wide'].includes(p.dayColumnWidth))p.dayColumnWidth='normal';
     if(!p.watermark)p.watermark=false;if(!p.wmDate)p.wmDate='';if(!p.wmPos)p.wmPos='bottom-center';
-    if(p.showDeps==null)p.showDeps=true;if(p.showToday==null)p.showToday=true;
+    if(p.showDeps==null)p.showDeps=true;if(p.depFilter==null)p.depFilter='all';if(p.showToday==null)p.showToday=true;
     if(p.owner==null)p.owner='';if(p.wmShowOwner==null)p.wmShowOwner=false;
     if(p.lockH==null)p.lockH=false;if(p.lockV==null)p.lockV=false;
     if(p.showWeekends==null)p.showWeekends=false;if(p.weekendOpacity==null)p.weekendOpacity=8;
@@ -745,8 +752,8 @@ const App={
       this.proj=_skDec(parsed);
       /* F56: Check if this is a local MRU open (not a remote share link) */
       const params=new URLSearchParams(location.search);
-      const mruId=params.get('mru');
-      if(mruId){this._shareMode=false;this._mruLinkId=mruId}
+      const mruFile=params.get('mruFile');
+      if(mruFile){this._shareMode=false;this._mruLinkFile=mruFile}
       else{this._shareMode=true}
       this._fileHandle=null;
       history.replaceState(null,'',location.pathname);
@@ -759,7 +766,7 @@ const App={
     const data=JSON.stringify(this.proj,null,2);
     /* F53: Try stored handle if no active handle (auto-reconnect on Ctrl+S) */
     if(!saveAs&&!this._fileHandle){const stored=await this._loadHandle();if(stored){try{const perm=await stored.requestPermission({mode:'readwrite'});if(perm==='granted')this._fileHandle=stored}catch(e){}}}
-    if(!saveAs&&this._fileHandle){try{const w=await this._fileHandle.createWritable();await w.write(data);await w.close();this.markClean();this.toast('Saved!');this.autoSave();try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();this._updateMRU(this._fileHandle,this._fileHandle.name,this.proj.name);return}catch(e){}}
+    if(!saveAs&&this._fileHandle){try{/* Fix D: stale file check before overwrite */if(this._fileLastModified){try{const chk=await this._fileHandle.getFile();if(chk.lastModified!==this._fileLastModified){if(!confirm('This file was modified outside this tab (possibly by another tab or program). Overwrite with your version?'))return}}catch(e){}}const w=await this._fileHandle.createWritable();await w.write(data);await w.close();try{const saved=await this._fileHandle.getFile();this._fileLastModified=saved.lastModified}catch(e){}this.markClean();this.toast('Saved!');this.autoSave();try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();this._updateMRU(this._fileHandle,this._fileHandle.name,this.proj.name);return}catch(e){}}
     if(window.showSaveFilePicker){try{const prevHandle=saveAs?this._fileHandle:null;const h=await window.showSaveFilePicker({suggestedName:(this.proj.name||'timeline')+'.tlproj',types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}]});const w=await h.createWritable();await w.write(data);await w.close();this._fileHandle=saveAs&&prevHandle?prevHandle:h;this.markClean();this.toast(saveAs?'Saved copy!':'Saved!');this.autoSave();this._storeHandle(this._fileHandle);try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();this._updateMRU(this._fileHandle,this._fileHandle.name,this.proj.name);return}catch(e){if(e.name==='AbortError')return}}
     const fn=(this.proj.name||'timeline')+'.tlproj';const b=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;a.click();URL.revokeObjectURL(a.href);this.markClean();this.toast('Downloaded!');this.autoSave();try{localStorage.setItem('tls3_fileName',fn)}catch(e){}this._updateFileIndicator();this._updateMRU(null,fn,this.proj.name)
   },
@@ -768,7 +775,7 @@ const App={
     const p=U.deep(src||this.proj);
     const def=newProj();
     /* project-level: strip fields matching defaults */
-    const projStrip=['owner','dateFormat','timescale','headerLayers','autoRange','showToday','showDeps',
+    const projStrip=['owner','dateFormat','timescale','headerLayers','autoRange','showToday','showDeps','depFilter',
       'locked','lockH','lockV','hideMode','theme','bgColor','headerColor','zoom','fontSize','monthFormat','quarterFormat','headerFontSize','dayLabelFormat','dayColumnWidth',
       'watermark','wmDate','wmPos','wmShowOwner','showWeekends','weekendOpacity','weekendAutoHide',
       'showHolidays','holidayOpacity','holidayColor','holidayLabels','scheduleAroundNonWorking',
@@ -923,23 +930,23 @@ const App={
     if(window.showOpenFilePicker){
       try{const[handle]=await window.showOpenFilePicker({types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}],multiple:false});
         const file=await handle.getFile();const text=await file.text();
-        try{this.snap();this.proj=JSON.parse(text);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=handle;this._storeHandle(handle);try{localStorage.setItem('tls3_fileName',handle.name)}catch(e){}this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this._updateMRU(handle,handle.name,this.proj.name);this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}
+        try{this.snap();this.proj=JSON.parse(text);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=handle;this._fileLastModified=file.lastModified;this._storeHandle(handle);try{localStorage.setItem('tls3_fileName',handle.name)}catch(e){}this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this._updateMRU(handle,handle.name,this.proj.name);this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}
         return}catch(e){if(e.name==='AbortError')return}
     }
     this.$.file_input.click()
   },
-  handleOpen(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{this.snap();this.proj=JSON.parse(ev.target.result);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=null;try{localStorage.setItem('tls3_fileName',f.name)}catch(e2){}this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this._updateMRU(null,f.name,this.proj.name);this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}};r.readAsText(f);e.target.value=''},
+  handleOpen(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{this.snap();this.proj=JSON.parse(ev.target.result);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=null;this._fileLastModified=f.lastModified;try{localStorage.setItem('tls3_fileName',f.name)}catch(e2){}this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this._updateMRU(null,f.name,this.proj.name);this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}};r.readAsText(f);e.target.value=''},
   newProjAct(){this.showModal('new-proj-modal');this.$.np_name.value='New Timeline';document.getElementById('np-template').value='blank'},
   createFromTemplate(){
     const tpl=document.getElementById('np-template').value,name=this.$.np_name.value.trim()||'New Timeline';
-    if(tpl==='duplicate'){this.snap();const dup=U.deep(this.proj);dup.name=name+' (Copy)';this.proj=dup;this._fileHandle=null;this._clearHandle();try{localStorage.removeItem('tls3_fileName')}catch(e){}this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markDirty();document.getElementById('new-proj-modal').classList.add('hidden');this.toast('Duplicated!');return}
+    if(tpl==='duplicate'){this.snap();const dup=U.deep(this.proj);dup.name=name+' (Copy)';this.proj=dup;this._fileHandle=null;this._fileLastModified=0;this._clearHandle();try{localStorage.removeItem('tls3_fileName')}catch(e){}this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markDirty();document.getElementById('new-proj-modal').classList.add('hidden');this.toast('Duplicated!');return}
     if(this._unsaved&&!confirm('Unsaved changes will be lost.'))return;
     this.snap();
     if(tpl==='blank')this.proj=newProj();
     else if(tpl==='product-launch')this.proj=this.tplProductLaunch();
     else if(tpl==='software-dev')this.proj=this.tplSoftwareDev();
     else this.proj=newProj();
-    this.proj.name=name;this._fileHandle=null;this._clearHandle();try{localStorage.removeItem('tls3_fileName')}catch(e){}this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();
+    this.proj.name=name;this._fileHandle=null;this._fileLastModified=0;this._clearHandle();try{localStorage.removeItem('tls3_fileName')}catch(e){}this.sel=[];this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();
     document.getElementById('new-proj-modal').classList.add('hidden');this.toast('Created!')
   },
   tplProductLaunch(){const p=newProj();p.name='Product Launch';const y=new Date().getFullYear();
@@ -1569,10 +1576,11 @@ const App={
     on('btn-add-import',()=>{this.$.add_dropdown.classList.add('hidden');this.showPaste()});
     on('btn-undo',()=>this.undo());on('btn-redo',()=>this.redo());
     // View dropdown
-    on('btn-view-menu',()=>{this.closeAllDD();this.$.view_dropdown.classList.toggle('hidden');this.posDD(this.$.view_dropdown)});
+    on('btn-view-menu',()=>{this.closeAllDD();this.$.view_dropdown.classList.toggle('hidden');this.posDD(this.$.view_dropdown);const vdf0=document.getElementById('view-dep-filter');if(vdf0)vdf0.value=this.proj.showDeps?(this.proj.depFilter||'all'):'off'});
     on('btn-today',()=>{this.$.view_dropdown.classList.add('hidden');this.goToday()});
     on('btn-fullscreen',()=>{this.$.view_dropdown.classList.add('hidden');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>this.toast('Fullscreen not supported','error'))});
     on('btn-show-float',()=>{this.$.view_dropdown.classList.add('hidden');this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')});
+    const vdf=document.getElementById('view-dep-filter');if(vdf)vdf.onchange=()=>{this.$.view_dropdown.classList.add('hidden');const val=vdf.value;if(val==='off'){this.proj.showDeps=false}else{this.proj.showDeps=true;this.proj.depFilter=val}this.sched();this.autoSave();this.toast('Dependencies: '+(val==='off'?'Off':val==='all'?'All':'Within swimlane'))};
     on('btn-zoom100',()=>this.doZoomTo(100));
     on('btn-fit',()=>this.sel.length?this.fitToSelection():this.fitToContent());
     on('btn-expand-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')});
@@ -1726,6 +1734,7 @@ const App={
     if(this.$.file_subtitle){this.$.file_subtitle.onclick=async(e)=>{e.stopPropagation();if(this._fileHandle)return;const ok=await this._tryReconnect();if(!ok)this.openFile()}}
     on('btn-pn-save',()=>{this.snap();this.proj.name=document.getElementById('pn-name').value.trim()||'Untitled';document.getElementById('pname-modal').classList.add('hidden');this.sched();this.autoSave()});
     document.getElementById('s-watermark').onchange=function(){document.getElementById('watermark-opts').classList.toggle('hidden',!this.checked)};
+    document.getElementById('s-deps').onchange=function(){document.getElementById('deps-opts').classList.toggle('hidden',!this.checked)};
     document.getElementById('s-show-weekends').onchange=function(){document.getElementById('weekend-inline').classList.toggle('hidden',!this.checked);document.getElementById('weekend-opts').classList.toggle('hidden',!this.checked)};
     document.getElementById('s-show-holidays').onchange=function(){document.getElementById('holiday-inline').classList.toggle('hidden',!this.checked);document.getElementById('holiday-opts').classList.toggle('hidden',!this.checked)};
     const holOpSlider=document.getElementById('s-hol-opacity');if(holOpSlider)holOpSlider.oninput=function(){document.getElementById('s-hol-opval').textContent=this.value+'%';const b=document.getElementById('s-hol-color');if(b)b.style.opacity=(0.3+(this.value/40)*0.7).toFixed(2)};
@@ -2905,6 +2914,8 @@ const App={
     this.$.s_name.value=p.name;this.$.s_owner.value=p.owner||'';
     this.$.s_start.value=p.timelineStart;this.$.s_end.value=p.timelineEnd;
     this.$.s_auto_range.checked=p.autoRange;this.$.s_today.checked=p.showToday;this.$.s_deps.checked=p.showDeps;
+    document.getElementById('deps-opts').classList.toggle('hidden',!p.showDeps);
+    const dfVal=p.depFilter||'all';document.querySelectorAll('input[name="s-dep-filter"]').forEach(r=>r.checked=(r.value===dfVal));
     this.$.s_fontsize.value=p.fontSize||11;
     // Date format
     const dfSel=document.getElementById('s-date-fmt');
@@ -3107,6 +3118,7 @@ const App={
     this.snap();const p=this.proj;p.name=this.$.s_name.value;p.owner=this.$.s_owner.value;
     p.timelineStart=this.$.s_start.value;p.timelineEnd=this.$.s_end.value;
     p.autoRange=this.$.s_auto_range.checked;p.showToday=this.$.s_today.checked;p.showDeps=this.$.s_deps.checked;
+    const depFR=document.querySelector('input[name="s-dep-filter"]:checked');p.depFilter=depFR?depFR.value:'all';
     p.fontSize=+this.$.s_fontsize.value||11;
     // Date format
     const dfSel=document.getElementById('s-date-fmt');
@@ -4685,8 +4697,12 @@ const App={
   },
 
   rDeps(tl){const svg=document.getElementById('dep-svg');if(!svg)return;const body=this.$.tl_body,bR=body.getBoundingClientRect();const L=[];
+    const filter=this.proj.depFilter||'all';
     for(const it of this.proj.items){if(!it.deps?.length)continue;
       for(const d of it.deps){const did=this.depId(d),lag=this.depLag(d),dtype=this.depType(d);
+        const pred=this.gi(did);if(!pred)continue;
+        /* F60: swimlane filter */
+        if(filter==='swimlane'&&pred.swimlaneId!==it.swimlaneId)continue;
         const sE=body.querySelector(`[data-iid="${did}"]`),tE=body.querySelector(`[data-iid="${it.id}"]`);if(!sE||!tE)continue;
         const sr=sE.getBoundingClientRect(),tr=tE.getBoundingClientRect();
         // Attachment points based on link type
@@ -4695,7 +4711,7 @@ const App={
         else if(dtype==='FF'){sx=sr.right-bR.left;sy=sr.top+sr.height/2-bR.top;tx=tr.right-bR.left;ty=tr.top+tr.height/2-bR.top}
         else{sx=sr.right-bR.left;sy=sr.top+sr.height/2-bR.top;tx=tr.left-bR.left;ty=tr.top+tr.height/2-bR.top}
         // Check if this link is violated
-        let violated=false;const iStart=it.type==='task'?it.startDate:it.date;const pred=this.gi(did);
+        let violated=false;const iStart=it.type==='task'?it.startDate:it.date;
         const idm=it.type==='task'?(it.durMode||'cal'):'work';
         if(pred){let req=null;
           if(dtype==='FS'){const pEnd=this._depEnd(pred);if(pEnd)req=this._addLagWorkingDays(pEnd,lag,idm)}
@@ -5205,11 +5221,13 @@ const App={
         }
       }yO+=h}
     /* Dependency arrows */
-    if(p.showDeps){
+    if(p.showDeps){const depFilt=p.depFilter||'all';
       for(const it of p.items){if(!it.deps?.length)continue;
         if(p.hideMode&&it.hidden)continue;
         const tPos=svgItemXMap.get(it.id);if(!tPos)continue;
         for(const d of it.deps){const did=this.depId(d),lag=this.depLag(d),dtype=this.depType(d);
+          /* F60: swimlane filter */
+          if(depFilt==='swimlane'){const pred0=this.gi(did);if(pred0&&pred0.swimlaneId!==it.swimlaneId)continue}
           const sPos=svgItemXMap.get(did);if(!sPos)continue;
           /* Attachment points based on link type */
           let sx,sy,tx,ty;
