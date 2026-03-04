@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.11 — B55: Dropdown emoji icons greyed out on Mac Safari. Removed color:var(--acc) from broad .save-dd-item span, targeted .dd-shortcut only; added VS16 (U+FE0F) to emoji for Safari color rendering; ⬇ icon gets inline accent style. */
+/* Timeline Studio v0.44.11 — B55: File dropdown emoji monochrome on macOS. Swapped 📄→✨, 📂→🗂️, 💾→🗃️ (macOS renders originals monochrome regardless of CSS/VS16); removed color:var(--acc) from broad .save-dd-item span, targeted .dd-shortcut only. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -1579,8 +1579,8 @@ const App={
     /* Non-FS browsers (Safari/Firefox): adapt menu labels and hide FS-only items */
     if(!this._hasFS){
       const _sa=document.getElementById('btn-save-as');if(_sa)_sa.style.display='none';
-      const _sv=document.getElementById('btn-save');if(_sv)_sv.innerHTML='<span style="color:var(--acc)">\u2B07</span> Download <span class="dd-shortcut">Ctrl+S</span>';
-      const _or=document.getElementById('btn-open-recent');if(_or){_or.innerHTML='<span>\uD83D\uDCC2\uFE0F</span> Open <span class="dd-shortcut">Ctrl+O</span>';_or.classList.remove('mru-toggle')}
+      const _sv=document.getElementById('btn-save');if(_sv)_sv.innerHTML='<span>\u2B07</span> Download <span class="dd-shortcut">Ctrl+S</span>';
+      const _or=document.getElementById('btn-open-recent');if(_or){_or.innerHTML='<span>\uD83D\uDDC2\uFE0F</span> Open <span class="dd-shortcut">Ctrl+O</span>';_or.classList.remove('mru-toggle')}
       const _ms=document.getElementById('mru-section');if(_ms)_ms.style.display='none';
       if(this.$.file_subtitle)this.$.file_subtitle.style.cursor='default';
     }
@@ -4659,7 +4659,7 @@ const App={
     this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this._tlTW=tl.tw;this.$.tl_body.style.width=tl.tw+(this.panelCollapsed?28:290)+'px';
     if(this._pinFlashIds&&this._pinFlashIds.size)requestAnimationFrame(()=>{if(this._pinFlashIds)this._pinFlashIds.clear()});
     /* Empty-state hint for new users */
-    if(p.items.length===0){const _hc=th.tlTx,_hc2=th.tlTx2;this.$.tl_body.innerHTML+=`<div class="tl-empty-hint" style="color:${_hc}"><div style="font-size:28px;margin-bottom:8px">📋</div><div>Click <strong>+ Task</strong> or <strong>+ Milestone</strong> in the toolbar to add your first item.</div><div style="margin-top:6px;font-size:11px;color:${_hc2}">Or choose a template from <strong style="color:${_hc}">New</strong> (📄).<br>Right-click the timeline to add at a specific date.</div></div>`}
+    if(p.items.length===0){const _hc=th.tlTx,_hc2=th.tlTx2;this.$.tl_body.innerHTML+=`<div class="tl-empty-hint" style="color:${_hc}"><div style="font-size:28px;margin-bottom:8px">📋</div><div>Click <strong>+ Task</strong> or <strong>+ Milestone</strong> in the toolbar to add your first item.</div><div style="margin-top:6px;font-size:11px;color:${_hc2}">Or choose a template from <strong style="color:${_hc}">New</strong> (✨).<br>Right-click the timeline to add at a specific date.</div></div>`}
 
     // Bind hidden indicators — click to expand
     this.$.tl_sl_labels.querySelectorAll('.sl-hidden-indicator').forEach(ind=>{ind.onclick=e=>{e.stopPropagation();const sl=this.gs(ind.dataset.slId);if(sl){this.snap();sl.collapsed='expanded';this.sched();this.autoSave()}}});
@@ -5925,7 +5925,7 @@ const App={
   showHelp(){
     const h=`<div style="font-size:12.5px;line-height:1.7;color:var(--tx2)">
     <h3 style="color:var(--tx1);margin-bottom:12px;font-size:15px">🚀 Quick Start Guide</h3>
-    <div style="margin-bottom:16px"><strong style="color:var(--acc)">1. Create Your Timeline</strong><p>Start with a blank project or choose a template from <strong>New</strong> (📄). Your timeline has <em>swimlanes</em> (horizontal sections) and <em>items</em> (milestones & tasks).</p></div>
+    <div style="margin-bottom:16px"><strong style="color:var(--acc)">1. Create Your Timeline</strong><p>Start with a blank project or choose a template from <strong>New</strong> (✨). Your timeline has <em>swimlanes</em> (horizontal sections) and <em>items</em> (milestones & tasks).</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">2. Add Items</strong><p>Click <strong>+ Mile</strong> or <strong>+ Task</strong> in the toolbar. Items appear in the selected swimlane. Right-click the timeline for "Add Here" at a specific date. To bulk-add items, switch to <strong>Data View</strong> and click <strong>📋 Paste</strong> — paste tab-separated rows from Excel (<code>Name [Tab] Date</code> for milestones, or <code>Name [Tab] Start [Tab] End</code> for tasks) and they'll be imported into your chosen swimlane.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">3. Edit Properties</strong><p>Click any item to open the <strong>Properties Panel</strong>. Change dates, colors, icons, owner, notes, and more. Pin the panel 📌 to keep it open.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">4. Drag & Arrange</strong><p><strong>Drag items</strong> left/right to change dates, or up/down to move between rows and sub-swimlanes. A <strong>dashed ghost outline</strong> shows exactly where the item will snap to on the grid. While dragging, a <strong>delta badge</strong> follows your cursor showing how far you've moved (<code>+3d</code>, <code>+14d · 2w 0d</code>), the <strong>header highlights</strong> the target date columns, and a <strong>status strip</strong> at the bottom shows original and target dates.</p><p>Hold <strong>Shift</strong> while dragging to <strong>lock horizontal movement</strong> (move vertically only). Press <strong>Escape</strong> to <strong>cancel a drag</strong> and restore the original position. Use <strong>Ctrl+click</strong> to multi-select items, then drag them as a group. <strong>Arrow keys</strong> nudge selected items precisely; hold <strong>Ctrl</strong> for faster movement (7 days). The <strong>Lock</strong> toggle (Tools menu) prevents all item movement until unlocked.</p></div>
