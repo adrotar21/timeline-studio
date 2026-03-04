@@ -152,6 +152,8 @@
           <div class="save-dd-item" id="btn-lasso" data-tooltip="Click and drag to select multiple<br>items on the timeline"><span>⬚</span> Lasso Select</div>
           <div class="save-dd-item" id="btn-pan" data-tooltip="Click and drag to scroll the<br>timeline instead of selecting items"><span>✋</span> Pan Mode</div>
           <div class="dd-sep"></div>
+          <div class="save-dd-item" id="btn-present" data-tooltip="Open presentation toolbar with<br>laser pointer, drawing pen,<br>highlighter, and pan tools"><span>🎯</span> Present</div>
+          <div class="dd-sep"></div>
           <div class="save-dd-item exp-toggle" id="btn-exp-toggle"><span>📷</span> Screenshot & Export <span class="exp-arrow" id="exp-arrow">▸</span></div>
           <div id="exp-section" class="hidden">
             <div class="save-dd-item exp-sub" id="btn-snap-vp" data-tooltip="Copy the visible timeline area<br>to clipboard as a PNG image"><span>📷</span> Screenshot (Viewport)</div>
@@ -180,7 +182,7 @@
     <div id="tl-container" class="view-active">
       <div id="tl-scroll">
         <div id="tl-hdr-wrap"><div id="tl-hdr-corner"></div><div id="tl-hdr-scroll"><div id="tl-hdr"></div></div></div>
-        <div id="tl-body-wrap"><div id="tl-sl-labels"></div><div id="sl-col-rh"></div><div id="tl-body-scroll"><div id="tl-body"></div></div><div id="tl-watermark" class="hidden"></div></div>
+        <div id="tl-body-wrap"><div id="tl-sl-labels"></div><div id="sl-col-rh"></div><div id="tl-body-scroll"><div id="tl-body"></div></div><div id="tl-watermark" class="hidden"></div><canvas id="pres-canvas" class="hidden"></canvas></div>
       </div>
     </div>
     <div id="data-container" class="view-hidden">
@@ -788,6 +790,24 @@
     </div>
   </div>
   <div id="tooltip" class="tooltip hidden"></div>
+</div>
+<div id="pres-toolbar" class="pres-toolbar hidden">
+  <div class="pres-tools">
+    <div class="pres-grip" id="pres-grip">⠿</div>
+    <button class="pres-btn" id="pres-laser" data-key="L" data-tooltip="Laser pointer (L)"><span class="pres-icon">🔴</span></button>
+    <button class="pres-btn" id="pres-pen" data-key="D" data-tooltip="Drawing pen (D)<br>Strokes auto-fade after 3s"><span class="pres-icon">✏️</span></button>
+    <button class="pres-btn" id="pres-highlight" data-key="H" data-tooltip="Highlighter (H)<br>Marks auto-fade after 5s"><span class="pres-icon">🖍️</span></button>
+    <button class="pres-btn" id="pres-pan-btn" data-key="P" data-tooltip="Pan / scroll (P)"><span class="pres-icon">✋</span></button>
+    <div class="pres-sep"></div>
+    <button class="pres-btn" id="pres-clear" data-key="C" data-tooltip="Clear all marks (C)"><span class="pres-icon">🗑️</span></button>
+    <button class="pres-x" id="pres-close">&times;</button>
+  </div>
+  <div class="pres-opts hidden" id="pres-opts">
+    <input type="color" id="pres-color" value="#ff0000" title="Stroke color">
+    <input type="range" id="pres-size" min="1" max="8" value="3" title="Stroke size">
+    <span class="pres-size-lbl" id="pres-size-lbl">3px</span>
+  </div>
+  <div class="pres-hint">` step back · F fullscreen · Esc exit</div>
 </div>
 <input type="file" id="file-input" accept=".json,.tlproj" style="display:none">
 <script src="app.js"></script>

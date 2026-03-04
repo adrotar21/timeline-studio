@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.13 — F50: Tools dropdown Screenshot & Export collapsible section with tooltips, inline tags (Full/HD), and footer hint. Export SVG/PNG/CSV/JSON accessible directly from Tools dropdown. */
+/* Timeline Studio v0.44.18 — Presenter mode: footer text overlap fix (margin-bottom on .pres-tools replaces padding-bottom), fullscreen Esc guard (document.fullscreenElement check prevents stale exit popup). */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -75,6 +75,7 @@ const SHORTCUT_ACTIONS=[
   {id:'togglePan',cat:'Tools',label:'Toggle Pan Mode',defaults:[],ctx:'tl'},
   {id:'formatPainter',cat:'Tools',label:'Format Painter',defaults:[],ctx:'sel'},
   {id:'repeatFP',cat:'Tools',label:'Format Painter (\u00d72 for multi)',defaults:['F4'],ctx:'sel'},
+  {id:'togglePresent',cat:'Tools',label:'Toggle Presenter Mode',defaults:[],ctx:'tl'},
   // Tier 2 — Customizable: Items
   {id:'addMilestone',cat:'Items',label:'Add Milestone',defaults:[],ctx:'tl'},
   {id:'addTask',cat:'Items',label:'Add Task',defaults:[],ctx:'tl'},
@@ -180,6 +181,7 @@ const App={
   _fileHandle:null,_fileLastModified:0,_mruCache:[],_mruValidated:false,_mruExpanded:false,_exportExpanded:false,_mruLinkFile:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
   _tabSessionId:(typeof sessionStorage!=='undefined'&&sessionStorage.getItem('tls3_tabId'))||(()=>{const id='tab_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);try{sessionStorage.setItem('tls3_tabId',id)}catch(e){}return id})(),
   _lassoMode:false,_panMode:false,_panning:false,_fpMode:false,_fpPersist:false,_fpStaged:false,_fpSourceId:null,_fpSourceData:null,_collapsedSl:new Set(),_pendingFit:false,
+  _presMode:false,_presTool:null,_presPrevTool:null,_presStrokes:[],_presLaserTrail:[],_presColor:'#ff0000',_presSize:3,_presRaf:null,_presCtx:null,_presDrawing:false,_presCurrentStroke:null,_presExitPop:null,_presPenColor:'#ff0000',_presHighlightColor:'#ffff00',_presDragOfs:null,
   _impData:null,_impMappings:[],_impOverloads:[],_impSelSrc:null,_impStatusMap:{},_impLinkColors:['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'],
   _scMap:{},_scOverrides:null,_scRecording:null,_nudgeSnapped:false,_nudgeSnapTimer:null,_scMsgTimer:null,
 
@@ -479,6 +481,7 @@ const App={
     togglePan(){if(this._fpMode||this._fpStaged)this.deactivateFP();this._panMode=!this._panMode;if(this._panMode&&this._lassoMode){this._lassoMode=false;document.getElementById('btn-lasso')?.classList.remove('active');this.$.tl_body.classList.remove('lasso-mode')}document.getElementById('btn-pan')?.classList.toggle('active',this._panMode);this.sched();this.toast(this._panMode?'Pan mode ON — click and drag to scroll':'Pan mode OFF')},
     formatPainter(){if(this._fpMode||this._fpStaged)this.deactivateFP();else this.stageFP()},
     repeatFP(){if(!this._fpMode&&!this._fpStaged){this.stageFP();this.activateFP(false)}else if(this._fpStaged&&!this._fpMode){this.activateFP(false)}else if(this._fpMode&&!this._fpPersist){this._fpPersist=true;const b=document.getElementById('btn-fp');if(b)b.classList.add('fp-locked');this.sched();this.toast('Upgraded to multi-apply')}},
+    togglePresent(){this.togglePresMode()},
     addMilestone(){this.addItem('milestone')},
     addTask(){this.addItem('task')},
     addSwimlane(){this.showSwM()},
@@ -1647,6 +1650,32 @@ const App={
     on('btn-toggle-sched',()=>{this.$.tools_dropdown.classList.add('hidden');this.toggleSchedulingMode()});
     on('btn-lasso',()=>{this.$.tools_dropdown.classList.add('hidden');this._scDispatch.toggleLasso.call(this)});
     on('btn-pan',()=>{this.$.tools_dropdown.classList.add('hidden');this._scDispatch.togglePan.call(this)});
+    on('btn-present',()=>{this.$.tools_dropdown.classList.add('hidden');this.togglePresMode()});
+    // Presentation toolbar buttons (toggle: clicking active tool deactivates it)
+    document.getElementById('pres-laser')?.addEventListener('click',()=>{if(this._presTool==='laser')this._presStepBack();else this._presSetTool('laser')});
+    document.getElementById('pres-pen')?.addEventListener('click',()=>{if(this._presTool==='pen')this._presStepBack();else this._presSetTool('pen')});
+    document.getElementById('pres-highlight')?.addEventListener('click',()=>{if(this._presTool==='highlight')this._presStepBack();else this._presSetTool('highlight')});
+    document.getElementById('pres-pan-btn')?.addEventListener('click',()=>{if(this._presTool==='pan')this._presStepBack();else this._presSetTool('pan')});
+    document.getElementById('pres-clear')?.addEventListener('click',()=>this._presClearAll());
+    document.getElementById('pres-close')?.addEventListener('click',()=>this._presCleanup());
+    document.getElementById('pres-size')?.addEventListener('input',e=>{
+      this._presSize=parseInt(e.target.value)||3;
+      document.getElementById('pres-size-lbl').textContent=e.target.value+'px';
+    });
+    document.getElementById('pres-color')?.addEventListener('input',e=>{this._presColor=e.target.value});
+    // Presentation toolbar drag (grip handle)
+    document.getElementById('pres-grip')?.addEventListener('mousedown',e=>{
+      e.preventDefault();const tb=document.getElementById('pres-toolbar');
+      const r=tb.getBoundingClientRect();const dx=e.clientX-r.left,dy=e.clientY-r.top;
+      tb.style.bottom='auto';tb.style.top=r.top+'px';tb.style.left=r.left+'px';
+      const onMove=ev=>{let nx=ev.clientX-dx,ny=ev.clientY-dy;
+        nx=Math.max(0,Math.min(window.innerWidth-r.width,nx));
+        ny=Math.max(0,Math.min(window.innerHeight-r.height,ny));
+        tb.style.left=nx+'px';tb.style.top=ny+'px';
+        tb.classList.toggle('pres-near-bottom',ny+r.height>window.innerHeight-80)};
+      const onUp=()=>{document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);this._presDragOfs=true};
+      document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp)
+    });
     // Screenshot & Export section (F50)
     on('btn-exp-toggle',(e)=>{e.stopPropagation();this._exportExpanded=!this._exportExpanded;document.getElementById('exp-section').classList.toggle('hidden',!this._exportExpanded);document.getElementById('exp-arrow').classList.toggle('open',this._exportExpanded)});
     on('btn-snap-vp',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(true)});
@@ -4506,7 +4535,7 @@ const App={
     const tl=this.met(),p=this.proj,th=this.getTheme(),rH=38;
     document.documentElement.style.setProperty('--sl-w',(p.labelWidth||160)+'px');
     this.$.tl_container.style.background=th.bg;
-    if(this._panMode)this.$.tl_body.style.cursor='grab';else if(this._lassoMode)this.$.tl_body.style.cursor='crosshair';else if(this._fpMode)this.$.tl_body.style.cursor='copy';else this.$.tl_body.style.cursor='';
+    if(!this._presMode){if(this._panMode)this.$.tl_body.style.cursor='grab';else if(this._lassoMode)this.$.tl_body.style.cursor='crosshair';else if(this._fpMode)this.$.tl_body.style.cursor='copy';else this.$.tl_body.style.cursor=''}
     const hc=th.hdr,hR=this.buildHdrRows(tl),rowH=22,totalHdrH=hR.length*rowH;
     this.$.tl_hdr_corner.style.height=totalHdrH+'px';this.$.tl_hdr_corner.style.background=hc;
     const hFs=p.headerFontSize||10.5;
@@ -6055,9 +6084,369 @@ const App={
     const up=()=>{
       document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);window.removeEventListener('blur',up);
       this._panning=false;
-      this.$.tl_body.style.cursor=this._panMode?'grab':this._lassoMode?'crosshair':'';
+      this.$.tl_body.style.cursor=this._presMode&&this._presTool==='pan'?'grab':this._panMode?'grab':this._lassoMode?'crosshair':'';
     };
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);window.addEventListener('blur',up);
+  },
+
+  /* ── Presentation Mode ─────────────────────────────────────────── */
+  togglePresMode(){
+    this._presMode=!this._presMode;
+    const tb=document.getElementById('pres-toolbar');
+    const cv=document.getElementById('pres-canvas');
+    if(this._presMode){
+      tb.classList.remove('hidden');
+      cv.classList.remove('hidden');
+      this._presCtx=cv.getContext('2d');
+      this._presResizeCanvas();
+      this._presSetTool('laser');
+      // ResizeObserver
+      if(!this._presRO){
+        this._presRO=new ResizeObserver(()=>this._presResizeCanvas());
+        this._presRO.observe(this.$.tl_body_scroll);
+      }
+      // Scroll listener for content-relative re-render
+      this._presScrollFn=()=>this._presScheduleRender();
+      this.$.tl_body_scroll.addEventListener('scroll',this._presScrollFn);
+      // Wheel passthrough (canvas pointer-events:auto blocks wheel from reaching scroll container)
+      cv.addEventListener('wheel',this._presOnWH=e=>{
+        e.preventDefault();
+        this.$.tl_body_scroll.scrollLeft+=e.deltaX||0;
+        this.$.tl_body_scroll.scrollTop+=e.deltaY||0;
+        this._presScheduleRender();
+      },{passive:false});
+      // Canvas event listeners
+      cv.addEventListener('mousedown',this._presOnMD=e=>this._presMouseDown(e));
+      cv.addEventListener('mousemove',this._presOnMM=e=>this._presMouseMove(e));
+      cv.addEventListener('mouseup',this._presOnMU=e=>this._presMouseUp(e));
+      cv.addEventListener('mouseleave',this._presOnML=()=>{this._presLaserTrail=[];this._presScheduleRender()});
+      // Keyboard handler
+      this._presKeyFn=e=>this._presKeyHandler(e);
+      document.addEventListener('keydown',this._presKeyFn,true);
+      // Yellow pulse glow on open
+      tb.classList.add('pres-glow');
+      tb.addEventListener('animationend',()=>tb.classList.remove('pres-glow'),{once:true});
+      this.toast('Presenter mode ON');
+    }else{
+      this._presCleanup();
+      this.toast('Presenter mode OFF');
+    }
+  },
+  _presCleanup(){
+    const tb=document.getElementById('pres-toolbar');
+    const cv=document.getElementById('pres-canvas');
+    tb.classList.add('hidden');cv.classList.add('hidden');cv.classList.remove('active');
+    tb.classList.remove('pres-glow','pres-near-bottom');
+    // Reset toolbar position to default
+    tb.style.top='';tb.style.bottom='16px';tb.style.left='16px';
+    this._presMode=false;this._presTool=null;this._presPrevTool=null;
+    this._presStrokes=[];this._presLaserTrail=[];this._presDrawing=false;this._presCurrentStroke=null;
+    this._presPenColor='#ff0000';this._presHighlightColor='#ffff00';this._presDragOfs=null;
+    if(this._presRaf){cancelAnimationFrame(this._presRaf);this._presRaf=null}
+    if(this._presRO){this._presRO.disconnect();this._presRO=null}
+    if(this._presScrollFn){this.$.tl_body_scroll.removeEventListener('scroll',this._presScrollFn);this._presScrollFn=null}
+    if(this._presOnWH){cv.removeEventListener('wheel',this._presOnWH);this._presOnWH=null}
+    if(this._presOnMD){cv.removeEventListener('mousedown',this._presOnMD);cv.removeEventListener('mousemove',this._presOnMM);cv.removeEventListener('mouseup',this._presOnMU);cv.removeEventListener('mouseleave',this._presOnML)}
+    if(this._presKeyFn){document.removeEventListener('keydown',this._presKeyFn,true);this._presKeyFn=null}
+    if(this._presExitPop){this._presExitPop.remove();this._presExitPop=null}
+    // Restore cursor if pan was active via presentation
+    if(this._panMode){this._panMode=false;document.getElementById('btn-pan')?.classList.remove('active');this.sched()}
+    this.$.tl_body.style.cursor='';
+    document.getElementById('pres-opts')?.classList.add('hidden');
+    document.getElementById('pres-toolbar')?.classList.remove('pres-has-opts');
+    document.querySelectorAll('.pres-btn').forEach(b=>b.classList.remove('active'));
+    // Reset color picker to default
+    const cp=document.getElementById('pres-color');if(cp)cp.value='#ff0000';
+  },
+  _presResizeCanvas(){
+    const cv=document.getElementById('pres-canvas');
+    const bs=this.$.tl_body_scroll;
+    const lw=this.proj.labelWidth||160;
+    cv.style.left=lw+'px';
+    cv.width=bs.clientWidth;
+    cv.height=bs.clientHeight;
+    this._presScheduleRender();
+  },
+  _presSetTool(tool){
+    if(this._presExitPop){this._presExitPop.remove();this._presExitPop=null}
+    const prev=this._presTool;
+    // Save outgoing tool's color
+    const cp=document.getElementById('pres-color');
+    if(prev==='pen'&&cp)this._presPenColor=cp.value;
+    else if(prev==='highlight'&&cp)this._presHighlightColor=cp.value;
+    // Track previous tool for backtick recovery
+    if(tool==='pan'&&prev&&prev!=='pan')this._presPrevTool=prev;
+    else if(tool!=='pan')this._presPrevTool=null;
+    this._presTool=tool;
+    // Update button states
+    document.querySelectorAll('.pres-btn').forEach(b=>b.classList.remove('active'));
+    const btnMap={laser:'pres-laser',pen:'pres-pen',highlight:'pres-highlight',pan:'pres-pan-btn'};
+    if(btnMap[tool])document.getElementById(btnMap[tool])?.classList.add('active');
+    // Clear cursor trail on tool switch
+    this._presLaserTrail=[];
+    // Show/hide color+size options; load per-tool color
+    const opts=document.getElementById('pres-opts');
+    const tb=document.getElementById('pres-toolbar');
+    tb.classList.toggle('pres-has-opts',tool==='pen'||tool==='highlight');
+    if(tool==='pen'||tool==='highlight'){
+      opts.classList.remove('hidden');
+      if(cp)cp.value=tool==='pen'?this._presPenColor:this._presHighlightColor;
+      this._presColor=cp?cp.value:this._presColor;
+      if(tool==='highlight'){
+        document.getElementById('pres-size').max='30';document.getElementById('pres-size').min='8';
+        if(parseInt(document.getElementById('pres-size').value)<8)document.getElementById('pres-size').value='15';
+        document.getElementById('pres-size-lbl').textContent=document.getElementById('pres-size').value+'px';
+      }else{
+        document.getElementById('pres-size').max='8';document.getElementById('pres-size').min='1';
+        if(parseInt(document.getElementById('pres-size').value)>8)document.getElementById('pres-size').value='3';
+        document.getElementById('pres-size-lbl').textContent=document.getElementById('pres-size').value+'px';
+      }
+    }else opts.classList.add('hidden');
+    // Canvas pointer-events & cursor
+    const cv=document.getElementById('pres-canvas');
+    if(tool==='pan'){
+      cv.classList.remove('active');
+      // Activate pan mode via existing system
+      if(!this._panMode){this._panMode=true;this.sched()}
+      this.$.tl_body.style.cursor='grab';
+    }else{
+      // Deactivate pan if it was on
+      if(this._panMode){this._panMode=false;document.getElementById('btn-pan')?.classList.remove('active');this.sched()}
+      cv.classList.add('active');
+      if(tool==='laser')this.$.tl_body.style.cursor='none';
+      else if(tool==='pen')this.$.tl_body.style.cursor='crosshair';
+      else if(tool==='highlight')this.$.tl_body.style.cursor='crosshair';
+      else this.$.tl_body.style.cursor='';
+    }
+    if(!tool)cv.classList.remove('active');
+  },
+  _presStepBack(){
+    if(this._presExitPop){this._presExitPop.remove();this._presExitPop=null;return}
+    if(this._presTool==='pan'&&this._presPrevTool){
+      this._presSetTool(this._presPrevTool);
+    }else if(this._presTool){
+      this._presTool=null;this._presPrevTool=null;
+      document.querySelectorAll('.pres-btn').forEach(b=>b.classList.remove('active'));
+      document.getElementById('pres-opts')?.classList.add('hidden');
+      document.getElementById('pres-toolbar')?.classList.remove('pres-has-opts');
+      const cv=document.getElementById('pres-canvas');cv.classList.remove('active');
+      if(this._panMode){this._panMode=false;document.getElementById('btn-pan')?.classList.remove('active');this.sched()}
+      this.$.tl_body.style.cursor='';
+    }
+  },
+  _presPromptExit(){
+    // If popup already visible, treat as confirm (double-Esc)
+    if(this._presExitPop){this._presExitPop.remove();this._presExitPop=null;this._presCleanup();this.toast('Presenter mode OFF');return}
+    const pop=document.createElement('div');pop.className='pres-exit-pop';
+    pop.innerHTML='Exit Presenter? <button class="pres-exit-yes">Yes (Esc)</button> <button class="pres-exit-no">No</button>';
+    pop.querySelector('.pres-exit-yes').addEventListener('click',()=>{pop.remove();this._presExitPop=null;this._presCleanup();this.toast('Presenter mode OFF')});
+    pop.querySelector('.pres-exit-no').addEventListener('click',()=>{pop.remove();this._presExitPop=null});
+    // Position relative to toolbar (viewport-aware)
+    const tb=document.getElementById('pres-toolbar');
+    const tbr=tb.getBoundingClientRect();
+    document.body.appendChild(pop);
+    const pr=pop.getBoundingClientRect();
+    let pTop=tbr.top-pr.height-8;
+    if(pTop<4)pTop=tbr.bottom+8; // flip below if near top
+    let pLeft=tbr.left;
+    pLeft=Math.max(4,Math.min(window.innerWidth-pr.width-4,pLeft));
+    pTop=Math.max(4,Math.min(window.innerHeight-pr.height-4,pTop));
+    pop.style.left=pLeft+'px';pop.style.top=pTop+'px';
+    // Yellow pulse glow
+    pop.classList.add('pres-glow');
+    pop.addEventListener('animationend',()=>pop.classList.remove('pres-glow'),{once:true});
+    this._presExitPop=pop;
+    setTimeout(()=>{if(this._presExitPop===pop){pop.remove();this._presExitPop=null}},5000);
+  },
+  _presKeyHandler(e){
+    if(!this._presMode)return;
+    // Don't intercept if user is in an input field
+    if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;
+    const k=e.key;
+    if(k==='`'||k==='~'){e.preventDefault();e.stopPropagation();this._presStepBack();return}
+    if(k==='Escape'){e.preventDefault();e.stopPropagation();if(document.fullscreenElement){document.exitFullscreen().catch(()=>{});return}this._presPromptExit();return}
+    // Toggle behavior: pressing same key deactivates tool
+    if(k.toLowerCase()==='l'){e.preventDefault();e.stopPropagation();if(this._presTool==='laser')this._presStepBack();else this._presSetTool('laser');return}
+    if(k.toLowerCase()==='d'){e.preventDefault();e.stopPropagation();if(this._presTool==='pen')this._presStepBack();else this._presSetTool('pen');return}
+    if(k.toLowerCase()==='h'){e.preventDefault();e.stopPropagation();if(this._presTool==='highlight')this._presStepBack();else this._presSetTool('highlight');return}
+    if(k.toLowerCase()==='p'){e.preventDefault();e.stopPropagation();if(this._presTool==='pan')this._presStepBack();else this._presSetTool('pan');return}
+    if(k.toLowerCase()==='f'){e.preventDefault();e.stopPropagation();if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>this.toast('Fullscreen not supported','error'));return}
+    if(k.toLowerCase()==='c'){e.preventDefault();e.stopPropagation();this._presClearAll();return}
+  },
+  _presMouseDown(e){
+    // Middle mouse pan (issue 6)
+    if(e.button===1){e.preventDefault();this.startPan(e);return}
+    if(!this._presTool||this._presTool==='pan')return;
+    if(this._presTool==='laser')return; // laser doesn't draw on click
+    e.preventDefault();e.stopPropagation();
+    const bs=this.$.tl_body_scroll;
+    const cv=document.getElementById('pres-canvas');
+    const r=cv.getBoundingClientRect();
+    const sx=e.clientX-r.left,sy=e.clientY-r.top;
+    const cx=sx+bs.scrollLeft,cy=sy+bs.scrollTop;
+    const isHL=this._presTool==='highlight';
+    this._presDrawing=true;this._presLaserTrail=[];
+    this._presColor=document.getElementById('pres-color').value;
+    this._presSize=parseInt(document.getElementById('pres-size').value)||3;
+    this._presCurrentStroke={
+      points:[{x:cx,y:cy,t:Date.now()}],
+      color:this._presColor,
+      size:isHL?this._presSize:this._presSize,
+      opacity:isHL?0.35:1.0,
+      createdAt:Date.now(),
+      fadeDuration:isHL?5000:3000
+    };
+  },
+  _presMouseMove(e){
+    const cv=document.getElementById('pres-canvas');
+    const r=cv.getBoundingClientRect();
+    const sx=e.clientX-r.left,sy=e.clientY-r.top;
+    const bs=this.$.tl_body_scroll;
+    // Cursor trail for laser, pen, highlight (when not drawing)
+    if(this._presTool==='laser'||(!this._presDrawing&&(this._presTool==='pen'||this._presTool==='highlight'))){
+      this._presLaserTrail.push({x:sx,y:sy,t:Date.now()});
+      if(this._presLaserTrail.length>15)this._presLaserTrail.shift();
+      this._presScheduleRender();
+      if(this._presTool==='laser')return;
+    }
+    if(this._presDrawing&&this._presCurrentStroke){
+      const cx=sx+bs.scrollLeft,cy=sy+bs.scrollTop;
+      this._presCurrentStroke.points.push({x:cx,y:cy,t:Date.now()});
+      this._presScheduleRender();
+    }
+  },
+  _presMouseUp(e){
+    if(this._presDrawing&&this._presCurrentStroke){
+      this._presStrokes.push(this._presCurrentStroke);
+      this._presCurrentStroke=null;
+      this._presDrawing=false;
+      this._presScheduleRender();
+    }
+  },
+  _presClearAll(){
+    this._presStrokes=[];this._presCurrentStroke=null;this._presDrawing=false;
+    this._presScheduleRender();
+    this.toast('Marks cleared','info',1200);
+  },
+  _presScheduleRender(){
+    if(!this._presRaf){
+      this._presRaf=requestAnimationFrame(()=>{this._presRender();this._presRaf=null});
+    }
+  },
+  _presRender(){
+    const cv=document.getElementById('pres-canvas');
+    const ctx=this._presCtx;if(!ctx||!cv.width||!cv.height)return;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    const now=Date.now();
+    const bs=this.$.tl_body_scroll;
+    const slX=bs.scrollLeft,slY=bs.scrollTop;
+    // 1. Draw completed strokes (content-relative)
+    const alive=[];
+    for(const s of this._presStrokes){
+      const age=now-s.createdAt;
+      if(age>s.fadeDuration+500)continue; // fully faded
+      alive.push(s);
+      let alpha=s.opacity;
+      if(age>s.fadeDuration-500)alpha*=Math.max(0,1-(age-(s.fadeDuration-500))/500);
+      if(alpha<=0)continue;
+      this._presDrawStroke(ctx,s,slX,slY,alpha);
+    }
+    this._presStrokes=alive;
+    // 2. Draw current in-progress stroke
+    if(this._presCurrentStroke){
+      this._presDrawStroke(ctx,this._presCurrentStroke,slX,slY,this._presCurrentStroke.opacity);
+    }
+    // 3. Draw cursor trail (viewport-relative) — laser, pen, highlight
+    const hasTrailTool=this._presTool==='laser'||this._presTool==='pen'||this._presTool==='highlight';
+    if(hasTrailTool&&this._presLaserTrail.length>0){
+      const trail=this._presLaserTrail;
+      while(trail.length>0&&now-trail[0].t>300)trail.shift();
+      if(this._presTool==='laser'){
+        for(let i=0;i<trail.length;i++){
+          const p=trail[i];const age=now-p.t;
+          const t=1-age/300;
+          if(t<=0)continue;
+          const r=4+t*6;
+          const a=t*0.7;
+          const grad=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
+          grad.addColorStop(0,`rgba(255,60,60,${a})`);
+          grad.addColorStop(0.4,`rgba(255,40,40,${a*0.6})`);
+          grad.addColorStop(1,`rgba(255,20,20,0)`);
+          ctx.fillStyle=grad;
+          ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+        }
+        if(trail.length>0){
+          const lp=trail[trail.length-1];
+          const gr=ctx.createRadialGradient(lp.x,lp.y,0,lp.x,lp.y,14);
+          gr.addColorStop(0,'rgba(255,80,80,0.9)');
+          gr.addColorStop(0.2,'rgba(255,50,50,0.6)');
+          gr.addColorStop(0.5,'rgba(255,30,30,0.2)');
+          gr.addColorStop(1,'rgba(255,0,0,0)');
+          ctx.fillStyle=gr;
+          ctx.beginPath();ctx.arc(lp.x,lp.y,14,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='rgba(255,200,200,0.95)';
+          ctx.beginPath();ctx.arc(lp.x,lp.y,2.5,0,Math.PI*2);ctx.fill();
+        }
+      }else{
+        // Pen/highlight colored cursor trail
+        const isHL=this._presTool==='highlight';
+        const clr=isHL?this._presHighlightColor:this._presPenColor;
+        const sz=parseInt(document.getElementById('pres-size')?.value)||(isHL?15:3);
+        // Parse hex color to RGB for alpha rendering
+        const hr=parseInt(clr.slice(1,3),16)||0,hg=parseInt(clr.slice(3,5),16)||0,hb=parseInt(clr.slice(5,7),16)||0;
+        for(let i=0;i<trail.length;i++){
+          const p=trail[i];const age=now-p.t;
+          const t=1-age/300;
+          if(t<=0)continue;
+          const a=t*(isHL?0.25:0.5);
+          ctx.globalAlpha=a;ctx.fillStyle=clr;
+          ctx.beginPath();ctx.arc(p.x,p.y,sz/2,0,Math.PI*2);ctx.fill();
+        }
+        // Main cursor indicator at current position
+        if(trail.length>0){
+          const lp=trail[trail.length-1];
+          const dotR=isHL?sz/2+2:sz/2+1;
+          ctx.globalAlpha=isHL?0.4:0.7;ctx.fillStyle=clr;
+          ctx.beginPath();ctx.arc(lp.x,lp.y,dotR,0,Math.PI*2);ctx.fill();
+          // Glow ring
+          const gr=ctx.createRadialGradient(lp.x,lp.y,dotR,lp.x,lp.y,dotR+6);
+          gr.addColorStop(0,`rgba(${hr},${hg},${hb},0.25)`);
+          gr.addColorStop(1,`rgba(${hr},${hg},${hb},0)`);
+          ctx.globalAlpha=1;ctx.fillStyle=gr;
+          ctx.beginPath();ctx.arc(lp.x,lp.y,dotR+6,0,Math.PI*2);ctx.fill();
+        }
+        ctx.globalAlpha=1;
+      }
+    }
+    // Schedule next frame if there are active elements
+    if(this._presStrokes.length>0||this._presCurrentStroke||(hasTrailTool&&this._presLaserTrail.length>0)){
+      this._presRaf=requestAnimationFrame(()=>{this._presRender();this._presRaf=null});
+    }
+  },
+  _presDrawStroke(ctx,stroke,slX,slY,alpha){
+    if(stroke.points.length<2){
+      // Single dot
+      const p=stroke.points[0];
+      const sx=p.x-slX,sy=p.y-slY;
+      ctx.globalAlpha=alpha;
+      ctx.fillStyle=stroke.color;
+      ctx.beginPath();ctx.arc(sx,sy,stroke.size/2,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+      return;
+    }
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=stroke.color;
+    ctx.lineWidth=stroke.size;
+    ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();
+    const p0=stroke.points[0];
+    ctx.moveTo(p0.x-slX,p0.y-slY);
+    for(let i=1;i<stroke.points.length;i++){
+      const p=stroke.points[i];
+      ctx.lineTo(p.x-slX,p.y-slY);
+    }
+    ctx.stroke();
+    ctx.globalAlpha=1;
   },
 
   /* Lasso Selection — uses fixed-position overlay + getBoundingClientRect for hit testing */
