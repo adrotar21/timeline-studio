@@ -640,6 +640,91 @@ function simulateRecordHandler(key,mods={}){
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  SECTION 6: Display Combo — Mac/Browser-Aware Rendering (~15 tests)
+//  _displayCombo must show ⌃ for digit combos on Safari/Firefox Mac
+//  because Cmd+0–9 is reserved for tab switching. Chrome Mac shows ⌘
+//  for everything since capture-phase JS can block browser shortcuts.
+// ═══════════════════════════════════════════════════════════════════
+section('Display Combo (Cross-Platform)');
+
+/**
+ * Mock _displayCombo matching app.js logic.
+ * @param {string} combo - Internal combo string (e.g. "Ctrl+s")
+ * @param {boolean} isMac - Simulate Mac platform
+ * @param {boolean} hasFS - Simulate Chromium (_hasFS=true) vs Safari/Firefox (_hasFS=false)
+ */
+function _displayCombo(combo,isMac,hasFS){
+  let s=combo;
+  if(isMac){
+    if(!hasFS){s=s.replace(/Ctrl\+(?=(?:Shift\+|Alt\+)*\d)/g,'⌃').replace(/Ctrl\+/g,'⌘')}
+    else{s=s.replace(/Ctrl\+/g,'⌘')}
+    s=s.replace(/Shift\+/g,'⇧').replace(/Alt\+/g,'⌥');
+  }else{
+    s=s.replace(/Ctrl/g,'Ctrl').replace(/Shift/g,'Shift').replace(/Alt/g,'Alt');
+  }
+  s=s.replace(/ArrowLeft/g,'←').replace(/ArrowRight/g,'→').replace(/ArrowUp/g,'↑').replace(/ArrowDown/g,'↓');
+  if(!isMac)s=s.replace(/\+([a-z])$/,(_, c)=>'+'+c.toUpperCase());
+  else s=s.replace(/([⌘⇧⌥⌃])([a-z])$/,(_, mod, c)=>mod+c.toUpperCase());
+  return s;
+}
+
+// --- Chrome Mac (hasFS=true): all Ctrl+ → ⌘ ---
+
+assert('Chrome Mac: Ctrl+s → ⌘S',
+  _displayCombo('Ctrl+s',true,true),'⌘S');
+
+assert('Chrome Mac: Ctrl+1 → ⌘1',
+  _displayCombo('Ctrl+1',true,true),'⌘1');
+
+assert('Chrome Mac: Ctrl+Shift+f → ⌘⇧F',
+  _displayCombo('Ctrl+Shift+f',true,true),'⌘⇧F');
+
+assert('Chrome Mac: Ctrl+Shift+1 → ⌘⇧1',
+  _displayCombo('Ctrl+Shift+1',true,true),'⌘⇧1');
+
+// --- Safari/Firefox Mac (hasFS=false): digits → ⌃, letters → ⌘ ---
+
+assert('Safari Mac: Ctrl+s → ⌘S',
+  _displayCombo('Ctrl+s',true,false),'⌘S');
+
+assert('Safari Mac: Ctrl+1 → ⌃1',
+  _displayCombo('Ctrl+1',true,false),'⌃1');
+
+assert('Safari Mac: Ctrl+9 → ⌃9',
+  _displayCombo('Ctrl+9',true,false),'⌃9');
+
+assert('Safari Mac: Ctrl+0 → ⌃0',
+  _displayCombo('Ctrl+0',true,false),'⌃0');
+
+assert('Safari Mac: Ctrl+Shift+f → ⌘⇧F',
+  _displayCombo('Ctrl+Shift+f',true,false),'⌘⇧F');
+
+assert('Safari Mac: Ctrl+Shift+1 → ⌃⇧1',
+  _displayCombo('Ctrl+Shift+1',true,false),'⌃⇧1');
+
+assert('Safari Mac: Alt+1 → ⌥1',
+  _displayCombo('Alt+1',true,false),'⌥1');
+
+// --- Windows (not Mac): always Ctrl, regardless of hasFS ---
+
+assert('Windows: Ctrl+s → Ctrl+S',
+  _displayCombo('Ctrl+s',false,true),'Ctrl+S');
+
+assert('Windows: Ctrl+1 → Ctrl+1',
+  _displayCombo('Ctrl+1',false,true),'Ctrl+1');
+
+assert('Windows: Ctrl+Shift+f → Ctrl+Shift+F',
+  _displayCombo('Ctrl+Shift+f',false,false),'Ctrl+Shift+F');
+
+// --- Edge cases ---
+
+assert('Safari Mac: plain key a → a (no modifier change)',
+  _displayCombo('a',true,false),'a');
+
+assert('Safari Mac: Escape → Escape',
+  _displayCombo('Escape',true,false),'Escape');
+
+// ═══════════════════════════════════════════════════════════════════
 //  DONE
 // ═══════════════════════════════════════════════════════════════════
 

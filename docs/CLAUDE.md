@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.44.9` — B54 Safari shortcut recorder Cmd key fix. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.44.10` — B54 follow-up: Ctrl+digit display fix for Safari/Firefox Mac. Live at `https://adrotar21.github.io/timeline-studio/`.
 - **Beta feedback (Feb 2026):** Two PgM beta testers validated the core product. Discoverability is the #1 gap — see BACKLOG.md for F48 (P1) and related items.
 - Version history tracked in `docs/BACKLOG.md` (recent) and `docs/VERSION_HISTORY.md` (archive), plus **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
@@ -95,6 +95,35 @@ TimelineProject/
 - **Key recorder**: Capture-phase listener absorbs keydown during recording in Settings → Shortcuts. Conflict detection prevents duplicate bindings. **Critical (B54):** `preventDefault()`/`stopPropagation()` must be called AFTER `_normalizeKey()`, not before — Safari suppresses subsequent Cmd+letter keydown events if the initial Meta keydown is prevented.
 - **Ctrl+Shift+K** opens Settings scrolled to the Shortcuts section (reserved shortcut).
 - **Help modal** dynamically generates shortcut table from `SHORTCUT_ACTIONS` + overrides. Customized bindings marked with accent `*`.
+
+### Cross-Platform Keyboard Behavior (B54)
+
+**Detection flags:**
+- `_hasFS` (`!!window.showSaveFilePicker`) — Chromium (Chrome/Edge/Opera) vs Safari/Firefox
+- `navigator.platform.includes('Mac')` — Mac vs Windows/Linux
+
+**Modifier key normalization (`_normalizeKey`):**
+- Both `e.metaKey` (Cmd ⌘) and `e.ctrlKey` (Ctrl ⌃) → internal `"Ctrl+"` for cross-platform portability
+- Both physical keys dispatch to the same action — no need for separate bindings
+
+**Shortcut recorder (`_startScRecord`):**
+- `preventDefault()`/`stopPropagation()` called AFTER `_normalizeKey()`, never before
+- Safari suppresses subsequent Cmd+letter keydown events if the initial Meta keydown is prevented
+
+**Display mapping (`_displayCombo`):**
+
+| Scenario | Display | Reason |
+|----------|---------|--------|
+| Chromium Mac, any `Ctrl+` combo | ⌘ | Cmd+key works (capture phase fires, `preventDefault` blocks browser) |
+| Safari/Firefox Mac, `Ctrl+letter` | ⌘ | Cmd+letter reaches JS and works |
+| Safari/Firefox Mac, `Ctrl+digit` | ⌃ | Cmd+0–9 reserved for tab switching; must use physical Ctrl |
+| Windows/Linux, any `Ctrl+` combo | Ctrl | No Cmd key exists |
+
+**Browser-reserved Cmd combos on Mac:**
+- Tab switching: Cmd+1–9 — Chrome: JS capture phase fires first, `preventDefault()` blocks. Safari/Firefox: intercepted before JS, events never reach page
+- Browser actions: Cmd+T/W/N/R/L/Q — same pattern (Chrome: blockable, Safari: not)
+
+**Key implementation detail:** `_hasFS` is the proxy for Chromium — never use `navigator.userAgent` sniffing
 
 ### MRU (Most Recently Used) File System (F55)
 - **Storage**: IndexedDB `tls3_handles` v2 with `recentFiles` object store (keyPath: `id`). Each entry: `{id, name, projectName, handle, lastOpened}`. Max 8 entries (`_MRU_MAX`).

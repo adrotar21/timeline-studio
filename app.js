@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.9 — B54: Safari shortcut recorder fix. Moved preventDefault()/stopPropagation() after _normalizeKey() check in _startScRecord handler so modifier-only keydowns (Cmd/Ctrl/Shift/Alt alone) pass through without being suppressed — fixes Safari not firing subsequent Cmd+letter keydown events when Meta keydown was prevented. */
+/* Timeline Studio v0.44.10 — B54 follow-up: Ctrl+digit display fix for Safari/Firefox Mac. _displayCombo now shows ⌃ (physical Ctrl) instead of ⌘ for digit combos on non-FS browsers (Safari/Firefox) since Cmd+0–9 is reserved for tab switching. Uses _hasFS as Chromium proxy. Cross-platform keyboard behavior documented in CLAUDE.md. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -183,7 +183,16 @@ const App={
   _impData:null,_impMappings:[],_impOverloads:[],_impSelSrc:null,_impStatusMap:{},_impLinkColors:['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'],
   _scMap:{},_scOverrides:null,_scRecording:null,_nudgeSnapped:false,_nudgeSnapTimer:null,_scMsgTimer:null,
 
-  /* Keyboard Shortcut Engine */
+  /* Keyboard Shortcut Engine
+   * Mac keyboard notes (B54):
+   * Both Cmd (⌘, e.metaKey) and physical Ctrl (⌃, e.ctrlKey) normalize to "Ctrl+"
+   * internally for cross-platform shortcut portability. Chrome lets Cmd+key events
+   * reach JS (capture-phase preventDefault blocks browser shortcuts). Safari/Firefox
+   * intercept Cmd+0–9 (tab switching) before JS — users must use physical ⌃+digit.
+   * _displayCombo() uses _hasFS to show ⌃ for digit combos on Safari/Firefox Mac.
+   * Recorder handler: preventDefault/stopPropagation called AFTER _normalizeKey(),
+   * never before — Safari suppresses subsequent Cmd+letter events if Meta keydown
+   * is prevented. */
   _normalizeKey(e){
     const parts=[];
     if(e.ctrlKey||e.metaKey)parts.push('Ctrl');
@@ -217,12 +226,18 @@ const App={
   _displayCombo(combo){
     const m=navigator.platform&&navigator.platform.includes('Mac');
     let s=combo;
-    if(m){s=s.replace(/Ctrl\+/g,'⌘').replace(/Shift\+/g,'⇧').replace(/Alt\+/g,'⌥')}
+    if(m){
+      // B54: Safari/Firefox intercept Cmd+0–9 for tab switching before JS sees it.
+      // Chrome lets capture-phase JS fire first, so Cmd+digit works there.
+      // On non-FS browsers (Safari/Firefox), show ⌃ for digit combos (physical Ctrl required).
+      if(!App._hasFS){s=s.replace(/Ctrl\+(?=(?:Shift\+|Alt\+)*\d)/g,'⌃').replace(/Ctrl\+/g,'⌘')}
+      else{s=s.replace(/Ctrl\+/g,'⌘')}
+      s=s.replace(/Shift\+/g,'⇧').replace(/Alt\+/g,'⌥')}
     else{s=s.replace(/Ctrl/g,'Ctrl').replace(/Shift/g,'Shift').replace(/Alt/g,'Alt')}
     s=s.replace(/ArrowLeft/g,'←').replace(/ArrowRight/g,'→').replace(/ArrowUp/g,'↑').replace(/ArrowDown/g,'↓');
     // Capitalize single-letter keys for display
     if(!m)s=s.replace(/\+([a-z])$/,(_, c)=>'+'+c.toUpperCase());
-    else s=s.replace(/([⌘⇧⌥])([a-z])$/,(_, mod, c)=>mod+c.toUpperCase());
+    else s=s.replace(/([⌘⇧⌥⌃])([a-z])$/,(_, mod, c)=>mod+c.toUpperCase());
     return s;
   },
   /* ── IndexedDB File Handle Store (F53) + MRU (F55) ── */
