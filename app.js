@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.11 — B55: File dropdown emoji monochrome on macOS. Swapped 📄→✨, 📂→🗂️, 💾→🗃️ (macOS renders originals monochrome regardless of CSS/VS16); removed color:var(--acc) from broad .save-dd-item span, targeted .dd-shortcut only. */
+/* Timeline Studio v0.44.12 — B56: File picker greys out target .tlproj on reconnect. Clear stale IDB handle before falling back to file picker after failed requestPermission(); added application/octet-stream fallback MIME type for macOS UTI matching. B55: Swapped monochrome emoji 📄→✨, 📂→🗂️, 💾→🗃️; targeted .dd-shortcut accent color. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -791,9 +791,9 @@ const App={
   async saveFile(saveAs=false){
     const data=JSON.stringify(this.proj,null,2);
     /* F53: Try stored handle if no active handle (auto-reconnect on Ctrl+S) */
-    if(!saveAs&&!this._fileHandle){const stored=await this._loadHandle();if(stored){try{const perm=await stored.requestPermission({mode:'readwrite'});if(perm==='granted')this._fileHandle=stored}catch(e){}}}
+    if(!saveAs&&!this._fileHandle){const stored=await this._loadHandle();if(stored){try{const perm=await stored.requestPermission({mode:'readwrite'});if(perm==='granted')this._fileHandle=stored;else this._clearHandle()}catch(e){this._clearHandle()}}}
     if(!saveAs&&this._fileHandle){try{/* Fix D: stale file check before overwrite */if(this._fileLastModified){try{const chk=await this._fileHandle.getFile();if(chk.lastModified!==this._fileLastModified){if(!confirm('This file was modified outside this tab (possibly by another tab or program). Overwrite with your version?'))return}}catch(e){}}const w=await this._fileHandle.createWritable();await w.write(data);await w.close();try{const saved=await this._fileHandle.getFile();this._fileLastModified=saved.lastModified}catch(e){}this.markClean();this.toast('Saved!');this.autoSave();try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();this._updateMRU(this._fileHandle,this._fileHandle.name,this.proj.name);return}catch(e){}}
-    if(window.showSaveFilePicker){try{const prevHandle=saveAs?this._fileHandle:null;const h=await window.showSaveFilePicker({suggestedName:(this.proj.name||'timeline')+'.tlproj',types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}]});const w=await h.createWritable();await w.write(data);await w.close();this._fileHandle=saveAs&&prevHandle?prevHandle:h;this.markClean();this.toast(saveAs?'Saved copy!':'Saved!');this.autoSave();this._storeHandle(this._fileHandle);try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();this._updateMRU(this._fileHandle,this._fileHandle.name,this.proj.name);return}catch(e){if(e.name==='AbortError')return}}
+    if(window.showSaveFilePicker){try{const prevHandle=saveAs?this._fileHandle:null;const h=await window.showSaveFilePicker({suggestedName:(this.proj.name||'timeline')+'.tlproj',types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json'],'application/octet-stream':['.tlproj']}}]});const w=await h.createWritable();await w.write(data);await w.close();this._fileHandle=saveAs&&prevHandle?prevHandle:h;this.markClean();this.toast(saveAs?'Saved copy!':'Saved!');this.autoSave();this._storeHandle(this._fileHandle);try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();this._updateMRU(this._fileHandle,this._fileHandle.name,this.proj.name);return}catch(e){if(e.name==='AbortError')return}}
     const fn=(this.proj.name||'timeline')+'.tlproj';const b=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;a.click();URL.revokeObjectURL(a.href);this.markClean();this.toast('Downloaded!');this.autoSave();try{localStorage.setItem('tls3_fileName',fn)}catch(e){}this._updateFileIndicator();this._updateMRU(null,fn,this.proj.name)
   },
   /* ── Share-link compression pipeline ── */
@@ -954,7 +954,7 @@ const App={
   async openFile(){
     if(this._unsaved&&!confirm('Unsaved changes will be lost. Continue?'))return;
     if(window.showOpenFilePicker){
-      try{const[handle]=await window.showOpenFilePicker({types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json']}}],multiple:false});
+      try{const[handle]=await window.showOpenFilePicker({types:[{description:'Timeline Project',accept:{'application/json':['.tlproj','.json'],'application/octet-stream':['.tlproj']}}],multiple:false});
         const file=await handle.getFile();const text=await file.text();
         try{this.snap();this.proj=JSON.parse(text);this.migrate();this.applyTheme();this.sel=[];this._fileHandle=handle;this._fileLastModified=file.lastModified;this._storeHandle(handle);try{localStorage.setItem('tls3_fileName',handle.name)}catch(e){}this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this._updateMRU(handle,handle.name,this.proj.name);this.toast('Loaded!')}catch(err){this.toast('Invalid file','error')}
         return}catch(e){if(e.name==='AbortError')return}
@@ -1774,7 +1774,7 @@ const App={
     // Settings toggles
     document.getElementById('project-name-display').addEventListener('dblclick',()=>{document.getElementById('pn-name').value=this.proj.name;this.showModal('pname-modal');document.getElementById('pn-name').focus()});
     /* F53: Click file subtitle to reconnect to stored handle */
-    if(this.$.file_subtitle){this.$.file_subtitle.onclick=async(e)=>{e.stopPropagation();if(this._fileHandle||!this._hasFS)return;const ok=await this._tryReconnect();if(!ok)this.openFile()}}
+    if(this.$.file_subtitle){this.$.file_subtitle.onclick=async(e)=>{e.stopPropagation();if(this._fileHandle||!this._hasFS)return;const ok=await this._tryReconnect();if(!ok){this._clearHandle();this.openFile()}}}
     on('btn-pn-save',()=>{this.snap();this.proj.name=document.getElementById('pn-name').value.trim()||'Untitled';document.getElementById('pname-modal').classList.add('hidden');this.sched();this.autoSave()});
     document.getElementById('s-watermark').onchange=function(){document.getElementById('watermark-opts').classList.toggle('hidden',!this.checked)};
     document.getElementById('s-deps').onchange=function(){document.getElementById('deps-opts').classList.toggle('hidden',!this.checked)};
