@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.44.8` — Safari/Firefox file handling UI adaptation + Today Marker toggle fix. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.44.9` — B54 Safari shortcut recorder Cmd key fix. Live at `https://adrotar21.github.io/timeline-studio/`.
 - **Beta feedback (Feb 2026):** Two PgM beta testers validated the core product. Discoverability is the #1 gap — see BACKLOG.md for F48 (P1) and related items.
 - Version history tracked in `docs/BACKLOG.md` (recent) and `docs/VERSION_HISTORY.md` (archive), plus **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
@@ -92,7 +92,7 @@ TimelineProject/
 - **Storage**: `localStorage['tls3_shortcuts']` stores user overrides as `{actionId: [combo1, combo2]}`. Missing keys fall back to `SHORTCUT_ACTIONS[].defaults`.
 - **Dispatch**: `_buildShortcutMap()` builds `_scMap: {comboString → actionId}`. The keydown handler normalizes the event via `_normalizeKey(e)`, looks up in `_scMap`, checks context guards (global, tl, sel, sel-manual), then dispatches via `_scDispatch[actionId]`.
 - **Special handlers**: Escape → `_handleEscape()` (multi-step: clear sel, close panel/menus/modals, exit lasso). Nudge → `_handleNudgeKey()` (preserves arrow acceleration system via `_nudgeSpeed`/`_nudgeSnapped`).
-- **Key recorder**: Capture-phase listener absorbs keydown during recording in Settings → Shortcuts. Conflict detection prevents duplicate bindings.
+- **Key recorder**: Capture-phase listener absorbs keydown during recording in Settings → Shortcuts. Conflict detection prevents duplicate bindings. **Critical (B54):** `preventDefault()`/`stopPropagation()` must be called AFTER `_normalizeKey()`, not before — Safari suppresses subsequent Cmd+letter keydown events if the initial Meta keydown is prevented.
 - **Ctrl+Shift+K** opens Settings scrolled to the Shortcuts section (reserved shortcut).
 - **Help modal** dynamically generates shortcut table from `SHORTCUT_ACTIONS` + overrides. Customized bindings marked with accent `*`.
 

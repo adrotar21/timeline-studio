@@ -490,6 +490,156 @@ section('Context Guards & Dispatch Metadata');
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  SECTION 5: Shortcut Recorder Handler Logic (~20 tests)
+//  Tests the capture-phase keydown handler used during recording.
+//  Critical: modifier-only keys must NOT call preventDefault() —
+//  Safari suppresses subsequent Cmd+key events if Meta keydown
+//  is prevented. (B54 fix: v0.44.9)
+// ═══════════════════════════════════════════════════════════════════
+section('Shortcut Recorder Handler');
+
+/**
+ * Mock recorder handler matching the fixed app.js _startScRecord logic.
+ * Returns {prevented, stopped, combo, escaped} for each call.
+ */
+function simulateRecordHandler(key,mods={}){
+  let prevented=false,stopped=false,combo=null,escaped=false;
+  const e={
+    key,
+    ctrlKey:!!mods.ctrl,
+    metaKey:!!mods.meta,
+    shiftKey:!!mods.shift,
+    altKey:!!mods.alt,
+    preventDefault(){prevented=true},
+    stopPropagation(){stopped=true},
+  };
+  // Matches the FIXED handler (B54):
+  if(e.key==='Escape'){e.preventDefault();e.stopPropagation();escaped=true;return{prevented,stopped,combo,escaped}}
+  const c=_normalizeKey(e);
+  if(!c)return{prevented,stopped,combo:null,escaped};
+  e.preventDefault();e.stopPropagation();
+  combo=c;
+  return{prevented,stopped,combo,escaped};
+}
+
+// --- Modifier-only keys: must NOT preventDefault ---
+
+{
+  const r=simulateRecordHandler('Meta',{meta:true});
+  assertF('Meta alone: preventDefault NOT called',r.prevented);
+  assertF('Meta alone: stopPropagation NOT called',r.stopped);
+  assert('Meta alone: no combo recorded',r.combo,null);
+}
+
+{
+  const r=simulateRecordHandler('Control',{ctrl:true});
+  assertF('Control alone: preventDefault NOT called',r.prevented);
+  assertF('Control alone: stopPropagation NOT called',r.stopped);
+  assert('Control alone: no combo recorded',r.combo,null);
+}
+
+{
+  const r=simulateRecordHandler('Shift',{shift:true});
+  assertF('Shift alone: preventDefault NOT called',r.prevented);
+  assertF('Shift alone: stopPropagation NOT called',r.stopped);
+  assert('Shift alone: no combo recorded',r.combo,null);
+}
+
+{
+  const r=simulateRecordHandler('Alt',{alt:true});
+  assertF('Alt alone: preventDefault NOT called',r.prevented);
+  assertF('Alt alone: stopPropagation NOT called',r.stopped);
+  assert('Alt alone: no combo recorded',r.combo,null);
+}
+
+// --- Valid combos: MUST call preventDefault and record ---
+
+{
+  const r=simulateRecordHandler('k',{meta:true});
+  assertT('Cmd+K: preventDefault called',r.prevented);
+  assertT('Cmd+K: stopPropagation called',r.stopped);
+  assert('Cmd+K: combo is Ctrl+k',r.combo,'Ctrl+k');
+}
+
+{
+  const r=simulateRecordHandler('s',{ctrl:true});
+  assertT('Ctrl+S: preventDefault called',r.prevented);
+  assertT('Ctrl+S: stopPropagation called',r.stopped);
+  assert('Ctrl+S: combo is Ctrl+s',r.combo,'Ctrl+s');
+}
+
+{
+  const r=simulateRecordHandler('k',{meta:true,shift:true});
+  assertT('Cmd+Shift+K: preventDefault called',r.prevented);
+  assert('Cmd+Shift+K: combo is Ctrl+Shift+k',r.combo,'Ctrl+Shift+k');
+}
+
+{
+  const r=simulateRecordHandler('f',{ctrl:true,shift:true});
+  assertT('Ctrl+Shift+F: preventDefault called',r.prevented);
+  assert('Ctrl+Shift+F: combo is Ctrl+Shift+f',r.combo,'Ctrl+Shift+f');
+}
+
+{
+  const r=simulateRecordHandler('1',{alt:true});
+  assertT('Alt+1: preventDefault called',r.prevented);
+  assert('Alt+1: combo is Alt+1',r.combo,'Alt+1');
+}
+
+// --- Plain keys (no modifiers): should record and prevent ---
+
+{
+  const r=simulateRecordHandler('a');
+  assertT('Plain a: preventDefault called',r.prevented);
+  assert('Plain a: combo is a',r.combo,'a');
+}
+
+{
+  const r=simulateRecordHandler('F2');
+  assertT('F2: preventDefault called',r.prevented);
+  assert('F2: combo is F2',r.combo,'F2');
+}
+
+// --- Escape: special handling ---
+
+{
+  const r=simulateRecordHandler('Escape');
+  assertT('Escape: preventDefault called',r.prevented);
+  assertT('Escape: stopPropagation called',r.stopped);
+  assertT('Escape: escaped flag set',r.escaped);
+  assert('Escape: no combo recorded',r.combo,null);
+}
+
+// --- Mac Cmd equivalence: Meta+key produces same combo as Ctrl+key ---
+
+{
+  const metaCombo=simulateRecordHandler('s',{meta:true}).combo;
+  const ctrlCombo=simulateRecordHandler('s',{ctrl:true}).combo;
+  assert('Meta+S and Ctrl+S produce identical combo',metaCombo,ctrlCombo);
+}
+
+{
+  const metaCombo=simulateRecordHandler('p',{meta:true,shift:true}).combo;
+  const ctrlCombo=simulateRecordHandler('p',{ctrl:true,shift:true}).combo;
+  assert('Meta+Shift+P and Ctrl+Shift+P produce identical combo',metaCombo,ctrlCombo);
+}
+
+// --- Safari regression: the key scenario ---
+// Pressing Cmd on Mac fires keydown with key='Meta'. If we call
+// preventDefault on this, Safari suppresses subsequent Cmd+letter
+// keydown events. The fix: don't preventDefault on modifier-only keys.
+
+{
+  // Simulate Safari Cmd+K sequence: Meta down, then K down with metaKey=true
+  const step1=simulateRecordHandler('Meta',{meta:true});
+  const step2=simulateRecordHandler('k',{meta:true});
+  assertF('Safari Cmd+K step 1 (Meta alone): NO preventDefault',step1.prevented);
+  assert('Safari Cmd+K step 1 (Meta alone): no combo',step1.combo,null);
+  assertT('Safari Cmd+K step 2 (k with meta): preventDefault called',step2.prevented);
+  assert('Safari Cmd+K step 2 (k with meta): combo is Ctrl+k',step2.combo,'Ctrl+k');
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  DONE
 // ═══════════════════════════════════════════════════════════════════
 

@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.8 — Safari/Firefox file handling UI adaptation. _hasFS feature flag detects File System Access API support; non-FS browsers get adapted File dropdown (New, Open, Download, Share Link), no Save As / Recent Files, filename subtitle without "click to reconnect". Today Marker toggle CSS specificity fix. */
+/* Timeline Studio v0.44.9 — B54: Safari shortcut recorder fix. Moved preventDefault()/stopPropagation() after _normalizeKey() check in _startScRecord handler so modifier-only keydowns (Cmd/Ctrl/Shift/Alt alone) pass through without being suppressed — fixes Safari not firing subsequent Cmd+letter keydown events when Meta keydown was prevented. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -2731,9 +2731,9 @@ const App={
     const kbd=el.querySelector('kbd');
     if(idx===-1)el.textContent='…';else if(kbd)kbd.textContent='…';
     this._scRecordHandler=e=>{
-      e.preventDefault();e.stopPropagation();
-      if(e.key==='Escape'){this._hideScMsg();this._stopScRecord();return}
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();this._hideScMsg();this._stopScRecord();return}
       const combo=this._normalizeKey(e);if(!combo)return;
+      e.preventDefault();e.stopPropagation();
       this._applyScRecord(combo);
     };
     document.addEventListener('keydown',this._scRecordHandler,true);
