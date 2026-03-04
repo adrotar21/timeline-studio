@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.18 — Presenter mode: footer text overlap fix (margin-bottom on .pres-tools replaces padding-bottom), fullscreen Esc guard (document.fullscreenElement check prevents stale exit popup). */
+/* Timeline Studio v0.44.19 — Ctrl+Shift+Scroll fine zoom fix: Chrome converts deltaY to deltaX when Shift held, causing both directions to zoom out. Now falls back to deltaX when deltaY is zero. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -1635,7 +1635,7 @@ const App={
     on('btn-zi',()=>this.doZoom(5));on('btn-zo',()=>this.doZoom(-5));
     this.$.zoom_lbl.addEventListener('wheel',e=>{e.preventDefault();this.doZoom(e.deltaY<0?5:-5)},{passive:false});
     /* Ctrl+Scroll zoom on timeline body: Ctrl=±5%, Ctrl+Shift=±1% */
-    this.$.tl_body_scroll.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();const d=e.shiftKey?1:5;this.doZoom(e.deltaY<0?d:-d)},{passive:false});
+    this.$.tl_body_scroll.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();const d=e.shiftKey?1:5;const dy=e.deltaY||e.deltaX;this.doZoom(dy<0?d:-d)},{passive:false});
     // Tools dropdown
     on('btn-tools-menu',()=>{this.closeAllDD();this.$.tools_dropdown.classList.toggle('hidden');this.posDD(this.$.tools_dropdown)});
     on('btn-settings',()=>this.showSettings());
