@@ -85,6 +85,12 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .mru-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mru-current .mru-name{font-weight:600}
 .mru-badge{font-size:9px;flex-shrink:0;margin-left:auto}
+/* Export toggle (F50) */
+.exp-toggle{position:relative}
+.exp-arrow{font-size:8px;color:var(--tx3);transition:transform .15s;display:inline-block;margin-left:2px}
+.exp-arrow.open{transform:rotate(90deg)}
+.exp-sub{padding-left:28px}
+.exp-tag{font-size:9px;color:var(--tx3);font-weight:400;margin-left:1px}
 .mru-badge-cur{color:var(--acc)}
 .mru-badge-warn{color:var(--danger)}
 .mru-badge-stale{color:var(--warn)}

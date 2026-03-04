@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.12 — B56: File picker greys out target .tlproj on reconnect. Clear stale IDB handle before falling back to file picker after failed requestPermission(); added application/octet-stream fallback MIME type for macOS UTI matching. B55: Swapped monochrome emoji 📄→✨, 📂→🗂️, 💾→🗃️; targeted .dd-shortcut accent color. */
+/* Timeline Studio v0.44.13 — F50: Tools dropdown Screenshot & Export collapsible section with tooltips, inline tags (Full/HD), and footer hint. Export SVG/PNG/CSV/JSON accessible directly from Tools dropdown. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -177,7 +177,7 @@ const App={
   _dirty:false,_dataDirty:false,_raf:null,_unsaved:false,_shareMode:false,_fileHintShown:false,_storedHandle:null,
   _sortCol:null,_sortDir:'asc',
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
-  _fileHandle:null,_fileLastModified:0,_mruCache:[],_mruValidated:false,_mruExpanded:false,_mruLinkFile:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
+  _fileHandle:null,_fileLastModified:0,_mruCache:[],_mruValidated:false,_mruExpanded:false,_exportExpanded:false,_mruLinkFile:null,_ctxDate:null,_ctxSubSwId:'',_ctxSubRow:0,_nudgeTimer:null,_nudgeSpeed:1,
   _tabSessionId:(typeof sessionStorage!=='undefined'&&sessionStorage.getItem('tls3_tabId'))||(()=>{const id='tab_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);try{sessionStorage.setItem('tls3_tabId',id)}catch(e){}return id})(),
   _lassoMode:false,_panMode:false,_panning:false,_fpMode:false,_fpPersist:false,_fpStaged:false,_fpSourceId:null,_fpSourceData:null,_collapsedSl:new Set(),_pendingFit:false,
   _impData:null,_impMappings:[],_impOverloads:[],_impSelSrc:null,_impStatusMap:{},_impLinkColors:['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'],
@@ -1647,9 +1647,14 @@ const App={
     on('btn-toggle-sched',()=>{this.$.tools_dropdown.classList.add('hidden');this.toggleSchedulingMode()});
     on('btn-lasso',()=>{this.$.tools_dropdown.classList.add('hidden');this._scDispatch.toggleLasso.call(this)});
     on('btn-pan',()=>{this.$.tools_dropdown.classList.add('hidden');this._scDispatch.togglePan.call(this)});
-    // Screenshot items
+    // Screenshot & Export section (F50)
+    on('btn-exp-toggle',(e)=>{e.stopPropagation();this._exportExpanded=!this._exportExpanded;document.getElementById('exp-section').classList.toggle('hidden',!this._exportExpanded);document.getElementById('exp-arrow').classList.toggle('open',this._exportExpanded)});
     on('btn-snap-vp',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(true)});
     on('btn-snap-full',()=>{this.$.tools_dropdown.classList.add('hidden');this.copyScreenshot(false)});
+    on('btn-tools-exp-svg',()=>{this.$.tools_dropdown.classList.add('hidden');this.exportSVG()});
+    on('btn-tools-exp-png',()=>{this.$.tools_dropdown.classList.add('hidden');this.exportPNG()});
+    on('btn-tools-exp-csv',()=>{this.$.tools_dropdown.classList.add('hidden');this.exportDataCSV()});
+    on('btn-tools-exp-json',()=>{this.$.tools_dropdown.classList.add('hidden');this.saveFile()});
     document.getElementById('tools-sc-link')?.addEventListener('click',e=>{e.preventDefault();this.$.tools_dropdown.classList.add('hidden');this.showSettingsShortcuts()});
     /* Format Painter split button */
     {const fpMain=document.getElementById('btn-fp');
@@ -1960,7 +1965,9 @@ const App={
   doZoomTo(t){this.doZoom(t-(this.proj.zoom||100))},
   closeAllDD(){['file_dropdown','add_dropdown','view_dropdown','tools_dropdown'].forEach(k=>{if(this.$[k])this.$[k].classList.add('hidden')});
     this._mruExpanded=false;const sec=document.getElementById('mru-section');const arrow=document.getElementById('mru-arrow');
-    if(sec)sec.classList.add('hidden');if(arrow)arrow.classList.remove('open')},
+    if(sec)sec.classList.add('hidden');if(arrow)arrow.classList.remove('open');
+    this._exportExpanded=false;const expSec=document.getElementById('exp-section');const expArr=document.getElementById('exp-arrow');
+    if(expSec)expSec.classList.add('hidden');if(expArr)expArr.classList.remove('open')},
   posDD(dd){
     if(!dd)return;
     dd.style.left='';dd.style.right='';

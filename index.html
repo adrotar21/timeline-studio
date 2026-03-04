@@ -152,8 +152,17 @@
           <div class="save-dd-item" id="btn-lasso" data-tooltip="Click and drag to select multiple<br>items on the timeline"><span>⬚</span> Lasso Select</div>
           <div class="save-dd-item" id="btn-pan" data-tooltip="Click and drag to scroll the<br>timeline instead of selecting items"><span>✋</span> Pan Mode</div>
           <div class="dd-sep"></div>
-          <div class="save-dd-item" id="btn-snap-vp" data-tooltip="Copy the visible timeline area<br>to clipboard as a PNG image"><span>📷</span> Screenshot (Viewport)</div>
-          <div class="save-dd-item" id="btn-snap-full" data-tooltip="Copy the entire timeline to<br>clipboard as a PNG image ·<br>Includes content beyond the visible area"><span>🖼</span> Screenshot (Full)</div>
+          <div class="save-dd-item exp-toggle" id="btn-exp-toggle"><span>📷</span> Screenshot & Export <span class="exp-arrow" id="exp-arrow">▸</span></div>
+          <div id="exp-section" class="hidden">
+            <div class="save-dd-item exp-sub" id="btn-snap-vp" data-tooltip="Copy the visible timeline area<br>to clipboard as a PNG image"><span>📷</span> Screenshot (Viewport)</div>
+            <div class="save-dd-item exp-sub" id="btn-snap-full" data-tooltip="Copy the entire timeline to<br>clipboard as a PNG image ·<br>Includes content beyond the visible area"><span>🖼</span> Screenshot (Full)</div>
+            <div class="dd-sep" style="margin-left:28px;margin-right:4px"></div>
+            <div class="save-dd-item exp-sub" id="btn-tools-exp-svg" data-tooltip="Export full timeline as a<br>scalable vector graphic ·<br>Infinitely zoomable, ideal for<br>large prints or embedding"><span>🖼</span> Export SVG <span class="exp-tag">(Full)</span></div>
+            <div class="save-dd-item exp-sub" id="btn-tools-exp-png" data-tooltip="Export full timeline as a<br>high-definition PNG · 3× pixel<br>density, ideal for presentations"><span>📷</span> Export PNG <span class="exp-tag">(HD)</span></div>
+            <div class="save-dd-item exp-sub" id="btn-tools-exp-csv" data-tooltip="Export all item data as CSV ·<br>Opens in Excel, Sheets, or any<br>spreadsheet app"><span>📊</span> Export CSV</div>
+            <div class="save-dd-item exp-sub" id="btn-tools-exp-json" data-tooltip="Export project as JSON ·<br>Full project backup including<br>all settings and layout"><span>📋</span> Export JSON</div>
+            <div class="dd-hint exp-sub" style="padding-bottom:4px">Exports capture full timeline</div>
+          </div>
           <div class="dd-sep"></div>
           <div class="dd-hint dd-hint-sm">Tools support shortcuts — <a href="#" id="tools-sc-link" style="color:var(--acc)">Ctrl+Shift+K</a> to set</div>
         </div>
