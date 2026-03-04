@@ -70,7 +70,6 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .save-dd-item:hover{background:var(--bg3);color:var(--tx1)}
 .save-dd-item span{font-size:11px;min-width:14px}
 .save-dd-item .dd-shortcut{color:var(--acc)}
-.save-dd-item>span:first-child{font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
 .save-dd-item.dd-disabled{opacity:.35;cursor:default}
 .save-dd-item.dd-disabled:hover{background:transparent;color:var(--tx2)}
 .dd-hint{padding:0 12px 6px 32px;font-size:9.5px;color:var(--tx3);font-style:italic;line-height:1.3}
