@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.11 — B55: Dropdown emoji icons greyed out on Mac Safari. Removed color:var(--acc) from broad .save-dd-item span rule (was forcing emoji through text rendering path on Safari); accent color now targeted to .dd-shortcut only. */
+/* Timeline Studio v0.44.11 — B55: Dropdown emoji icons greyed out on Mac Safari. Removed color:var(--acc) from broad .save-dd-item span, targeted .dd-shortcut only; forced color emoji font-family on icon spans; ⬇ icon gets inline accent style. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -1579,7 +1579,7 @@ const App={
     /* Non-FS browsers (Safari/Firefox): adapt menu labels and hide FS-only items */
     if(!this._hasFS){
       const _sa=document.getElementById('btn-save-as');if(_sa)_sa.style.display='none';
-      const _sv=document.getElementById('btn-save');if(_sv)_sv.innerHTML='<span>\u2B07</span> Download <span class="dd-shortcut">Ctrl+S</span>';
+      const _sv=document.getElementById('btn-save');if(_sv)_sv.innerHTML='<span style="color:var(--acc)">\u2B07</span> Download <span class="dd-shortcut">Ctrl+S</span>';
       const _or=document.getElementById('btn-open-recent');if(_or){_or.innerHTML='<span>\uD83D\uDCC2</span> Open <span class="dd-shortcut">Ctrl+O</span>';_or.classList.remove('mru-toggle')}
       const _ms=document.getElementById('mru-section');if(_ms)_ms.style.display='none';
       if(this.$.file_subtitle)this.$.file_subtitle.style.cursor='default';
