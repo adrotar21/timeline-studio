@@ -68,7 +68,8 @@ body.theme-midnight{--bg0:#0a0e17;--bg1:#111827;--bg2:#1f2937;--bg3:#374151;--br
 .dd-zoom-btn{font-size:10px!important;padding:3px 8px!important}
 .save-dd-item{padding:7px 12px;cursor:pointer;font-size:12px;color:var(--tx2);transition:background .1s;display:flex;align-items:center;gap:6px}
 .save-dd-item:hover{background:var(--bg3);color:var(--tx1)}
-.save-dd-item span{font-size:11px;min-width:14px;color:var(--acc)}
+.save-dd-item span{font-size:11px;min-width:14px}
+.save-dd-item .dd-shortcut{color:var(--acc)}
 .save-dd-item.dd-disabled{opacity:.35;cursor:default}
 .save-dd-item.dd-disabled:hover{background:transparent;color:var(--tx2)}
 .dd-hint{padding:0 12px 6px 32px;font-size:9.5px;color:var(--tx3);font-style:italic;line-height:1.3}

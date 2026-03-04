@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.10 — B54 follow-up: Ctrl+digit display fix for Safari/Firefox Mac. _displayCombo now shows ⌃ (physical Ctrl) instead of ⌘ for digit combos on non-FS browsers (Safari/Firefox) since Cmd+0–9 is reserved for tab switching. Uses _hasFS as Chromium proxy. Cross-platform keyboard behavior documented in CLAUDE.md. */
+/* Timeline Studio v0.44.11 — B55: Dropdown emoji icons greyed out on Mac Safari. Removed color:var(--acc) from broad .save-dd-item span rule (was forcing emoji through text rendering path on Safari); accent color now targeted to .dd-shortcut only. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
