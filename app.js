@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.7 — F60: Dependency display filtering. New depFilter project property ('all'|'swimlane') with sub-options under Show Dependencies in Settings. "Within swimlane only" hides cross-swimlane dependency arrows while preserving scheduling engine behavior. View dropdown Dependencies section with Off/All/Within Swimlane selector. cycleDeps keyboard shortcut action (no default binding). Filter applied in both on-screen rDeps() and export SVG rendering. */
+/* Timeline Studio v0.44.8 — Safari/Firefox file handling UI adaptation. _hasFS feature flag detects File System Access API support; non-FS browsers get adapted File dropdown (New, Open, Download, Share Link), no Save As / Recent Files, filename subtitle without "click to reconnect". Today Marker toggle CSS specificity fix. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -173,6 +173,7 @@ const App={
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
   view:'timeline',panelCollapsed:false,panelLocked:false,editItem:null,
   _panelHintCooldown:0,_wasExpandedBeforeDataView:false,_lockPillHintCD:0,_hidePillHintCD:0,_pillHoverTimer:null,
+  _hasFS:!!window.showSaveFilePicker,
   _dirty:false,_dataDirty:false,_raf:null,_unsaved:false,_shareMode:false,_fileHintShown:false,_storedHandle:null,
   _sortCol:null,_sortDir:'asc',
   _searchTerm:'',_searchMatches:[],_searchIdx:-1,_lastShiftSel:null,
@@ -230,7 +231,11 @@ const App={
   async _storeHandle(handle){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readwrite');tx.objectStore('handles').put(handle,this._tabSessionId);await new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=j});db.close()}catch(e){}},
   async _loadHandle(){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readonly');const req=tx.objectStore('handles').get(this._tabSessionId);const handle=await new Promise((r,j)=>{req.onsuccess=()=>r(req.result);req.onerror=j});db.close();return handle||null}catch(e){return null}},
   async _clearHandle(){try{const db=await this._openHandleDB();const tx=db.transaction('handles','readwrite');tx.objectStore('handles').delete(this._tabSessionId);db.close()}catch(e){}},
-  async _tryReconnect(){const handle=await this._loadHandle();if(!handle)return false;try{const perm=await handle.requestPermission({mode:'readwrite'});if(perm==='granted'){this._fileHandle=handle;try{const rf=await handle.getFile();this._fileLastModified=rf.lastModified}catch(e){}this._updateFileIndicator();this.toast('Reconnected to '+handle.name);return true}}catch(e){}return false},
+  async _tryReconnect(){const handle=await this._loadHandle();if(!handle)return false;try{const perm=await handle.requestPermission({mode:'readwrite'});if(perm==='granted'){this._fileHandle=handle;try{const rf=await handle.getFile();this._fileLastModified=rf.lastModified;
+    /* Stale-tab reload: pull newer disk version if no unsaved edits */
+    const lsSaveTime=parseInt(localStorage.getItem('tls3_saveTime'))||0;
+    if(rf.lastModified>lsSaveTime&&!this._unsaved){try{const text=await rf.text();const diskProj=JSON.parse(text);this.proj=diskProj;this.migrate();this.applyTheme();this.sched();this.markClean();this.autoSave()}catch(e){}}
+  }catch(e){}this._updateFileIndicator();this.toast('Reconnected to '+handle.name);return true}}catch(e){}return false},
   /* ── MRU Storage (F55) ── */
   async _loadMRU(){
     try{const db=await this._openHandleDB();const tx=db.transaction('recentFiles','readonly');const store=tx.objectStore('recentFiles');
@@ -274,6 +279,7 @@ const App={
   _syncMRUCache(){try{const data=this._mruCache.map(e=>({id:e.id,name:e.name,projectName:e.projectName,lastOpened:e.lastOpened,lastState:e._state||'nameonly'}));localStorage.setItem('tls3_recentNames',JSON.stringify(data))}catch(e){}},
   _readMRUCache(){try{const s=localStorage.getItem('tls3_recentNames');if(s){const arr=JSON.parse(s);return arr.map(e=>({id:e.id,name:e.name,projectName:e.projectName,lastOpened:e.lastOpened,handle:null,_state:e.lastState||'nameonly'}))}return[]}catch(e){return[]}},
   async _updateMRU(handle,fileName,projectName){
+    if(!this._hasFS)return;
     const entry={id:'mru_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),name:fileName,projectName:projectName||'',handle:handle||null,lastOpened:Date.now()};
     await this._storeMRUEntry(entry)
   },
@@ -349,6 +355,7 @@ const App={
     })
   },
   _toggleMRU(){
+    if(!this._hasFS)return;
     const sec=document.getElementById('mru-section');const arrow=document.getElementById('mru-arrow');
     if(!sec)return;
     this._mruExpanded=!this._mruExpanded;
@@ -526,7 +533,7 @@ const App={
     this._syncPanelPad();this.applyTheme();this.bind();this.sched();if(this.proj.items.length)this._pendingFit=true;
     if(this._shareMode){this._showShareBanner();this.markClean();this.toast('Shared timeline loaded','info',3000)}
     /* F56: Reconnect file handle when opened from MRU in new tab */
-    if(this._mruLinkFile){(async()=>{
+    if(this._hasFS&&this._mruLinkFile){(async()=>{
       try{
         await this._loadMRU();
         const entry=this._mruCache.find(e=>e.name===this._mruLinkFile);
@@ -543,17 +550,21 @@ const App={
       }catch(e){this._mruLinkFile=null}
     })()}
     /* F53: File handle reconnect on startup */
-    if(!this._shareMode&&this.proj.items.length){(async()=>{
+    if(this._hasFS&&!this._shareMode&&this.proj.items.length){(async()=>{
       const stored=await this._loadHandle();
       if(stored){
         this._storedHandle=stored;
-        try{const perm=await stored.queryPermission({mode:'readwrite'});if(perm==='granted'){this._fileHandle=stored;try{const rf=await stored.getFile();this._fileLastModified=rf.lastModified}catch(e){}this._updateFileIndicator();return}}catch(e){}
+        try{const perm=await stored.queryPermission({mode:'readwrite'});if(perm==='granted'){this._fileHandle=stored;try{const rf=await stored.getFile();this._fileLastModified=rf.lastModified;
+          /* Stale-tab reload: if disk file is newer than localStorage snapshot, pull from disk */
+          const lsSaveTime=parseInt(localStorage.getItem('tls3_saveTime'))||0;
+          if(rf.lastModified>lsSaveTime){try{const text=await rf.text();const diskProj=JSON.parse(text);this.proj=diskProj;this.migrate();this.applyTheme();this.sched();if(this.proj.items.length)this._pendingFit=true;this.markClean();this.autoSave()}catch(e){}}
+        }catch(e){}this._updateFileIndicator();return}}catch(e){}
         this._updateFileIndicator();
         if(!this._fileHintShown){this._fileHintShown=true;const fn=stored.name||localStorage.getItem('tls3_fileName')||'';if(fn)setTimeout(()=>this.toast(fn+' \u2014 click filename to reconnect','info',4000),600)}
       }else if(!this._fileHandle){this._updateFileIndicator()}
     })()}
     /* F55: Warm MRU cache on startup (non-blocking) */
-    this._loadMRU().catch(()=>{});
+    if(this._hasFS)this._loadMRU().catch(()=>{});
     this.$.tl_body_scroll.addEventListener('scroll',()=>{
       this.$.tl_sl_labels.scrollTop=this.$.tl_body_scroll.scrollTop;
       this.$.tl_hdr_scroll.scrollLeft=this.$.tl_body_scroll.scrollLeft;
@@ -739,7 +750,7 @@ const App={
   undo(){if(!this.undoStack.length)return;this.redoStack.push(U.deep(this.proj));this.proj=this.undoStack.pop();this.migrate();this.sched();this.refreshPanel();this.toast('Undone')},
   redo(){if(!this.redoStack.length)return;this.undoStack.push(U.deep(this.proj));this.proj=this.redoStack.pop();this.migrate();this.sched();this.refreshPanel();this.toast('Redone')},
   refreshPanel(){if(this.editItem&&this.sel.length===1){const it=this.gi(this.sel[0]);if(it){this.editItem=it;this.renderPanel(it)}}else if(this.sel.length>1)this.renderBulkPanel()},
-  autoSave:U.deb(function(){if(App._shareMode)return;try{localStorage.setItem('tls3',JSON.stringify(App.proj))}catch(e){}},400),
+  autoSave:U.deb(function(){if(App._shareMode)return;try{localStorage.setItem('tls3',JSON.stringify(App.proj));localStorage.setItem('tls3_saveTime',String(Date.now()))}catch(e){}},400),
   loadAuto(){try{const s=localStorage.getItem('tls3');if(s)this.proj=JSON.parse(s)}catch(e){}},
   async _loadFromHash(){
     try{
@@ -1041,10 +1052,19 @@ const App={
       el.appendChild(document.createTextNode(fname));
       el.className='file-subtitle'+(dirty?' fi-dirty':' fi-linked');
     }else if(storedName){
-      el.appendChild(document.createTextNode(fname+' \u00b7 click to reconnect'));
-      el.className='file-subtitle';
+      if(this._hasFS){
+        el.appendChild(document.createTextNode(fname+' \u00b7 click to reconnect'));
+        el.className='file-subtitle';
+      }else{
+        el.appendChild(document.createTextNode(fname));
+        el.className='file-subtitle'+(dirty?' fi-dirty':'');
+      }
     }else{
-      el.appendChild(document.createTextNode(dirty?'Not saved \u2014 Ctrl+S':'No file linked \u2014 Ctrl+S to save'));
+      if(this._hasFS){
+        el.appendChild(document.createTextNode(dirty?'Not saved \u2014 Ctrl+S':'No file linked \u2014 Ctrl+S to save'));
+      }else{
+        el.appendChild(document.createTextNode(dirty?'Not saved \u2014 Ctrl+S to download':'Ctrl+S to download'));
+      }
       el.className='file-subtitle';
     }
     /* Update container tooltip: full project name + file info when truncated */
@@ -1541,11 +1561,19 @@ const App={
   bind(){
     const on=(id,fn)=>{const e=document.getElementById(id);if(e)e.addEventListener('click',fn)};
     // File dropdown
+    /* Non-FS browsers (Safari/Firefox): adapt menu labels and hide FS-only items */
+    if(!this._hasFS){
+      const _sa=document.getElementById('btn-save-as');if(_sa)_sa.style.display='none';
+      const _sv=document.getElementById('btn-save');if(_sv)_sv.innerHTML='<span>\u2B07</span> Download <span class="dd-shortcut">Ctrl+S</span>';
+      const _or=document.getElementById('btn-open-recent');if(_or){_or.innerHTML='<span>\uD83D\uDCC2</span> Open <span class="dd-shortcut">Ctrl+O</span>';_or.classList.remove('mru-toggle')}
+      const _ms=document.getElementById('mru-section');if(_ms)_ms.style.display='none';
+      if(this.$.file_subtitle)this.$.file_subtitle.style.cursor='default';
+    }
     on('btn-file-menu',()=>{
       this.closeAllDD();
       this.$.file_dropdown.classList.toggle('hidden');this.posDD(this.$.file_dropdown)
     });
-    on('btn-open-recent',e=>{e.stopPropagation();this._toggleMRU()});
+    on('btn-open-recent',e=>{if(this._hasFS){e.stopPropagation();this._toggleMRU()}else{this.$.file_dropdown.classList.add('hidden');this.openFile()}});
     on('btn-new',()=>{this.$.file_dropdown.classList.add('hidden');this.newProjAct()});
     on('btn-save',()=>{this.$.file_dropdown.classList.add('hidden');this._shareMode=false;this.saveFile()});
     on('btn-save-as',()=>{this.$.file_dropdown.classList.add('hidden');this._shareMode=false;this.saveFile(true)});
@@ -1731,7 +1759,7 @@ const App={
     // Settings toggles
     document.getElementById('project-name-display').addEventListener('dblclick',()=>{document.getElementById('pn-name').value=this.proj.name;this.showModal('pname-modal');document.getElementById('pn-name').focus()});
     /* F53: Click file subtitle to reconnect to stored handle */
-    if(this.$.file_subtitle){this.$.file_subtitle.onclick=async(e)=>{e.stopPropagation();if(this._fileHandle)return;const ok=await this._tryReconnect();if(!ok)this.openFile()}}
+    if(this.$.file_subtitle){this.$.file_subtitle.onclick=async(e)=>{e.stopPropagation();if(this._fileHandle||!this._hasFS)return;const ok=await this._tryReconnect();if(!ok)this.openFile()}}
     on('btn-pn-save',()=>{this.snap();this.proj.name=document.getElementById('pn-name').value.trim()||'Untitled';document.getElementById('pname-modal').classList.add('hidden');this.sched();this.autoSave()});
     document.getElementById('s-watermark').onchange=function(){document.getElementById('watermark-opts').classList.toggle('hidden',!this.checked)};
     document.getElementById('s-deps').onchange=function(){document.getElementById('deps-opts').classList.toggle('hidden',!this.checked)};

@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.44.7` — F60 dependency display filtering (within-swimlane-only mode, View dropdown, cycleDeps shortcut). Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.44.8` — Safari/Firefox file handling UI adaptation + Today Marker toggle fix. Live at `https://adrotar21.github.io/timeline-studio/`.
 - **Beta feedback (Feb 2026):** Two PgM beta testers validated the core product. Discoverability is the #1 gap — see BACKLOG.md for F48 (P1) and related items.
 - Version history tracked in `docs/BACKLOG.md` (recent) and `docs/VERSION_HISTORY.md` (archive), plus **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
@@ -105,6 +105,15 @@ TimelineProject/
 - **UI**: Collapsible "Open & Recent ▸" row in File dropdown. `_mruExpanded` state persists within session. Per-entry × remove buttons. Browse link always at top of expansion.
 - **Hooks**: `_updateMRU()` called from `openFile()`, `handleOpen()`, and all 3 `saveFile()` paths.
 - **Fallback**: Firefox/Safari get NAME_ONLY entries (filename + projectName from localStorage, no handle). Clicking opens standard file picker.
+
+### Browser Compatibility — File System Access (v0.44.8)
+- **Feature flag**: `_hasFS: !!window.showSaveFilePicker` — evaluated once at parse time, used for all conditional logic
+- **Chromium (Chrome, Edge, Opera)**: Full File System Access API — Save, Save As, Recent Files, handle reconnection all work
+- **Non-FS browsers (Safari, Firefox)**: `saveFile()` falls through to blob download (path 3), `openFile()` uses `<input type="file">` fallback
+- **UI adaptation** (runs once in `bind()`): Hide Save As + MRU section, relabel Save→"Download", relabel Open & Recent→"Open" (direct picker), set subtitle cursor to `default`
+- **File subtitle**: Shows filename only (no "click to reconnect"), "Ctrl+S to download" for new projects, `fi-dirty` class when unsaved
+- **Guarded paths**: `_updateMRU()`, `_toggleMRU()`, startup reconnect (MRU link file, handle reconnect, MRU cache warm) — all early-return when `!_hasFS`
+- **Keyboard shortcuts**: Ctrl+S and Ctrl+Shift+S both fall through to blob download on non-FS browsers (no changes needed)
 
 ### Rendering Pipeline
 ```

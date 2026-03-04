@@ -524,6 +524,7 @@ body.theme-midnight #props-panel{box-shadow:-4px 0 20px rgba(0,0,0,.4)}
 .form-row{display:flex;gap:10px}.form-row .form-group{flex:1}
 .color-picker-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .toggle-switch{display:inline-flex;align-items:center;cursor:pointer}
+.form-group>.toggle-switch{display:inline-flex}
 .toggle-switch input{display:none}
 .toggle-slider{width:34px;height:18px;background:var(--bg3);border-radius:9px;position:relative;transition:background .2s;border:1px solid var(--brd2)}
 .toggle-slider::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;background:rgba(255,255,255,.85);border-radius:50%;transition:transform .2s,background .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
