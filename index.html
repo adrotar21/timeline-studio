@@ -654,13 +654,20 @@
       <div id="imp-adv-body" class="hidden">
         <div style="display:flex;align-items:center;gap:8px;margin:10px 0">
           <button class="btn btn-secondary" id="btn-imp-file" style="font-size:11px;padding:5px 10px">Choose File</button>
-          <input type="file" id="imp-file-input" accept=".csv,.tsv,.txt" style="display:none">
+          <input type="file" id="imp-file-input" accept=".csv,.tsv,.txt,.xml,.json" style="display:none">
           <span id="imp-file-name" style="font-size:11px;color:var(--tx3)">No file selected</span>
         </div>
+        <div id="imp-source-wrap" class="imp-source-wrap hidden"><span style="font-size:11px;color:var(--tx3);white-space:nowrap">Source:</span><select id="imp-source-sel" class="form-input" style="font-size:11px;padding:3px 6px;max-width:200px"></select><span id="imp-source-badge" class="imp-source-badge"></span></div>
         <div id="imp-perfect-match" class="imp-perfect-match hidden" style="margin-bottom:10px">All columns auto-matched. This appears to be a Timeline Studio export.</div>
         <div id="imp-map-area" class="hidden"></div>
         <div id="imp-overload-area" class="hidden" style="margin-top:8px"></div>
         <div id="imp-status-area" class="hidden" style="margin-top:10px"></div>
+        <div id="imp-opts-wrap" class="imp-opts-wrap hidden">
+          <div class="imp-section-title" style="margin-top:0">Import Options</div>
+          <div class="imp-opts-row"><label>Duration mode</label><select id="imp-durmode" style="max-width:90px"><option value="cal">Calendar</option><option value="work">Working</option></select><label style="margin-left:8px">Default duration</label><input type="number" id="imp-defdur" value="14" min="1" max="365"><span style="font-size:10px;color:var(--tx3)">days</span></div>
+          <div class="imp-opts-row"><label>Date format</label><select id="imp-datefmt" style="max-width:160px"><option value="auto">Auto-detect</option><option value="us">US (M/D/Y)</option><option value="eu">EU (D/M/Y)</option><option value="iso">ISO (Y-M-D)</option></select></div>
+          <div class="imp-opts-row"><label><input type="checkbox" id="imp-snapwork"> Snap start dates to working days</label></div>
+        </div>
         <div id="imp-preview-wrap" class="hidden" style="margin-top:10px"></div>
         <div id="imp-status" style="font-size:11px;color:var(--tx3);margin-top:6px"></div>
         <div style="margin-top:10px;text-align:right"><button class="btn btn-primary hidden" id="btn-imp-do">Import</button></div>

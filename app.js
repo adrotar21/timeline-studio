@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.19 — Ctrl+Shift+Scroll fine zoom fix: Chrome converts deltaY to deltaX when Shift held, causing both directions to zoom out. Now falls back to deltaX when deltaY is zero. */
+/* Timeline Studio v0.44.20 — Import & Interoperability: Source tool presets (Smartsheet, Jira, Asana, Monday.com, MS Project) with auto-detect, scheduling options (duration mode, default duration, date format, snap-to-working-days), parseDuration() multi-format parser, Smartsheet predecessor off-by-one correction. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -182,7 +182,7 @@ const App={
   _tabSessionId:(typeof sessionStorage!=='undefined'&&sessionStorage.getItem('tls3_tabId'))||(()=>{const id='tab_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);try{sessionStorage.setItem('tls3_tabId',id)}catch(e){}return id})(),
   _lassoMode:false,_panMode:false,_panning:false,_fpMode:false,_fpPersist:false,_fpStaged:false,_fpSourceId:null,_fpSourceData:null,_collapsedSl:new Set(),_pendingFit:false,
   _presMode:false,_presTool:null,_presPrevTool:null,_presStrokes:[],_presLaserTrail:[],_presColor:'#ff0000',_presSize:3,_presRaf:null,_presCtx:null,_presDrawing:false,_presCurrentStroke:null,_presExitPop:null,_presPenColor:'#ff0000',_presHighlightColor:'#ffff00',_presDragOfs:null,
-  _impData:null,_impMappings:[],_impOverloads:[],_impSelSrc:null,_impStatusMap:{},_impLinkColors:['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'],
+  _impData:null,_impMappings:[],_impOverloads:[],_impSelSrc:null,_impStatusMap:{},_impLinkColors:['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'],_impPreset:null,_impDetected:null,_impDurMode:'cal',_impDefDur:14,_impDateFmt:'auto',_impSnapWork:false,
   _scMap:{},_scOverrides:null,_scRecording:null,_nudgeSnapped:false,_nudgeSnapTimer:null,_scMsgTimer:null,
 
   /* Keyboard Shortcut Engine
@@ -541,7 +541,8 @@ const App={
      'as-term','as-results',
      'imp-adv-toggle','imp-adv-arrow','imp-adv-body','imp-file-input','imp-file-name',
      'imp-map-area','imp-status-area','imp-perfect-match','imp-preview-wrap','imp-status',
-     'imp-overload-area','btn-imp-do',
+     'imp-overload-area','btn-imp-do','imp-source-wrap','imp-source-sel','imp-source-badge',
+     'imp-opts-wrap','imp-durmode','imp-defdur','imp-datefmt','imp-snapwork',
      'pill-group','pill-lock','pill-hide','pill-auto','pill-fp','pill-sel',
      'panel-tab','panel-tab-icon','btn-collapse','btn-lock-collapse',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
@@ -3289,7 +3290,7 @@ const App={
     if(changed)this.sched();
   },
 
-  showPaste(){this.$.paste_sw.innerHTML=this.proj.swimlanes.map(s=>`<option value="${s.id}">${U.esc(s.name)}</option>`).join('');this.$.paste_ta.value='';this.$.paste_prev.textContent='';this._impData=null;this._impMappings=[];this._impOverloads=[];this._impSelSrc=null;this._impStatusMap={};if(this.$.imp_file_name)this.$.imp_file_name.textContent='No file selected';if(this.$.imp_file_input)this.$.imp_file_input.value='';if(this.$.imp_map_area)this.$.imp_map_area.classList.add('hidden');if(this.$.imp_status_area)this.$.imp_status_area.classList.add('hidden');if(this.$.imp_perfect_match)this.$.imp_perfect_match.classList.add('hidden');if(this.$.imp_preview_wrap){this.$.imp_preview_wrap.classList.add('hidden');this.$.imp_preview_wrap.innerHTML=''}if(this.$.imp_overload_area){this.$.imp_overload_area.classList.add('hidden');this.$.imp_overload_area.innerHTML=''}if(this.$.imp_status)this.$.imp_status.textContent='';if(this.$.btn_imp_do)this.$.btn_imp_do.classList.add('hidden');if(this.$.imp_adv_toggle)this.$.imp_adv_toggle.classList.remove('open');if(this.$.imp_adv_body)this.$.imp_adv_body.classList.add('hidden');this.showModal('paste-modal');this.$.paste_ta.focus()},
+  showPaste(){this.$.paste_sw.innerHTML=this.proj.swimlanes.map(s=>`<option value="${s.id}">${U.esc(s.name)}</option>`).join('');this.$.paste_ta.value='';this.$.paste_prev.textContent='';this._impData=null;this._impMappings=[];this._impOverloads=[];this._impSelSrc=null;this._impStatusMap={};this._impPreset=null;this._impDetected=null;this._impDurMode='cal';this._impDefDur=14;this._impDateFmt='auto';this._impSnapWork=false;if(this.$.imp_opts_wrap)this.$.imp_opts_wrap.classList.add('hidden');if(this.$.imp_source_wrap)this.$.imp_source_wrap.classList.add('hidden');if(this.$.imp_file_name)this.$.imp_file_name.textContent='No file selected';if(this.$.imp_file_input)this.$.imp_file_input.value='';if(this.$.imp_map_area)this.$.imp_map_area.classList.add('hidden');if(this.$.imp_status_area)this.$.imp_status_area.classList.add('hidden');if(this.$.imp_perfect_match)this.$.imp_perfect_match.classList.add('hidden');if(this.$.imp_preview_wrap){this.$.imp_preview_wrap.classList.add('hidden');this.$.imp_preview_wrap.innerHTML=''}if(this.$.imp_overload_area){this.$.imp_overload_area.classList.add('hidden');this.$.imp_overload_area.innerHTML=''}if(this.$.imp_status)this.$.imp_status.textContent='';if(this.$.btn_imp_do)this.$.btn_imp_do.classList.add('hidden');if(this.$.imp_adv_toggle)this.$.imp_adv_toggle.classList.remove('open');if(this.$.imp_adv_body)this.$.imp_adv_body.classList.add('hidden');this.showModal('paste-modal');this.$.paste_ta.focus()},
   previewPaste(){const r=this.parsePaste(this.$.paste_ta.value);this.$.paste_prev.textContent=r.length?`Found ${r.length} items`:''},
   parsePaste(text){return text.trim().split('\n').filter(l=>l.trim()).map(line=>{const c=line.split('\t').map(s=>s.trim());if(c.length<2||!c[0])return null;if(c.length>=3){const d1=U.parseDate(c[1]),d2=U.parseDate(c[2]);if(d1&&d2)return{name:c[0],type:'task',startDate:U.iso(d1),endDate:U.iso(d2)};if(d1)return{name:c[0],type:'milestone',date:U.iso(d1)}}if(c.length>=2){const d=U.parseDate(c[1]);if(d)return{name:c[0],type:'milestone',date:U.iso(d)}}return null}).filter(Boolean)},
   doPaste(){const rows=this.parsePaste(this.$.paste_ta.value);if(!rows.length){this.toast('No valid data','error');return}this.snap();const tgt=this.$.paste_sw.value;rows.forEach((r,i)=>{const it={id:U.id(),type:r.type,name:r.name,swimlaneId:tgt,subSwimId:'',subRow:i%3,color:COLORS[i%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:'',status:'',statusDate:'',vLine:{enabled:false,style:'dashed',color:'#999999',direction:'both',extent:'swim'},links:[]};if(r.type==='milestone')it.date=r.date;else{it.startDate=r.startDate;it.endDate=r.endDate;it.durMode='cal';it.duration=U.days(r.startDate,r.endDate)+1}this.proj.items.push(it)});if(this.proj.autoRange)this.autoRange();document.getElementById('paste-modal').classList.add('hidden');this.sched();this.autoSave();this.toast(`Imported ${rows.length} items`)},
@@ -3320,7 +3321,15 @@ const App={
     DateFormat:['dateformat','date format','date_format'],
     ShowDate:['showdate','show date','show_date']
   },
-  /* CSV/TSV Parsing */
+  _IMP_PRESETS:{
+    smartsheet:{label:'Smartsheet',extraAliases:{Name:['primary column'],End:['finish date']},sigs:{ext:[],headerPatterns:[['primary column'],['row id','predecessors']]},quirks:{predOffByOne:true}},
+    jira:{label:'Jira',extraAliases:{Name:['summary'],Type:['issue type']},sigs:{ext:[],headerPatterns:[['issue key','summary','issue type'],['issue key','summary']]},quirks:{}},
+    asana:{label:'Asana',extraAliases:{Owner:['assignee email'],Swimlane:['section/column'],Predecessors:['dependent on','blocked by (dependencies)']},sigs:{ext:[],headerPatterns:[['task id','section/column'],['task id','assignee email']]},quirks:{}},
+    monday:{label:'Monday.com',extraAliases:{Owner:['person']},sigs:{ext:[],headerPatterns:[['group','person'],['group','timeline']]},quirks:{}},
+    msproject:{label:'MS Project',extraAliases:{},sigs:{ext:['.xml'],headerPatterns:[],xmlRoot:'Project'},quirks:{}},
+    generic:{label:'Generic CSV/TSV',extraAliases:{},sigs:{ext:['.csv','.tsv'],headerPatterns:[]},quirks:{}}
+  },
+  /* CSV/TSV/JSON Parsing */
   parseCSV(text){
     const rows=[],n=text.length;let row=[],field='',inQ=false,i=0;
     while(i<n){const c=text[i];
@@ -3337,6 +3346,33 @@ const App={
   parseTSV(text){
     return text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim()).map(l=>l.split('\t').map(c=>c.trim()));
   },
+  parseJSON(text){
+    let data;try{data=JSON.parse(text)}catch(e){return null}
+    if(Array.isArray(data)){
+      if(!data.length)return null;
+      const keySet=new Set();data.forEach(obj=>{if(obj&&typeof obj==='object'&&!Array.isArray(obj))Object.keys(obj).forEach(k=>keySet.add(k))});
+      const headers=[...keySet];
+      const rows=data.map(obj=>headers.map(k=>{const v=obj[k];if(v==null)return'';if(typeof v==='boolean')return v?'true':'false';return String(v)}));
+      return{headers,rows};
+    }
+    return null;
+  },
+  parseDuration(str){
+    if(!str||!str.trim())return null;const s=str.trim().toLowerCase();
+    const iso=s.match(/^pt(\d+)h/i);if(iso)return Math.round(parseInt(iso[1])/8);
+    const wk=s.match(/^(\d+)\s*w(?:eeks?)?$/);if(wk)return parseInt(wk[1])*5;
+    const dy=s.match(/^(\d+)\s*d(?:ays?)?$/);if(dy)return parseInt(dy[1]);
+    const hr=s.match(/^(\d+)\s*h(?:ours?)?$/);if(hr)return Math.round(parseInt(hr[1])/8);
+    const ed=s.match(/^(\d+)\s*edays?$/i);if(ed)return parseInt(ed[1]);
+    const num=s.match(/^(\d+)$/);if(num)return parseInt(num[1]);
+    return null;
+  },
+  _impParseDate(s){
+    if(!s)return null;s=s.trim();
+    if(this._impDateFmt==='eu'&&/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){const[d,m,y]=s.split('/').map(Number);return new Date(y,m-1,d)}
+    if(this._impDateFmt==='us'&&/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){const[m,d,y]=s.split('/').map(Number);return new Date(y,m-1,d)}
+    return U.parseDate(s);
+  },
   /* Toggle / File Handling */
   toggleAdvImport(){
     const tg=this.$.imp_adv_toggle,bd=this.$.imp_adv_body;if(!tg||!bd)return;
@@ -3348,32 +3384,89 @@ const App={
     file.text().then(text=>{
       const ext=file.name.split('.').pop().toLowerCase();
       let rows;
-      if(ext==='tsv')rows=this.parseTSV(text);
+      if(ext==='json'){
+        const jr=this.parseJSON(text);if(!jr||!jr.headers.length){this.toast('JSON file has no importable data','error');return}
+        rows=[jr.headers,...jr.rows];
+      }else if(ext==='xml'){
+        const det=this.detectSourceTool(file.name,[],text);
+        if(det.tool==='msproject'){this.toast('MS Project XML import coming soon. Export as CSV first.','info');return}
+        this.toast('Unsupported XML format','error');return;
+      }else if(ext==='tsv')rows=this.parseTSV(text);
       else if(ext==='csv')rows=this.parseCSV(text);
       else{const l1=text.split('\n')[0]||'';rows=(l1.split('\t').length>l1.split(',').length)?this.parseTSV(text):this.parseCSV(text)}
       if(!rows.length||rows.length<2){this.toast('File has no data rows','error');return}
       const headers=rows[0],data=rows.slice(1).filter(r=>r.some(c=>c));
       this._impData={headers,rows:data};
+      /* Auto-detect source tool and set preset */
+      const det=this.detectSourceTool(file.name,headers,text);
+      this._impDetected=det;
+      this._impPreset=(det.tool==='generic-tsv'||det.tool==='tls-reimport'||det.tool==='generic')?null:det.tool;
       this._impMappings=this.autoDetectMappings(headers);
       this._impOverloads=[];this._impSelSrc=null;this._impStatusMap={};
       const isTLS=this._checkTLSReimport(this._impMappings,headers);
       if(isTLS)this.$.imp_perfect_match.classList.remove('hidden');
       else this.$.imp_perfect_match.classList.add('hidden');
+      this._renderSourceDropdown();
       this.$.imp_status.textContent=`${data.length} data row${data.length!==1?'s':''}, ${headers.length} column${headers.length!==1?'s':''}`;
       this.$.btn_imp_do.classList.remove('hidden');
+      this._showImportOpts();
       this.renderMappingGUI();
       this._checkStatusMapping();
       this.renderImportPreview();
     }).catch(err=>{this.toast('Failed to read file: '+err.message,'error')});
   },
-  /* Auto-Detection */
+  _showImportOpts(){
+    const w=this.$.imp_opts_wrap;if(!w)return;w.classList.remove('hidden');
+    const dm=this.$.imp_durmode,dd=this.$.imp_defdur,df=this.$.imp_datefmt,sw=this.$.imp_snapwork;
+    if(dm){dm.value=this._impDurMode;dm.onchange=()=>{this._impDurMode=dm.value}}
+    if(dd){dd.value=this._impDefDur;dd.onchange=()=>{this._impDefDur=Math.max(1,Math.min(365,parseInt(dd.value,10)||14))}}
+    if(df){df.value=this._impDateFmt;df.onchange=()=>{this._impDateFmt=df.value}}
+    if(sw){sw.checked=this._impSnapWork;sw.onchange=()=>{this._impSnapWork=sw.checked}}
+  },
+  _renderSourceDropdown(){
+    const wrap=this.$.imp_source_wrap,sel=this.$.imp_source_sel,badge=this.$.imp_source_badge;if(!wrap||!sel||!badge)return;
+    wrap.classList.remove('hidden');
+    const keys=['smartsheet','jira','asana','monday','generic'];
+    let opts='<option value="">(Auto-detect)</option>';
+    keys.forEach(k=>{const p=this._IMP_PRESETS[k];opts+=`<option value="${k}"${this._impPreset===k?' selected':''}>${p.label}</option>`});
+    sel.innerHTML=opts;if(this._impPreset)sel.value=this._impPreset;
+    if(this._impDetected&&this._impPreset){
+      const c=this._impDetected.confidence;
+      badge.textContent=c==='high'?'Auto-detected':c==='medium'?'Likely match':'';
+      badge.style.background=c==='high'?'rgba(34,197,94,.15)':c==='medium'?'rgba(245,158,11,.15)':'rgba(107,114,128,.15)';
+      badge.style.color=c==='high'?'var(--success,#22c55e)':c==='medium'?'#f59e0b':'var(--tx3)';
+      badge.style.display='';
+    }else{badge.style.display='none'}
+    sel.onchange=()=>{
+      this._impPreset=sel.value||null;badge.style.display='none';
+      this._impMappings=this.autoDetectMappings(this._impData.headers);
+      this._impOverloads=[];this._impSelSrc=null;this._impStatusMap={};
+      const isTLS=this._checkTLSReimport(this._impMappings,this._impData.headers);
+      if(isTLS)this.$.imp_perfect_match.classList.remove('hidden');else this.$.imp_perfect_match.classList.add('hidden');
+      this.renderMappingGUI();this._checkStatusMapping();this.renderImportPreview();
+    };
+  },
+  /* Source Tool Detection & Preset Aliases */
+  detectSourceTool(filename,headers,content){
+    const ext=filename?'.'+filename.split('.').pop().toLowerCase():'';
+    if(ext==='.xml'&&content&&content.trim().startsWith('<')){if(content.includes('<Project')&&content.includes('schemas.microsoft.com/project'))return{tool:'msproject',confidence:'high'}}
+    if(headers&&headers.length>0){const hlSet=new Set(headers.map(h=>h.toLowerCase().trim()));for(const[tool,preset] of Object.entries(this._IMP_PRESETS)){if(tool==='generic')continue;const patterns=preset.sigs.headerPatterns;for(const pattern of patterns){const matches=pattern.filter(p=>hlSet.has(p.toLowerCase()));if(matches.length===pattern.length)return{tool,confidence:matches.length>=3?'high':'medium'}}}}
+    if(content&&!content.includes(',')&&content.includes('\t'))return{tool:'generic-tsv',confidence:'high'};
+    if(headers){const m=this.autoDetectMappings(headers);if(this._checkTLSReimport(m,headers))return{tool:'tls-reimport',confidence:'high'}}
+    return{tool:'generic',confidence:'low'};
+  },
+  _mergedAliases(presetKey){
+    const base=this._IMP_ALIASES;if(!presetKey||presetKey==='generic'||!this._IMP_PRESETS[presetKey])return base;
+    const extra=this._IMP_PRESETS[presetKey].extraAliases;if(!extra||!Object.keys(extra).length)return base;
+    const merged={};for(const[field,aliases] of Object.entries(base)){merged[field]=extra[field]?[...aliases,...extra[field]]:aliases}return merged;
+  },
   autoDetectMappings(headers){
-    const mappings=[],used=new Set();
+    const als=this._mergedAliases(this._impPreset),mappings=[],used=new Set();
     headers.forEach((h,i)=>{
       const hl=h.toLowerCase().trim();
-      for(const[field,aliases] of Object.entries(this._IMP_ALIASES)){
+      for(const[field,a] of Object.entries(als)){
         if(used.has(field))continue;
-        if(aliases.includes(hl)){mappings.push({srcIdx:i,tgtField:field,color:this._impLinkColors[mappings.length%this._impLinkColors.length]});used.add(field);return}
+        if(a.includes(hl)){mappings.push({srcIdx:i,tgtField:field,color:this._impLinkColors[mappings.length%this._impLinkColors.length]});used.add(field);return}
       }
     });
     return mappings;
@@ -3717,7 +3810,7 @@ const App={
       const it={id:U.id(),type:'milestone',name:row.Name||'Item '+(i+1),swimlaneId:tgtSl,subSwimId:'',subRow:i%3,
         color:COLORS[i%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,
         showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',
-        dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:'',durMode:'cal'};
+        dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:'',durMode:this._impDurMode};
       if(row.Owner)it.owner=row.Owner;
       if(row.Notes)it.notes=row.Notes;
       if(row.Color&&/^#[0-9a-f]{3,8}$/i.test(row.Color))it.color=row.Color;
@@ -3743,10 +3836,10 @@ const App={
         it.status=this._resolveStatusForImport(row.Status);
         if(this.proj.statusDefs.length>stBefore)createdStatus++;
       }
-      if(row.StatusDate){const sd=U.parseDate(row.StatusDate);if(sd)it.statusDate=U.iso(sd)}
+      if(row.StatusDate){const sd=this._impParseDate(row.StatusDate);if(sd)it.statusDate=U.iso(sd)}
       /* Dates & type inference */
-      const startD=row.Start?U.parseDate(row.Start):null;
-      const endD=row.End?U.parseDate(row.End):null;
+      const startD=row.Start?this._impParseDate(row.Start):null;
+      const endD=row.End?this._impParseDate(row.End):null;
       let explicitType=row.Type?row.Type.toLowerCase().trim():'';
       if(explicitType==='task'||explicitType==='milestone')it.type=explicitType;
       else if(startD&&endD){
@@ -3757,17 +3850,20 @@ const App={
       }else if(startD)it.type='milestone';
       if(it.type==='task'){
         it.startDate=startD?U.iso(startD):U.iso(new Date());
+        if(this._impSnapWork)it.startDate=this._skipNonWorking(it.startDate);
         it.endDate=endD?U.iso(endD):null;
+        const isWork=this._impDurMode==='work';
         if(row.Duration&&!it.endDate){
-          it.duration=parseInt(row.Duration,10)||14;
-          it.endDate=U.iso(U.addDays(it.startDate,it.duration-1));
+          it.duration=this.parseDuration(row.Duration)||this._impDefDur;
+          it.endDate=isWork?this._addWorkingDays(it.startDate,it.duration):U.iso(U.addDays(it.startDate,it.duration-1));
         }else if(it.endDate){
-          it.duration=U.days(it.startDate,it.endDate)+1;
+          it.duration=isWork?this._countWorkingDays(it.startDate,it.endDate):(U.days(it.startDate,it.endDate)+1);
         }else{
-          it.duration=14;it.endDate=U.iso(U.addDays(it.startDate,13));
+          it.duration=this._impDefDur;it.endDate=isWork?this._addWorkingDays(it.startDate,it.duration):U.iso(U.addDays(it.startDate,this._impDefDur-1));
         }
       }else{
         it.date=startD?U.iso(startD):U.iso(new Date());
+        if(this._impSnapWork)it.date=this._skipNonWorking(it.date);
       }
       /* Default label positions for import (unless CSV explicitly mapped LabelPos) */
       if(!row.LabelPos)it.labelPosition=it.type==='task'?'center':'bottom';
@@ -3776,13 +3872,15 @@ const App={
     /* Pass 2: Resolve predecessors */
     const predField=this._impMappings.find(m=>m.tgtField==='Predecessors');
     if(predField){
+      const predOfs=(this._impPreset&&this._IMP_PRESETS[this._impPreset]&&this._IMP_PRESETS[this._impPreset].quirks.predOffByOne)?-1:0;
       mapped.forEach((row,i)=>{
         if(!row.Predecessors)return;
         const preds=this.parsePredString(row.Predecessors);
         preds.forEach(p=>{
-          if(p.rowNum<1||p.rowNum>newItems.length)return;
-          if(p.rowNum-1===i)return;
-          newItems[i].deps.push({id:newItems[p.rowNum-1].id,type:p.type,lag:p.lag});
+          const adjRow=p.rowNum+predOfs;
+          if(adjRow<1||adjRow>newItems.length)return;
+          if(adjRow-1===i)return;
+          newItems[i].deps.push({id:newItems[adjRow-1].id,type:p.type,lag:p.lag});
         });
       });
     }

@@ -586,6 +586,13 @@ body.theme-light .toggle-slider::after{background:#fff;box-shadow:0 1px 3px rgba
 .imp-prev-table td{padding:3px 6px;border:1px solid var(--brd);color:var(--tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .imp-prev-table tr:nth-child(even) td{background:var(--bg2)}
 .imp-perfect-match{font-size:11px;color:var(--success,#22c55e);padding:8px 10px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:5px;font-weight:500}
+.imp-source-wrap{display:flex;align-items:center;gap:8px;margin:6px 0}
+.imp-source-badge{font-size:9px;padding:1px 6px;border-radius:8px;font-weight:600;white-space:nowrap}
+.imp-opts-wrap{border:1px solid var(--brd);border-radius:6px;padding:10px;background:var(--bg1);margin-top:8px}
+.imp-opts-row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:11px;flex-wrap:wrap}
+.imp-opts-row label{color:var(--tx2);white-space:nowrap}
+.imp-opts-row select,.imp-opts-row input[type="number"]{font-size:11px;padding:3px 6px;background:var(--bg2);color:var(--tx1);border:1px solid var(--brd);border-radius:3px}
+.imp-opts-row input[type="number"]{width:50px;text-align:center}
 /* === End Advanced Import === */
 .export-options{display:flex;gap:10px}
 .export-opt{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px;border:1px solid var(--brd);border-radius:7px;background:var(--bg2);color:var(--tx2);cursor:pointer;font-size:13px;transition:all .12s}
