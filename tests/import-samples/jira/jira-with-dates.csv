@@ -1,0 +1,9 @@
+Summary,Issue key,Issue Type,Status,Due Date,Created,Updated,Sprint,Story Points,Original Estimate
+Sprint planning kickoff,PROJ-1,Task,Done,20/Jan/26,2026-01-10T09:00:00+0000,2026-01-20T17:00:00+0000,Sprint 1,2,14400
+User authentication module,PROJ-2,Story,In Progress,02/Feb/26,2026-01-12T10:30:00+0000,2026-01-28T15:20:00+0000,Sprint 1,8,57600
+Password reset flow,PROJ-3,Sub-task,In Progress,30/Jan/26,2026-01-15T08:00:00+0000,2026-01-27T11:45:00+0000,Sprint 1,3,28800
+OAuth2 integration,PROJ-4,Story,To Do,15/Feb/26,2026-01-16T14:00:00+0000,2026-01-16T14:00:00+0000,Sprint 2,13,86400
+Session management,PROJ-5,Task,To Do,10/Feb/26,2026-01-18T09:15:00+0000,2026-01-18T09:15:00+0000,Sprint 2,5,28800
+Rate limiting middleware,PROJ-6,Task,Done,25/Jan/26,2026-01-14T11:00:00+0000,2026-01-25T16:30:00+0000,Sprint 1,3,14400
+Security audit,PROJ-7,Task,To Do,28/Feb/26,2026-01-20T13:00:00+0000,2026-01-20T13:00:00+0000,Sprint 3,8,57600
+Performance benchmarks,PROJ-8,Bug,In Review,05/Feb/26,2026-01-22T10:00:00+0000,2026-02-03T14:00:00+0000,Sprint 2,1,7200

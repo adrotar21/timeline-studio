@@ -1,0 +1,11 @@
+Name,Start,End,Notes,Owner
+"Design Review — Q1 (v2.0)",2026-01-15,2026-01-15,"Reviewers: Sarah, Mike, and Joao","O'Brien, Patrick"
+"Büdget Überprüfung",2026-01-20,2026-01-20,"Überprüfung der Kosten für Q1 — €50,000 Budget","Müller, Hans"
+"日本語テスト",2026-02-01,2026-02-01,テスト項目のインポート,田中太郎
+"Task with ""quoted"" name",2026-02-15,2026-02-28,"This field has ""double quotes"" inside it",Test User
+"Multi-line
+task name",2026-03-01,2026-03-15,"This note spans
+multiple lines
+with line breaks",Another User
+"Résumé & Café Planning",2026-03-20,2026-03-20,"Accented characters: é, è, ê, ë, à, ñ, ü, ö","García, María"
+"Task with <HTML> & ""special"" chars",2026-04-01,2026-04-10,"Contains <b>HTML</b> tags & ampersands & ""quotes""",Dev Team

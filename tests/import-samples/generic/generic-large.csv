@@ -1,0 +1,101 @@
+Name,Start Date,End Date,Swimlane,Sub-Swimlane,Predecessors,Status,Progress,Owner
+Implement settings page #1,2026-01-05,2026-01-08,Planning,Strategy,,On Track,10,Bob
+Optimize API endpoint #2,2026-01-06,2026-01-16,Design,Content,,Not Started,0,Bob
+Review monitoring #3,2026-01-07,2026-01-17,Development,Frontend,1FS-1d,On Track,50,Eve
+Test email service #4,2026-01-08,2026-01-13,QA,Unit Tests,1FS+2d,Not Started,0,Bob
+Design auth middleware #5,2026-01-09,2026-02-02,Deployment,Production,3FS,Complete,75,Bob
+Design CI/CD pipeline #6,2026-01-10,2026-01-15,Planning,Research,,At Risk,75,Dave
+Design dashboard #7,2026-01-11,2026-01-25,Design,Content,3FS,On Track,0,Grace
+Document auth middleware #8,2026-01-12,2026-01-15,Development,Backend,3FS+2d,Not Started,0,Carol
+Review search feature #9,2026-01-13,2026-01-20,QA,Performance,8SS,At Risk,0,Dave
+Configure file upload #10,2026-01-14,2026-01-19,Deployment,Staging,8FS+2d,On Track,100,Heidi
+Document notification system #11,2026-01-15,2026-01-20,Planning,Research,10FS+2d,Complete,75,Grace
+Review notification system #12,2026-01-16,2026-01-26,Design,Visual,,Not Started,0,Bob
+Test email service #13,2026-01-17,2026-01-27,Development,Frontend,10FS-1d,At Risk,75,Alice
+Design CI/CD pipeline #14,2026-01-18,2026-02-11,QA,Performance,13FS+2d,Not Started,0,Eve
+Test report generator #15,2026-01-19,2026-01-20,Deployment,Production,,At Risk,75,Carol
+Deploy monitoring #16,2026-01-20,2026-02-02,Planning,Strategy,12SS,Not Started,0,Frank
+Implement database schema #17,2026-01-21,2026-01-26,Design,Visual,,At Risk,10,Alice
+Refactor API endpoint #18,2026-01-22,2026-01-23,Development,Frontend,,Not Started,0,Carol
+Document CI/CD pipeline #19,2026-01-23,2026-01-26,QA,Unit Tests,17FS-1d,On Track,75,Dave
+Analyze auth middleware #20,2026-01-24,2026-02-03,Deployment,Production,,Complete,0,Dave
+Design caching layer #21,2026-02-05,2026-02-06,Planning,Strategy,,On Track,75,Dave
+Design dashboard #22,2026-02-06,2026-02-09,Design,UX,16FS+2d,Not Started,0,Dave
+Document payment module #23,2026-02-07,2026-02-17,Development,Backend,21FS-1d,On Track,50,Grace
+Design database schema #24,2026-02-08,2026-02-22,QA,Unit Tests,,Complete,50,Heidi
+Design dashboard #25,2026-02-09,2026-02-16,Deployment,Staging,,Not Started,0,Dave
+Review CI/CD pipeline #26,2026-02-10,2026-02-17,Planning,Strategy,21FS+2d,Complete,10,Bob
+Optimize database schema #27,2026-02-11,2026-02-12,Design,Visual,,Not Started,0,Bob
+Test email service #28,2026-02-12,2026-02-19,Development,Frontend,,Complete,0,Carol
+Implement file upload #29,2026-02-13,2026-02-18,QA,Integration,,Complete,25,Grace
+Test payment module #30,2026-02-14,2026-02-19,Deployment,Production,24FS,At Risk,0,Alice
+Optimize monitoring #31,2026-02-15,2026-02-18,Planning,Research,29FS,On Track,0,Bob
+Review file upload #32,2026-02-16,2026-02-17,Design,Content,,On Track,75,Alice
+Design email service #33,2026-02-17,2026-03-03,Development,Mobile,,At Risk,25,Dave
+Configure user profile #34,2026-02-18,2026-02-23,QA,Performance,33FS+2d,Complete,25,Bob
+Document load balancer #35,2026-02-19,2026-03-01,Deployment,Staging,,Not Started,0,Dave
+Test auth middleware #36,2026-02-20,2026-02-21,Planning,Research,,At Risk,25,Carol
+Optimize analytics #37,2026-02-21,2026-03-03,Design,Visual,,Not Started,0,Eve
+Design notification system #38,2026-02-22,2026-02-27,Development,Mobile,32SS,At Risk,25,Dave
+Configure payment module #39,2026-02-23,2026-03-09,QA,Performance,,At Risk,75,Heidi
+Implement API endpoint #40,2026-02-24,2026-03-10,Deployment,Production,,At Risk,0,Alice
+Test settings page #41,2026-03-05,2026-03-08,Planning,Research,,Complete,75,Alice
+Design notification system #42,2026-03-06,2026-03-16,Design,UX,38SS,Complete,10,Alice
+Configure dashboard #43,2026-03-07,2026-03-12,Development,Backend,38FS,At Risk,75,Grace
+Test user profile #44,2026-03-08,2026-04-01,QA,Performance,39FS-1d,Not Started,0,Carol
+Analyze user profile #45,2026-03-09,2026-03-14,Deployment,Production,44FS,Complete,0,Heidi
+Review report generator #46,2026-03-10,2026-03-15,Planning,Strategy,41SS,Not Started,0,Dave
+Configure settings page #47,2026-03-11,2026-04-04,Design,Visual,43FS+2d,Complete,100,Frank
+Design settings page #48,2026-03-12,2026-03-15,Development,Frontend,,At Risk,0,Bob
+Analyze auth middleware #49,2026-03-13,2026-03-27,QA,Performance,,Complete,75,Bob
+Refactor payment module #50,2026-03-14,2026-03-19,Deployment,Production,47FS,On Track,25,Grace
+Configure load balancer #51,2026-03-15,2026-03-20,Planning,Strategy,,Not Started,0,Eve
+Deploy email service #52,2026-03-16,2026-03-21,Design,Content,,At Risk,75,Carol
+Analyze file upload #53,2026-03-17,2026-04-03,Development,Frontend,,On Track,75,Eve
+Optimize login flow #54,2026-03-18,2026-03-23,QA,Integration,51FS+2d,Complete,50,Heidi
+Optimize data pipeline #55,2026-03-19,2026-04-12,Deployment,Staging,,On Track,100,Bob
+Optimize load balancer #56,2026-03-20,2026-03-25,Planning,Research,51FS+2d,On Track,10,Carol
+Implement user profile #57,2026-03-21,2026-03-28,Design,UX,,Not Started,0,Heidi
+Refactor payment module #58,2026-03-22,2026-04-08,Development,Backend,,Complete,50,Dave
+Implement database schema #59,2026-03-23,2026-04-16,QA,Unit Tests,,On Track,100,Heidi
+Optimize user profile #60,2026-03-24,2026-04-17,Deployment,Staging,55FS-1d,At Risk,50,Grace
+Test data pipeline #61,2026-04-05,2026-04-12,Planning,Research,56FS+2d,Complete,100,Dave
+Document API endpoint #62,2026-04-06,2026-04-20,Design,Visual,58FS+2d,At Risk,75,Bob
+Test user profile #63,2026-04-07,2026-04-14,Development,Frontend,,On Track,0,Grace
+Configure CI/CD pipeline #64,2026-04-08,2026-04-15,QA,Integration,,On Track,50,Grace
+Refactor file upload #65,2026-04-09,2026-04-16,Deployment,Staging,61FS+2d,Complete,50,Dave
+Review settings page #66,2026-04-10,2026-04-17,Planning,Research,,Complete,25,Grace
+Test report generator #67,2026-04-11,2026-04-14,Design,Content,,Not Started,0,Grace
+Refactor login flow #68,2026-04-12,2026-04-13,Development,Mobile,,On Track,50,Carol
+Deploy file upload #69,2026-04-13,2026-04-18,QA,Unit Tests,65FS+2d,Complete,25,Grace
+Design data pipeline #70,2026-04-14,2026-04-15,Deployment,Production,,Not Started,0,Frank
+Design dashboard #71,2026-04-15,2026-05-08,Planning,Strategy,66SS,Not Started,0,Carol
+Test data pipeline #72,2026-04-16,2026-05-02,Design,UX,67FS-1d,At Risk,25,Carol
+Refactor database schema #73,2026-04-17,2026-05-10,Development,Mobile,,At Risk,0,Alice
+Refactor file upload #74,2026-04-18,2026-04-25,QA,Integration,,On Track,0,Dave
+Deploy load balancer #75,2026-04-19,2026-05-12,Deployment,Staging,73FS,At Risk,75,Grace
+Design monitoring #76,2026-04-20,2026-05-06,Planning,Research,73FS-1d,Not Started,0,Grace
+Document notification system #77,2026-04-21,2026-04-28,Design,Visual,75FS+2d,Complete,50,Grace
+Refactor settings page #78,2026-04-22,2026-04-27,Development,Mobile,,Not Started,0,Eve
+Review report generator #79,2026-04-23,2026-05-05,QA,Integration,,Complete,25,Alice
+Configure search feature #80,2026-04-24,2026-05-03,Deployment,Production,76FS+2d,At Risk,75,Eve
+Optimize payment module #81,2026-05-05,2026-05-06,Planning,Strategy,78FS-1d,On Track,100,Heidi
+Document report generator #82,2026-05-06,2026-05-27,Design,Content,78SS,Complete,100,Dave
+Refactor auth middleware #83,2026-05-07,2026-05-14,Development,Backend,,At Risk,50,Frank
+Document settings page #84,2026-05-08,2026-05-13,QA,Integration,78SS,At Risk,0,Carol
+Review data pipeline #85,2026-05-09,2026-05-14,Deployment,Staging,,At Risk,0,Dave
+Review auth middleware #86,2026-05-10,2026-05-13,Planning,Research,85SS,At Risk,0,Alice
+Deploy notification system #87,2026-05-11,2026-05-25,Design,Content,,Complete,0,Alice
+Deploy data pipeline #88,2026-05-12,2026-05-19,Development,Mobile,,On Track,0,Eve
+Design API endpoint #89,2026-05-13,2026-05-20,QA,Integration,,Not Started,0,Carol
+Refactor analytics #90,2026-05-14,2026-05-15,Deployment,Staging,,Not Started,0,Grace
+Optimize file upload #91,2026-05-15,2026-05-22,Planning,Strategy,,At Risk,75,Grace
+Refactor load balancer #92,2026-05-16,2026-05-17,Design,Visual,,Not Started,0,Dave
+Review settings page #93,2026-05-17,2026-06-03,Development,Mobile,88SS,Not Started,0,Carol
+Analyze report generator #94,2026-05-18,2026-06-04,QA,Unit Tests,,At Risk,0,Dave
+Deploy report generator #95,2026-05-19,2026-05-20,Deployment,Production,,At Risk,100,Dave
+Design CI/CD pipeline #96,2026-05-20,2026-05-23,Planning,Research,,At Risk,10,Bob
+Test analytics #97,2026-05-21,2026-06-03,Design,UX,,At Risk,50,Bob
+Deploy file upload #98,2026-05-22,2026-05-27,Development,Backend,,Complete,50,Bob
+Implement email service #99,2026-05-23,2026-06-09,QA,Performance,95FS,Not Started,0,Dave
+Deploy security scan #100,2026-05-24,2026-05-25,Deployment,Staging,,On Track,50,Heidi

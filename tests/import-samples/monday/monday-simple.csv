@@ -1,0 +1,7 @@
+Name,Group,Person,Status,Date,Priority,Notes
+Set up development environment,Sprint 1,John Smith,Done,01/15/2026,High,Install all required dependencies and configure IDE
+Design database schema,Sprint 1,Jane Doe,Working on it,01/20/2026,Critical,Normalize tables for user and product data
+Create API boilerplate,Sprint 1,John Smith,Done,01/18/2026,Medium,Express.js with TypeScript template
+Build user registration endpoint,Sprint 2,Jane Doe,Working on it,02/01/2026,High,Include email verification flow
+Implement search functionality,Sprint 2,John Smith,Stuck,02/10/2026,High,Elasticsearch integration having config issues
+Write API documentation,Sprint 2,Jane Doe,,02/15/2026,Low,Swagger/OpenAPI spec for all endpoints

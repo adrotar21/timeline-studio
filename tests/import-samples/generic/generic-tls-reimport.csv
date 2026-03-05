@@ -1,0 +1,7 @@
+Name,Type,Start Date,End Date,Duration,Swimlane,Sub-Swimlane,Predecessors,Status,Progress,Notes,Color,Pinned,Hidden,Label Position,Owner
+Project Kickoff,milestone,2026-01-05,,0,Planning,Milestones,,Complete,100,All-hands kickoff,#4CAF50,no,no,bottom,Sarah Chen
+Requirements,task,2026-01-06,2026-01-17,10,Planning,Analysis,,On Track,60,Stakeholder interviews,#2196F3,no,no,center,Mike Johnson
+Design,task,2026-01-20,2026-02-07,15,Planning,Design,1FS,On Track,30,System architecture,#FF9800,no,no,center,Sarah Chen
+Development,task,2026-02-10,2026-03-14,25,Execution,Backend,2FS,Not Started,0,Core build,#9C27B0,no,no,center,Dev Team
+Testing,task,2026-03-16,2026-03-28,10,Execution,QA,3FS,Not Started,0,Integration tests,#00BCD4,no,no,center,QA Team
+Launch,milestone,2026-04-01,,0,Execution,,4FS,Not Started,0,Go-live,#FF5722,no,no,bottom,PM

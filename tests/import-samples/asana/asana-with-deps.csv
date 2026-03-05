@@ -1,0 +1,9 @@
+Task ID,Name,Section/Column,Assignee,Start Date,Due Date,Dependent On,Tags
+1300000000001,Research competitors,Research,Sarah Miller,2026-01-10,2026-01-17,,research
+1300000000002,Define feature requirements,Research,Tom Baker,2026-01-15,2026-01-22,1300000000001,planning
+1300000000003,Create technical spec,Planning,Mike Johnson,2026-01-20,2026-01-28,1300000000002,technical
+1300000000004,Design mockups,Design,Lisa Wang,2026-01-22,2026-02-05,1300000000002,design
+1300000000005,Backend API development,Development,Mike Johnson,2026-02-01,2026-02-20,"1300000000003,1300000000004",backend
+1300000000006,Frontend implementation,Development,Lisa Wang,2026-02-05,2026-02-25,1300000000004,frontend
+1300000000007,Integration testing,QA,Tom Baker,2026-02-20,2026-02-28,"1300000000005,1300000000006",testing
+1300000000008,Deploy to production,Release,Mike Johnson,2026-03-01,2026-03-03,1300000000007,devops

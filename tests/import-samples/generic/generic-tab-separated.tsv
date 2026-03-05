@@ -1,0 +1,9 @@
+Task Name	Start Date	End Date	Duration	Status	Assignee	Notes
+Project Kickoff	2026-01-05	2026-01-05	0	Complete	Sarah Chen	Kickoff meeting held
+Requirements Analysis	2026-01-06	2026-01-17	10	On Track	Mike Johnson	Stakeholder interviews in progress
+System Design	2026-01-20	2026-02-07	15	Not Started	Sarah Chen	Waiting for requirements sign-off
+Backend Development	2026-02-10	2026-03-21	30	Not Started	Dev Team	Core API and database layer
+Frontend Development	2026-02-17	2026-03-28	30	Not Started	UI Team	React components and integration
+Integration Testing	2026-03-31	2026-04-11	10	Not Started	QA Team	End-to-end testing
+User Acceptance Testing	2026-04-14	2026-04-25	10	Not Started	Business Team	Final validation
+Production Deployment	2026-04-28	2026-04-28	0	Not Started	DevOps	Go-live milestone

@@ -1,0 +1,9 @@
+Name,Group,Person,Status,Timeline,Priority,Last Updated,Creation Log
+Requirements gathering,Planning,Sarah Lee,Done,2026-01-10 - 2026-01-20,Critical,02/01/2026,01/05/2026
+UX research and interviews,Planning,David Kim,Done,2026-01-15 - 2026-01-30,High,02/01/2026,01/08/2026
+Wireframe prototyping,Design,Sarah Lee,Working on it,2026-01-25 - 2026-02-10,High,02/15/2026,01/12/2026
+Visual design system,Design,David Kim,Working on it,2026-02-01 - 2026-02-20,Medium,02/18/2026,01/15/2026
+Frontend development,Development,Chris Park,Stuck,2026-02-15 - 2026-03-15,Critical,02/28/2026,01/20/2026
+Backend API development,Development,Emma Torres,Working on it,2026-02-10 - 2026-03-10,Critical,02/25/2026,01/20/2026
+QA and testing,QA,David Kim,,2026-03-10 - 2026-03-25,High,01/25/2026,01/22/2026
+Production deployment,Release,Chris Park,,2026-03-25 - 2026-03-30,Critical,01/25/2026,01/22/2026

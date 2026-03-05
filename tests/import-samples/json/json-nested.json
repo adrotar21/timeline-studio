@@ -1,0 +1,57 @@
+{
+  "projectName": "Product Launch Q1 2026",
+  "lanes": [
+    {
+      "name": "Planning",
+      "subLanes": [
+        {
+          "name": "Strategy",
+          "items": [
+            {"name": "Market Research", "type": "task", "start": "2026-01-05", "end": "2026-01-17", "owner": "Marketing", "status": "Complete", "progress": 100},
+            {"name": "Competitive Analysis", "type": "task", "start": "2026-01-08", "end": "2026-01-15", "owner": "Strategy Team", "status": "Complete", "progress": 100},
+            {"name": "Strategy Approved", "type": "milestone", "start": "2026-01-20", "owner": "VP Product"}
+          ]
+        },
+        {
+          "name": "Requirements",
+          "items": [
+            {"name": "User Stories", "type": "task", "start": "2026-01-12", "end": "2026-01-24", "owner": "Product", "status": "On Track", "progress": 75},
+            {"name": "Technical Spec", "type": "task", "start": "2026-01-19", "end": "2026-02-01", "owner": "Engineering Lead", "status": "On Track", "progress": 40},
+            {"name": "Requirements Freeze", "type": "milestone", "start": "2026-02-03", "owner": "Product"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Execution",
+      "subLanes": [
+        {
+          "name": "Development",
+          "items": [
+            {"name": "Sprint 1", "type": "task", "start": "2026-02-05", "end": "2026-02-19", "owner": "Dev Team", "status": "Not Started"},
+            {"name": "Sprint 2", "type": "task", "start": "2026-02-20", "end": "2026-03-06", "owner": "Dev Team", "status": "Not Started"},
+            {"name": "Sprint 3", "type": "task", "start": "2026-03-09", "end": "2026-03-21", "owner": "Dev Team", "status": "Not Started"},
+            {"name": "Feature Complete", "type": "milestone", "start": "2026-03-23", "owner": "Engineering Lead"}
+          ]
+        },
+        {
+          "name": "QA",
+          "items": [
+            {"name": "Test Planning", "type": "task", "start": "2026-02-10", "end": "2026-02-14", "owner": "QA Lead"},
+            {"name": "Regression Suite", "type": "task", "start": "2026-03-09", "end": "2026-03-28", "owner": "QA Team"},
+            {"name": "QA Sign-Off", "type": "milestone", "start": "2026-03-30", "owner": "QA Lead"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Launch",
+      "items": [
+        {"name": "Beta Program", "type": "task", "start": "2026-03-30", "end": "2026-04-11", "owner": "Product"},
+        {"name": "Marketing Prep", "type": "task", "start": "2026-04-06", "end": "2026-04-18", "owner": "Marketing"},
+        {"name": "Go/No-Go Decision", "type": "milestone", "start": "2026-04-20", "owner": "Executive Team"},
+        {"name": "Public Launch", "type": "milestone", "start": "2026-04-22", "owner": "CEO"}
+      ]
+    }
+  ]
+}

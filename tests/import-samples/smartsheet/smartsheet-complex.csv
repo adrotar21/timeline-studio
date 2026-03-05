@@ -1,0 +1,16 @@
+Row ID,Task Name,Start,Finish,Duration,Predecessors,% Complete,Assigned To,Status,Comments,Priority,Risk Level
+9940150001,Project Charter,01/05/2026,01/09/2026,5d,,100%,Maria Gonzalez,Complete,"Draft, review, and finalize charter document",High,Low
+9940150002,Stakeholder Analysis,01/12/2026,01/16/2026,5d,2,100%,Maria Gonzalez,Complete,Identify all project stakeholders,Medium,Low
+9940150003,Requirements Workshop,01/19/2026,01/23/2026,5d,3,80%,James Wright,In Progress,"Facilitate workshops with engineering, product, and design",High,Medium
+9940150004,Technical Feasibility,01/19/2026,01/30/2026,2w,3SS,50%,Raj Patel,In Progress,Evaluate proposed architecture options,High,High
+9940150005,Budget Approval,02/02/2026,02/06/2026,5d,5,0%,Finance Team,Not Started,,Medium,Medium
+9940150006,Resource Allocation,02/09/2026,02/13/2026,5d,6,0%,HR Department,Not Started,Confirm team availability and assignments,Medium,Low
+9940150007,Environment Setup,02/09/2026,02/20/2026,2w,6SS,0%,DevOps Team,Not Started,"Provision dev, staging, and prod environments",High,Medium
+9940150008,Sprint 1 Development,02/16/2026,02/27/2026,2w,4,0%,Dev Team Alpha,Not Started,Core authentication and user management,High,Medium
+9940150009,Sprint 2 Development,03/02/2026,03/13/2026,2w,9,0%,Dev Team Alpha,Not Started,Dashboard and reporting features,High,Medium
+9940150010,UX Review,03/02/2026,03/06/2026,5d,9SS,0%,Lisa Chang,Not Started,"Review Sprint 1 output, provide feedback",Medium,Low
+9940150011,Integration Testing,03/16/2026,03/27/2026,2w,10,0%,QA Team,At Risk,"API, performance, and security testing",High,High
+9940150012,UAT Preparation,03/23/2026,03/27/2026,5d,12SS,0%,James Wright,Not Started,Prepare test scripts and recruit UAT testers,Medium,Low
+9940150013,User Acceptance Testing,03/30/2026,04/10/2026,2w,12,0%,Business Users,Not Started,,High,Medium
+9940150014,Go/No-Go Decision,04/13/2026,04/13/2026,0d,14,0%,Steering Committee,Not Started,Executive sign-off required before launch,High,High
+9940150015,Production Deployment,04/14/2026,04/17/2026,4d,15,0%,DevOps Team,On Hold,"Deployment blocked pending vendor contract, expected resolution by 04/10",High,High

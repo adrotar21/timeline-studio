@@ -1,0 +1,14 @@
+Name,Type,Start Date,End Date,Duration,Swimlane,Sub-Swimlane,Row,Predecessors,Status,Progress,Notes,Color,Pinned,Hidden,Label Position,Font Size,Text Color,Date Format,Show Date,Owner
+Project Kickoff,milestone,2026-01-05,,0,Planning,Milestones,0,,Complete,100,All-hands meeting,#4CAF50,no,no,bottom,12,#FFFFFF,MMM D,yes,Sarah Chen
+Requirements Analysis,task,2026-01-06,2026-01-17,10,Planning,Analysis,0,,On Track,50,Stakeholder interviews,#2196F3,no,no,center,0,#000000,,no,Mike Johnson
+Architecture Design,task,2026-01-20,2026-02-07,15,Planning,Design,0,1FS,Not Started,0,System architecture and tech stack,#FF9800,yes,no,right,10,#333333,MMM D YYYY,yes,Sarah Chen
+Backend API,task,2026-02-10,2026-03-14,25,Development,Backend,0,2FS+2d,On Track,20,REST API development,#9C27B0,no,no,center,0,,,,Dev Team Alpha
+Frontend UI,task,2026-02-17,2026-03-21,25,Development,Frontend,0,2SS+5d,Not Started,0,React component library,#E91E63,no,no,center,0,,,,Dev Team Beta
+Database Migration,task,2026-02-10,2026-02-21,10,Development,Backend,1,2FS,At Risk,10,"Complex schema changes, needs review",#F44336,yes,no,left,0,,,,DBA Team
+Integration Testing,task,2026-03-16,2026-03-28,10,QA,Testing,0,"3FS,4FF",Not Started,0,End-to-end integration tests,#00BCD4,no,no,center,0,,,,QA Team
+Performance Testing,task,2026-03-23,2026-04-04,10,QA,Testing,1,6SS+5d,Not Started,0,Load and stress testing,#009688,no,no,center,0,,,,QA Team
+UAT,task,2026-04-06,2026-04-18,10,QA,Acceptance,0,7FS,Not Started,0,Business user validation,#795548,no,no,center,0,,,,Business Team
+Security Audit,task,2026-04-06,2026-04-11,5,QA,Acceptance,1,6FS,Not Started,0,Penetration testing and code review,#607D8B,no,hidden,center,0,,,,Security Team
+Go-Live Approval,milestone,2026-04-20,,0,Launch,,0,"8FS,9FS",Not Started,0,Executive sign-off required,#FF5722,no,no,bottom,14,#FFFFFF,MMMM D YYYY,yes,VP Engineering
+Production Deploy,task,2026-04-21,2026-04-22,2,Launch,,0,10FS,Not Started,0,Blue-green deployment,#3F51B5,yes,no,center,0,,,,DevOps
+Launch!,milestone,2026-04-23,,0,Launch,,0,11FS,Not Started,0,Public announcement,#FFEB3B,no,no,bottom,16,#000000,MMM D,yes,Marketing

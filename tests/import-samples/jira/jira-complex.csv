@@ -1,0 +1,19 @@
+Summary,Issue key,Issue id,Issue Type,Status,Priority,Assignee,Epic Link,Labels,Fix Version,Component/s,Description,Comment,Comment.1,Comment.2
+E-Commerce Platform Rebuild,PROJ-1,10001,Epic,In Progress,Highest,John Smith,,"epic,q1-2026",v2.0,Platform,"Rebuild the e-commerce platform with modern architecture.
+Key goals:
+- Improve performance by 50%
+- Support mobile-first design
+- Migrate to microservices",Started sprint planning on Jan 15,Architecture review completed,,
+Product catalog service,PROJ-2,10002,Story,In Progress,High,Jane Doe,PROJ-1,"backend,api",v2.0,Services,"Implement the product catalog microservice with full CRUD operations and search capabilities.",Initial design doc shared,Code review in progress,Addressing PR feedback
+Shopping cart API,PROJ-3,10003,Story,To Do,High,Bob Wilson,PROJ-1,"backend,api",v2.0,Services,"Build shopping cart service with persistence and session management.",Waiting on catalog service to finish,,
+Payment gateway integration,PROJ-4,10004,Story,To Do,Medium,Alice Chen,PROJ-1,"backend,payments,security",v2.0,Payments,"Integrate Stripe and PayPal payment processors.
+Requirements:
+- PCI compliance
+- Webhook handling
+- Refund support",,,
+Fix cart total calculation,PROJ-5,10005,Bug,In Review,Highest,Jane Doe,PROJ-1,"bug,frontend",v2.0,UI,"Cart total does not account for quantity discounts when items exceed 10 units.",Found root cause in discount module,Fix submitted in PR #142,
+Product search autocomplete,PROJ-6,10006,Sub-task,In Progress,Medium,Bob Wilson,PROJ-1,"frontend,search",v2.0,UI,Implement typeahead search with debounced API calls.,Using Elasticsearch for indexing,,
+Mobile responsive checkout,PROJ-7,10007,Task,To Do,High,Alice Chen,PROJ-1,"frontend,mobile",v2.1,UI,"Ensure checkout flow works on all screen sizes.",,,
+Load testing infrastructure,PROJ-8,10008,Task,Done,Low,John Smith,,"devops,testing",v2.0,Infrastructure,Set up k6 load testing scripts and CI integration.,Completed load test framework,Added to CI pipeline,Results documented in wiki
+Database migration scripts,PROJ-9,10009,Task,In Progress,High,Jane Doe,PROJ-1,"backend,database",v2.0,Data,"Write migration scripts for transitioning from monolith DB to per-service databases.",Schema mapping complete,Running test migrations,
+User acceptance testing plan,PROJ-10,10010,Task,To Do,Medium,Bob Wilson,PROJ-1,"qa,testing",v2.0,QA,Create UAT test plan covering all critical user journeys.,,,

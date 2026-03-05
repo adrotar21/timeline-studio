@@ -1,0 +1,9 @@
+Row ID,Task Name,Start,Finish,Duration,Predecessors,% Complete,Assigned To
+7830291001,Requirements Gathering,01/05/2026,01/16/2026,10d,,100%,Alice Park
+7830291002,Architecture Design,01/19/2026,01/30/2026,10d,2,75%,Bob Martinez
+7830291003,UI Design,01/19/2026,01/28/2026,8d,2SS,60%,Carla Nguyen
+7830291004,Backend Development,02/02/2026,02/27/2026,20d,3FS+2d,30%,Dev Team
+7830291005,Frontend Development,02/02/2026,02/20/2026,15d,4SS,25%,Carla Nguyen
+7830291006,API Integration,02/23/2026,03/06/2026,10d,5,10%,Bob Martinez
+7830291007,QA Testing,03/09/2026,03/20/2026,10d,7,0%,QA Team
+7830291008,Deployment,03/23/2026,03/25/2026,3d,8,0%,DevOps Team

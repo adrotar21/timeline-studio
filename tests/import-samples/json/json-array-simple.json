@@ -1,0 +1,8 @@
+[
+  {"name": "Project Kickoff", "start": "2026-01-05", "end": "2026-01-05"},
+  {"name": "Requirements Analysis", "start": "2026-01-06", "end": "2026-01-17"},
+  {"name": "System Design", "start": "2026-01-20", "end": "2026-02-07"},
+  {"name": "Development", "start": "2026-02-10", "end": "2026-03-21"},
+  {"name": "Testing", "start": "2026-03-24", "end": "2026-04-11"},
+  {"name": "Launch", "start": "2026-04-14", "end": "2026-04-14"}
+]

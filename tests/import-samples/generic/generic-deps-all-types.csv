@@ -1,0 +1,13 @@
+Task Name,Start,End,Predecessors,Notes
+Foundation,2026-01-05,2026-01-17,,No dependencies
+Framing,2026-01-19,2026-02-07,1FS,Finish-to-Start: starts after Foundation finishes
+Electrical Rough-In,2026-01-26,2026-02-14,2SS+5d,Start-to-Start with 5 day lag
+Plumbing Rough-In,2026-01-26,2026-02-14,2SS+5d,Start-to-Start with 5 day lag (parallel to Electrical)
+Insulation,2026-02-09,2026-02-21,"3FF,4FF",Finish-to-Finish: must finish when Electrical and Plumbing finish
+Drywall,2026-02-16,2026-03-07,5FS,Finish-to-Start after Insulation
+Painting,2026-03-02,2026-03-14,6SS+10d,Start-to-Start with 10 day lag
+Flooring,2026-03-09,2026-03-21,6SS+15d,Start-to-Start with 15 day lag
+Trim Work,2026-03-16,2026-03-28,"7FF,8FF",Finish-to-Finish with Painting and Flooring
+Final Inspection,2026-03-30,2026-03-30,9FS,Finish-to-Start milestone
+Punch List,2026-03-31,2026-04-04,10FS-1d,Finish-to-Start with negative lag (lead time)
+Handover,2026-04-07,2026-04-07,11FS,Final milestone

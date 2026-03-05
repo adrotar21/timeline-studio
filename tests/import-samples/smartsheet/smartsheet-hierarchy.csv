@@ -1,0 +1,14 @@
+Row ID,Primary Column,Start,Finish,Predecessors,Assigned To,Status
+6120480001,Phase 1: Planning,01/05/2026,02/06/2026,,Program Office,In Progress
+6120480002,  Gather Requirements,01/05/2026,01/23/2026,,Business Analysts,In Progress
+6120480003,    Interview Stakeholders,01/05/2026,01/14/2026,,Janet Liu,Complete
+6120480004,    Review Documents,01/12/2026,01/23/2026,4,Tom Bradley,In Progress
+6120480005,  Define Scope,01/26/2026,02/06/2026,5,Sarah Chen,Not Started
+6120480006,    Draft Scope Document,01/26/2026,01/30/2026,5,Sarah Chen,Not Started
+6120480007,    Scope Approval,02/02/2026,02/06/2026,7,Steering Committee,Not Started
+6120480008,Phase 2: Execution,02/09/2026,04/17/2026,8,Program Office,Not Started
+6120480009,  Design,02/09/2026,03/06/2026,,Design Team,Not Started
+6120480010,    Wireframes,02/09/2026,02/20/2026,,UX Team,Not Started
+6120480011,    Visual Design,02/23/2026,03/06/2026,11,UI Team,Not Started
+6120480012,  Development,03/09/2026,04/17/2026,12,Dev Team,Not Started
+6120480013,Phase 3: Closure,04/20/2026,05/01/2026,13,Program Office,Not Started

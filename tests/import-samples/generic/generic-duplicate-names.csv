@@ -1,0 +1,11 @@
+Name,Start,End,Swimlane,Sub-Swimlane,Status
+Design Review,2026-01-10,2026-01-10,Frontend,UX,Complete
+Design Review,2026-01-17,2026-01-17,Frontend,Visual,Not Started
+Design Review,2026-01-24,2026-01-24,Backend,API,On Track
+Testing,2026-02-10,2026-02-21,Frontend,UX,Not Started
+Testing,2026-02-10,2026-02-21,Frontend,Visual,Not Started
+Testing,2026-02-17,2026-02-28,Backend,API,Not Started
+Testing,2026-02-17,2026-02-28,Backend,Database,Not Started
+Code Complete,2026-03-01,2026-03-01,Frontend,,Not Started
+Code Complete,2026-03-01,2026-03-01,Backend,,Not Started
+Launch,2026-03-15,2026-03-15,,,Not Started

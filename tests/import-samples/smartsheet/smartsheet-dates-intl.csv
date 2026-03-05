@@ -1,0 +1,6 @@
+Row ID,Task Name,Start,Finish,Assigned To,Comments
+4501829374,Project Kickoff,15/01/2026,15/01/2026,Sarah Chen,Kickoff meeting with all stakeholders
+4501829375,Design Phase,16/01/2026,28/02/2026,Mike Torres,UI/UX design and wireframes
+4501829376,Development,02/03/2026,15/05/2026,Dev Team,Core feature implementation
+4501829377,Testing,18/05/2026,30/06/2026,QA Team,Integration and regression testing
+4501829378,Launch,01/07/2026,01/07/2026,Sarah Chen,Production deployment and go-live

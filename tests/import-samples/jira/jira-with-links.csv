@@ -1,0 +1,9 @@
+Summary,Issue key,Issue id,Issue Type,Status,Priority,Assignee,Outward issue link (Blocks),Inward issue link (is blocked by)
+Define project requirements,PROJ-1,10001,Task,Done,High,John Smith,,
+Design system architecture,PROJ-2,10002,Task,Done,High,Jane Doe,,PROJ-1
+Implement database schema,PROJ-3,10003,Task,In Progress,Medium,Bob Wilson,PROJ-5,PROJ-2
+Build REST API endpoints,PROJ-4,10004,Task,In Progress,Medium,Alice Chen,"PROJ-6, PROJ-7",PROJ-2
+Write integration tests,PROJ-5,10005,Task,To Do,Low,Jane Doe,,PROJ-3
+Create frontend components,PROJ-6,10006,Story,To Do,High,John Smith,,"PROJ-3, PROJ-4"
+Connect frontend to API,PROJ-7,10007,Task,To Do,Medium,Alice Chen,PROJ-8,PROJ-4
+Deploy to staging,PROJ-8,10008,Task,To Do,Highest,Bob Wilson,,PROJ-7

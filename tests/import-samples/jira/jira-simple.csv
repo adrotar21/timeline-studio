@@ -1,0 +1,7 @@
+Summary,Issue key,Issue id,Issue Type,Status,Priority,Assignee,Reporter,Created,Updated
+Platform Migration Epic,PROJ-1,10001,Epic,In Progress,Highest,John Smith,Jane Doe,2026-01-15T09:30:00+0000,2026-02-20T14:15:00+0000
+Design new authentication flow,PROJ-2,10002,Story,To Do,High,Jane Doe,Jane Doe,2026-01-16T10:00:00+0000,2026-01-16T10:00:00+0000
+Set up CI/CD pipeline,PROJ-3,10003,Task,In Progress,Medium,Bob Wilson,John Smith,2026-01-17T08:45:00+0000,2026-02-18T11:30:00+0000
+Login page crashes on Safari,PROJ-4,10004,Bug,In Review,High,Alice Chen,Bob Wilson,2026-01-20T13:20:00+0000,2026-02-22T09:00:00+0000
+Write unit tests for auth module,PROJ-5,10005,Sub-task,Done,Low,Jane Doe,Jane Doe,2026-01-21T15:00:00+0000,2026-02-10T16:45:00+0000
+Update API documentation,PROJ-6,10006,Task,To Do,Lowest,Bob Wilson,Alice Chen,2026-01-22T11:10:00+0000,2026-01-22T11:10:00+0000

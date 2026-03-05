@@ -1,0 +1,7 @@
+Task Name,Start,End,Notes
+Kickoff,2026-01-05,2026-01-05,ISO format
+Requirements,Jan 6 2026,Jan 17 2026,Text month format
+Design,01/20/2026,02/07/2026,US numeric format
+Development,February 10 2026,March 21 2026,Full month name
+Testing,2026-03-24,2026-04-11,ISO again
+Launch,Apr 14 2026,Apr 14 2026,Abbreviated month
