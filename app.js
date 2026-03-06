@@ -26,8 +26,8 @@ const ICONS=[
   {id:'pin',l:'📍',p:'M12 2C8 2 5 5 5 8.5c0 5 7 13.5 7 13.5s7-8.5 7-13.5C19 5 16 2 12 2zm0 9a2.5 2.5 0 110-5 2.5 2.5 0 010 5z'},
 ];
 const THEMES={
-  default:{bg:'#ffffff',hdr:'#1a2332',cls:'',tlTx:'#1a1a1a',tlTx2:'#5a6577'},
-  claude:{bg:'#FAF7F2',hdr:'#292524',cls:'theme-claude',tlTx:'#3B2F2B',tlTx2:'#7A6E66'},
+  warm:{bg:'#FAF7F2',hdr:'#292524',cls:'theme-warm',tlTx:'#3B2F2B',tlTx2:'#7A6E66'},
+  cool:{bg:'#ffffff',hdr:'#1a2332',cls:'',tlTx:'#1a1a1a',tlTx2:'#5a6577'},
   light:{bg:'#ffffff',hdr:'#4a5568',cls:'theme-light',tlTx:'#1a1a1a',tlTx2:'#5a6577'},
   midnight:{bg:'#111827',hdr:'#0a0e17',cls:'theme-midnight',tlTx:'#e5e7eb',tlTx2:'#9ca3af'},
 };
@@ -594,7 +594,7 @@ const App={
     const p=this.proj;
     if(!p.timescale||!['days','weeks','months','quarters','years'].includes(p.timescale))p.timescale='months';
     if(!p.dateFormat)p.dateFormat='MMM D, YYYY';
-    if(!p.theme)p.theme='default';if(p.autoRange==null)p.autoRange=true;
+    if(p.theme==='claude')p.theme='warm';if(p.theme==='default')p.theme='cool';if(!p.theme)p.theme='warm';if(p.autoRange==null)p.autoRange=true;
     if(p.locked==null)p.locked=false;if(p.hideMode==null)p.hideMode=false;
     if(p.headerLayers==null)p.headerLayers=2;if(p.fontSize==null)p.fontSize=11;
     if(!p.monthFormat||!['short','letter'].includes(p.monthFormat))p.monthFormat='short';
