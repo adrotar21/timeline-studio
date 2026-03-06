@@ -673,8 +673,8 @@ const App={
     return(this.proj.statusDefs||[]).find(sd=>sd.id===statusId)||null;
   },
 
-  applyTheme(){const t=THEMES[this.proj.theme]||THEMES.default;document.body.className=t.cls},
-  getTheme(){return THEMES[this.proj.theme]||THEMES.default},
+  applyTheme(){const t=THEMES[this.proj.theme]||THEMES.warm;document.body.className=t.cls},
+  getTheme(){return THEMES[this.proj.theme]||THEMES.warm},
 
   sched(tl=true,dt=true){
     if(tl)this._dirty=true;if(dt)this._dataDirty=true;
@@ -3203,7 +3203,7 @@ const App={
     // Date format
     const dfSel=document.getElementById('s-date-fmt');
     if(dfSel){if(dfSel.value==='custom'){const cf=document.getElementById('s-custom-fmt')?.value||'DDMMMYY';p.dateFormat='custom:'+cf}else{p.dateFormat=dfSel.value}}
-    p.theme=document.querySelector('.theme-card.active')?.dataset.theme||'default';
+    p.theme=document.querySelector('.theme-card.active')?.dataset.theme||'warm';
     p.showWeekends=document.getElementById('s-show-weekends').checked;
     p.weekendOpacity=+document.getElementById('s-wknd-opacity').value||8;
     p.weekendAutoHide=document.getElementById('s-wknd-auto').checked;
