@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.20 — Import & Interoperability: Source tool presets (Smartsheet, Jira, Asana, Monday.com, MS Project) with auto-detect, scheduling options (duration mode, default duration, date format, snap-to-working-days), parseDuration() multi-format parser, Smartsheet predecessor off-by-one correction. */
+/* Timeline Studio v0.44.21 — Float calculation fix: FS/FF backward pass used indirect calendar-day approximation that produced incorrect LF when working-day lag crossed weekends. Replaced with direct _addLagWorkingDays(sls,-lag,sdm) matching the SS backward pass pattern. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -1310,26 +1310,15 @@ const App={
           const type=this.depType(link),lag=this.depLag(link);
           const sdm=s.type==='task'?(s.durMode||'cal'):'work';
           if(type==='FS'){
-            const pEF=ef.get(id);
-            if(pEF){let fwdContrib=this._addLagWorkingDays(pEF,lag,sdm);
-              if(fwdContrib&&this.proj.scheduleAroundNonWorking&&sdm==='work')fwdContrib=this._skipNonWorking(fwdContrib);
-              const cand=fwdContrib?U.addDays(pEF,U.days(fwdContrib,sls)):null;
-              if(cand&&(!minLF||cand<minLF))minLF=cand}
+            const cand=this._addLagWorkingDays(sls,-lag,sdm);
+            if(cand&&(!minLF||cand<minLF))minLF=cand;
           }else if(type==='SS'){
             // SS constrains pred START: LS(pred) = LS(succ) - lag
             const cand=this._addLagWorkingDays(sls,-lag,sdm);
             if(cand&&(!ssLS||cand<ssLS))ssLS=cand;
           }else if(type==='FF'){
-            const pEF=ef.get(id);
-            if(pEF){let fwdContrib=this._addLagWorkingDays(pEF,lag,sdm);
-              if(fwdContrib&&this.proj.scheduleAroundNonWorking&&sdm==='work')fwdContrib=this._skipNonWorking(fwdContrib);
-              const sDur=s.type==='task'?Math.max(0,s.duration||0):0;
-              let sLF;
-              if(s.type==='task'&&this.proj.scheduleAroundNonWorking&&(s.durMode||'cal')!=='cal'){
-                const sEndIncl=this._addWorkingDays(sls,sDur);
-                sLF=U.addDays(sEndIncl,1);
-              }else{sLF=U.addDays(sls,sDur)}
-              const cand=fwdContrib?U.addDays(pEF,U.days(fwdContrib,sLF)):null;
+            const sLF=lf.get(s.id);
+            if(sLF){const cand=this._addLagWorkingDays(sLF,-lag,sdm);
               if(cand&&(!minLF||cand<minLF))minLF=cand}
           }
         }
