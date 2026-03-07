@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.21 — Float calculation fix: FS/FF backward pass used indirect calendar-day approximation that produced incorrect LF when working-day lag crossed weekends. Replaced with direct _addLagWorkingDays(sls,-lag,sdm) matching the SS backward pass pattern. */
+/* Timeline Studio v0.44.22 — App icon update: replaced inline SVG logo with actual PNG asset (base64-embedded, 48x48 cropped-square). CSS hue-rotate/brightness/saturate filters per theme. Favicon uses canvas-rendered PNG with matching theme filters in applyTheme(). */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -673,7 +673,7 @@ const App={
     return(this.proj.statusDefs||[]).find(sd=>sd.id===statusId)||null;
   },
 
-  applyTheme(){const t=THEMES[this.proj.theme]||THEMES.warm;document.body.className=t.cls},
+  applyTheme(){const t=THEMES[this.proj.theme]||THEMES.warm;document.body.className=t.cls;const logo=document.querySelector('.app-brand img');const fi=document.querySelector('link[rel="icon"]');if(fi&&logo&&logo.complete){const filters={warm:'hue-rotate(152deg) saturate(0.65)',cool:'none',light:'brightness(0.92)',midnight:'hue-rotate(11deg) brightness(1.25)'};const c=document.createElement('canvas');c.width=32;c.height=32;const ctx=c.getContext('2d');const f=filters[this.proj.theme]||'none';if(f!=='none')ctx.filter=f;ctx.drawImage(logo,0,0,32,32);fi.href=c.toDataURL('image/png')}},
   getTheme(){return THEMES[this.proj.theme]||THEMES.warm},
 
   sched(tl=true,dt=true){
