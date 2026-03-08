@@ -546,6 +546,8 @@ const App={
      'pill-group','pill-lock','pill-hide','pill-auto','pill-fp','pill-sel',
      'panel-tab','panel-tab-icon','btn-collapse','btn-lock-collapse',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
+    /* Beta tier activation from URL params (e.g. ?tier=beta_boardroom&ref=signup or ?ref=gm) */
+    {const _bp=new URLSearchParams(location.search);let _bt=_bp.get('tier');const _br=_bp.get('ref');if(_br==='gm'&&!_bt)_bt='beta_boardroom';if(_bt){localStorage.setItem('tls3_tier',_bt);if(_br)localStorage.setItem('tls3_ref',_br);const _bu=new URL(location.href);_bu.searchParams.delete('tier');_bu.searchParams.delete('ref');history.replaceState(null,'',_bu.pathname+(_bu.hash||''));setTimeout(()=>this.toast('Beta access activated!','success',3000),800)}this._tier=localStorage.getItem('tls3_tier')||'free';this._tierRef=localStorage.getItem('tls3_ref')||''}
     if(!await this._loadFromHash()){if(this._shareLoadFailed)this.proj=newProj();else this.loadAuto()}this.migrate();this._loadShortcuts();this._buildShortcutMap();
     try{this.panelCollapsed=localStorage.getItem('tls3_panelCollapsed')==='1';this.panelLocked=localStorage.getItem('tls3_panelLocked')==='1'}catch(e){}
     if(this.panelCollapsed){this.$.panel_tab.classList.remove('hidden');this.$.props_panel.classList.add('panel-hidden');this._syncLockTab()}else{this._renderEmptyPanel()}
