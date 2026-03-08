@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.24 — Critical Path pill + stale endDate fix: added header bar pill indicator for Critical Path mode (orange 🔥, click-to-dismiss). Fixed stale endDate bug where root items or durMode changes caused incorrect float calculations — endDates are now defensively freshened in calculateFloat(), runSchedule(), and _recalcNonWorkingDays(). 25/25 test files, 464/464 assertions passing. */
+/* Timeline Studio v0.44.25 — Edge case regression tests: 26 tests (81 assertions) covering pinned item scheduling/float/violations, scheduling pass convergence (1 topo-sorted pass always sufficient), zero-duration task behavior (documented float=1 bug from JS falsy 0 in forward pass), float>=0 invariant with independent violation detection, FF/SF float calculation (SF permissiveness, FF alignment), and load-state consistency (derived value round-trip). Also includes stale data regression tests from v0.44.24 (31 tests, 95 assertions). 27/27 test files, 464/464 assertions passing. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
