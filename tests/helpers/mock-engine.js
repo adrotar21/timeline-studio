@@ -135,7 +135,7 @@ const App={
   },
   _recalcNonWorkingDays(){
     for(const it of this.proj.items){
-      if(it.type==='task'&&(it.durMode||'cal')!=='cal'&&it.startDate&&it.duration){
+      if(it.type==='task'&&it.startDate&&it.duration){
         it.endDate=this._calcEndDate(it);
       }
     }
@@ -249,6 +249,7 @@ const App={
   },
   runSchedule(){
     if(this.proj.schedulingMode!=='scheduled')return;
+    for(const it of this.proj.items){if(it.type==='task'&&it.startDate&&it.duration)it.endDate=this._calcEndDate(it)}
     for(let pass=0;pass<5;pass++){
       const n=this._runSchedulePass(false);
       if(n===0)break;
@@ -256,6 +257,7 @@ const App={
   },
   calculateFloat(){
     const items=this.proj.items;
+    for(const it of items){if(it.type==='task'&&it.startDate&&it.duration)it.endDate=this._calcEndDate(it)}
     const es=new Map(),ef=new Map(),ls=new Map(),lf=new Map();
     const order=this.topoSort();
     for(const id of order){const it=this.gi(id);if(!it)continue;

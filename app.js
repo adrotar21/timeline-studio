@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.23 — SF dependency support + bug hardening: added Start-Finish link type across engine scheduling, validation, float calculation, and render paths. Import cycle guard prevents circular edges during advanced CSV import. Test runner EPERM fallback for restricted environments. 25/25 test files, 464/464 assertions passing. */
+/* Timeline Studio v0.44.24 — Critical Path pill + stale endDate fix: added header bar pill indicator for Critical Path mode (orange 🔥, click-to-dismiss). Fixed stale endDate bug where root items or durMode changes caused incorrect float calculations — endDates are now defensively freshened in calculateFloat(), runSchedule(), and _recalcNonWorkingDays(). 25/25 test files, 464/464 assertions passing. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -543,7 +543,7 @@ const App={
      'imp-map-area','imp-status-area','imp-perfect-match','imp-preview-wrap','imp-status',
      'imp-overload-area','btn-imp-do','imp-source-wrap','imp-source-sel','imp-source-badge',
      'imp-opts-wrap','imp-durmode','imp-defdur','imp-datefmt','imp-snapwork',
-     'pill-group','pill-lock','pill-hide','pill-auto','pill-fp','pill-sel',
+     'pill-group','pill-lock','pill-hide','pill-auto','pill-fp','pill-sel','pill-cp',
      'panel-tab','panel-tab-icon','btn-collapse','btn-lock-collapse',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
     /* Beta tier activation from URL params (e.g. ?tier=beta_boardroom&ref=signup or ?ref=gm) */
@@ -1024,17 +1024,18 @@ const App={
     const tsl=document.getElementById('toggle-sched-label');
     if(tsl)tsl.textContent=this.proj.schedulingMode==='scheduled'?'Switch to Manual':'Switch to Auto-Scheduled';
     /* Mode indicator pills */
-    const pg=this.$.pill_group,pl=this.$.pill_lock,ph=this.$.pill_hide,pa=this.$.pill_auto,pf=this.$.pill_fp,ps=this.$.pill_sel;
+    const pg=this.$.pill_group,pl=this.$.pill_lock,ph=this.$.pill_hide,pa=this.$.pill_auto,pf=this.$.pill_fp,ps=this.$.pill_sel,pcp=this.$.pill_cp;
     if(pg){
-      const locked=!!this.proj.locked,hiding=!!this.proj.hideMode,auto=this.proj.schedulingMode==='scheduled',fp=!!this._fpMode,selCt=this.sel.length;
+      const locked=!!this.proj.locked,hiding=!!this.proj.hideMode,auto=this.proj.schedulingMode==='scheduled',fp=!!this._fpMode,selCt=this.sel.length,cp=!!this._critPath;
       if(pl)pl.classList.toggle('hidden',!locked);
       if(ph)ph.classList.toggle('hidden',!hiding);
       if(pa)pa.classList.toggle('hidden',!auto);
       if(pf)pf.classList.toggle('hidden',!fp);
+      if(pcp)pcp.classList.toggle('hidden',!cp);
       if(ps){ps.classList.toggle('hidden',selCt<2);
         if(selCt>=2){const countEl=ps.querySelector('.pill-count');const ctEl=ps.querySelector('.pill-sel-ct');if(countEl)countEl.textContent=selCt;if(ctEl)ctEl.textContent=selCt;ps.classList.add('has-count')}
       }
-      pg.classList.toggle('hidden',!locked&&!hiding&&!auto&&!fp&&selCt<2);
+      pg.classList.toggle('hidden',!locked&&!hiding&&!auto&&!fp&&!cp&&selCt<2);
       if(hiding&&ph){
         const ct=this.proj.items.filter(i=>i.hidden).length;
         const countEl=ph.querySelector('.pill-count');
@@ -1239,7 +1240,7 @@ const App={
      In auto-scheduled mode also re-runs the scheduling engine. */
   _recalcNonWorkingDays(){
     for(const it of this.proj.items){
-      if(it.type==='task'&&(it.durMode||'cal')!=='cal'&&it.startDate&&it.duration){
+      if(it.type==='task'&&it.startDate&&it.duration){
         it.endDate=this._calcEndDate(it);
       }
     }
@@ -1289,6 +1290,8 @@ const App={
   /* Calculate float for all items (forward + backward pass) */
   calculateFloat(){
     const items=this.proj.items;
+    // Freshen endDates so stale values never cause wrong float
+    for(const it of items){if(it.type==='task'&&it.startDate&&it.duration)it.endDate=this._calcEndDate(it)}
     const es=new Map(),ef=new Map(),ls=new Map(),lf=new Map();
     // Forward pass
     const order=this.topoSort();
@@ -1435,6 +1438,8 @@ const App={
   },
   runSchedule(){
     if(this.proj.schedulingMode!=='scheduled')return;
+    // Freshen root item endDates so _depEnd reads correct values
+    for(const it of this.proj.items){if(it.type==='task'&&it.startDate&&it.duration)it.endDate=this._calcEndDate(it)}
     for(let pass=0;pass<5;pass++){
       const n=this._runSchedulePass(false);
       if(n===0)break; // stable
@@ -1745,7 +1750,7 @@ const App={
     /* Mode indicator pill events */
     if(this.$.pill_group){
       const pg=this.$.pill_group;
-      pg.addEventListener('click',e=>{const btn=e.target.closest('.pill-x');if(!btn)return;const p=btn.dataset.pill;if(p==='lock'){this.proj.locked=false;this.proj.lockH=false;this.proj.lockV=false;this.sched();this.autoSave();this.toast('Unlocked')}else if(p==='hide'){this.proj.hideMode=false;this.sched();this.toast('Showing all')}else if(p==='auto'){this.toggleSchedulingMode()}else if(p==='fp'){this.deactivateFP()}else if(p==='sel'){this.sel=[];this.closePanel();this.sched()}});
+      pg.addEventListener('click',e=>{const btn=e.target.closest('.pill-x');if(!btn)return;const p=btn.dataset.pill;if(p==='lock'){this.proj.locked=false;this.proj.lockH=false;this.proj.lockV=false;this.sched();this.autoSave();this.toast('Unlocked')}else if(p==='hide'){this.proj.hideMode=false;this.sched();this.toast('Showing all')}else if(p==='auto'){this.toggleSchedulingMode()}else if(p==='fp'){this.deactivateFP()}else if(p==='cp'){this.toggleCritPath()}else if(p==='sel'){this.sel=[];this.closePanel();this.sched()}});
       pg.addEventListener('mouseenter',()=>{clearTimeout(this._pillHoverTimer);pg.classList.add('pill-hover')});
       pg.addEventListener('mouseleave',()=>{this._pillHoverTimer=setTimeout(()=>pg.classList.remove('pill-hover'),200)});
     }

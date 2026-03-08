@@ -166,6 +166,12 @@ body.theme-midnight .pill-fp{background:rgba(167,139,250,.12);color:#a78bfa}
 .pill-sel.has-count .pill-icon{width:auto;text-align:left}
 body.theme-light .pill-sel{background:rgba(100,116,139,.1);color:#475569}
 body.theme-midnight .pill-sel{background:rgba(148,163,184,.12);color:#94a3b8}
+/* Critical Path pill — orange/amber matching crit-path stroke (#fb8500) */
+.pill-cp{background:rgba(251,133,0,.15);color:#fb8500}
+body.theme-light .pill-cp{background:rgba(251,133,0,.1);color:#c26900}
+body.theme-midnight .pill-cp{background:rgba(251,133,0,.12);color:#fb8500}
+@keyframes pill-glow-cp{0%{box-shadow:0 0 0 0 rgba(251,133,0,0)}30%{box-shadow:0 0 8px 3px rgba(251,133,0,.5)}100%{box-shadow:0 0 0 0 rgba(251,133,0,0)}}
+.pill-cp.pill-hint{animation:pill-glow-cp 1s ease-out}
 
 /* Format Painter (F42) */
 #tl-body.fp-mode{cursor:copy}
