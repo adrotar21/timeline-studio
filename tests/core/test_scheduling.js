@@ -77,6 +77,18 @@ section('FF Dependencies');
   assert('FF dep: B start computed from A end','2026-01-07',es);
 }
 
+section('SF Dependencies');
+{
+  resetItemCounter();
+  const A=makeItem('task',{id:'A',name:'A',startDate:'2026-01-05',duration:5,endDate:'2026-01-09'});
+  const B=makeItem('task',{id:'B',name:'B',startDate:'2026-01-20',duration:3,endDate:'2026-01-22'});
+  addDep(B,'A','SF',0);
+  initProj([A,B]);
+  const es=App.calcEarlyStart(App.gi('B'));
+  // SF: B depEnd must be >= A start. A start Jan05, B dur=3 => Jan02
+  assert('SF dep: B early start from A start','2026-01-02',es);
+}
+
 section('Milestone Dependencies');
 {
   resetItemCounter();
@@ -243,6 +255,29 @@ section('RunSchedule');
   assert('After schedule: B start = A depEnd','2026-01-10',App.gi('B').startDate);
 }
 
+section('RunSchedule - Can Pull Earlier');
+{
+  resetItemCounter();
+  const A=makeItem('task',{id:'A',startDate:'2026-01-05',duration:5,endDate:'2026-01-09'});
+  const B=makeItem('task',{id:'B',startDate:'2026-01-20',duration:3,endDate:'2026-01-22'});
+  addDep(B,'A','FF',0);
+  initProj([A,B],{schedulingMode:'scheduled'});
+  App.runSchedule();
+  // FF with A depEnd Jan10 and B dur=3 => B start Jan07 (left shift from Jan20)
+  assert('RunSchedule can move left for FF constraints','2026-01-07',App.gi('B').startDate);
+}
+
+section('RunSchedule - SF Auto Scheduling');
+{
+  resetItemCounter();
+  const A=makeItem('task',{id:'A',startDate:'2026-01-05',duration:5,endDate:'2026-01-09'});
+  const B=makeItem('task',{id:'B',startDate:'2026-01-20',duration:3,endDate:'2026-01-22'});
+  addDep(B,'A','SF',0);
+  initProj([A,B],{schedulingMode:'scheduled'});
+  App.runSchedule();
+  assert('RunSchedule applies SF constraint','2026-01-02',App.gi('B').startDate);
+}
+
 section('RunSchedule — Pinned Item Skipped');
 {
   resetItemCounter();
@@ -278,6 +313,40 @@ section('Float Calculation');
   // Linear chain: both should have float=0
   assert('A float in linear chain',App.gi('A')._float,0);
   assert('B float in linear chain',App.gi('B')._float,0);
+}
+
+section('Float Calculation - SF Branch');
+{
+  resetItemCounter();
+  const A=makeItem('task',{id:'A',startDate:'2026-01-05',duration:5,endDate:'2026-01-09'});
+  const B=makeItem('task',{id:'B',startDate:'2026-01-20',duration:3,endDate:'2026-01-22'});
+  addDep(B,'A','SF',0);
+  initProj([A,B],{schedulingMode:'scheduled'});
+  App.runSchedule();
+  App.calculateFloat();
+  assert('SF branch: predecessor on critical chain has zero float',App.gi('A')._float,0);
+  assertT('SF branch: successor float is computed',App.gi('B')._float!=null);
+}
+
+section('Float Calculation - SF Branching Paths');
+{
+  resetItemCounter();
+  const A=makeItem('task',{id:'A',startDate:'2026-01-05',duration:5,endDate:'2026-01-09'});
+  const B=makeItem('task',{id:'B',startDate:'2026-01-20',duration:3,endDate:'2026-01-22'});
+  const C=makeItem('task',{id:'C',startDate:'2026-01-20',duration:5,endDate:'2026-01-24'});
+  addDep(B,'A','SF',0);
+  addDep(C,'A','FS',0);
+  initProj([A,B,C],{schedulingMode:'scheduled'});
+  App.runSchedule();
+  App.calculateFloat();
+
+  assert('SF branching: A float=0 (shared predecessor)',App.gi('A')._float,0);
+  assert('SF branching: C float=0 (critical FS branch)',App.gi('C')._float,0);
+  assertT('SF branching: B has slack',App.gi('B')._float>0);
+  const crit=App.getCriticalPath();
+  assertT('SF branching: A critical',crit&&crit.has('A'));
+  assertT('SF branching: C critical',crit&&crit.has('C'));
+  assertF('SF branching: B not critical',crit&&crit.has('B'));
 }
 
 section('Float — Parallel Paths');

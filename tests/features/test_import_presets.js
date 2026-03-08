@@ -132,6 +132,50 @@ function _resolveStatusForImport(val,proj,impStatusMap){
 
 // ─── New functions for import preset testing ───
 
+function attachImportedDepsWithCycleGuard(newItems,predStrings){
+  const byRowNum=new Map(newItems.map((it,idx)=>[idx+1,it]));
+  const adj=new Map();
+  newItems.forEach(it=>adj.set(it.id,[]));
+  newItems.forEach(it=>{
+    for(const d of it.deps||[]){
+      const pid=(typeof d==='string'?d:(d&&d.id)||'').toString().trim();
+      if(pid&&adj.has(pid))adj.get(pid).push(it.id);
+    }
+  });
+
+  const wouldCreateCycle=(itemId,predId)=>{
+    if(!itemId||!predId)return false;
+    if(itemId===predId)return true;
+    const seen=new Set([itemId]);
+    const queue=[itemId];
+    while(queue.length){
+      const cur=queue.shift();
+      const next=adj.get(cur)||[];
+      for(const nid of next){
+        if(nid===predId)return true;
+        if(!seen.has(nid)){seen.add(nid);queue.push(nid);}
+      }
+    }
+    return false;
+  };
+
+  let added=0,skippedCircular=0;
+  newItems.forEach((it,idx)=>{
+    const preds=parsePredString((predStrings&&predStrings[idx])||'');
+    preds.forEach(p=>{
+      const predItem=byRowNum.get(p.rowNum);
+      const predId=predItem?predItem.id:'';
+      if(!predId||predId===it.id)return;
+      if(wouldCreateCycle(it.id,predId)){skippedCircular++;return;}
+      (it.deps||(it.deps=[])).push({id:predId,type:p.type||'FS',lag:p.lag||0});
+      if(adj.has(predId))adj.get(predId).push(it.id);
+      added++;
+    });
+  });
+
+  return{added,skippedCircular};
+}
+
 const _IMP_PRESET_SIGS={
   msproject:{ext:['.xml'],headerPatterns:[],xmlRoot:'Project'},
   smartsheet:{ext:[],headerPatterns:[['Primary Column'],['Row ID','Predecessors']]},
@@ -872,5 +916,42 @@ section('Edge Cases');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+section('Import Dependency Cycle Guard');
+{
+  const direct=[
+    {id:'d1',deps:[]},
+    {id:'d2',deps:[]},
+  ];
+  const directRes=attachImportedDepsWithCycleGuard(direct,['2FS','1FS']);
+  assert('direct cycle: one edge added',directRes.added,1);
+  assert('direct cycle: one edge skipped',directRes.skippedCircular,1);
+  assert('direct cycle: row1 keeps dep on row2',direct[0].deps[0].id,'d2');
+  assert('direct cycle: row2 dep skipped',direct[1].deps.length,0);
+
+  const transitive=[
+    {id:'t1',deps:[]},
+    {id:'t2',deps:[]},
+    {id:'t3',deps:[]},
+  ];
+  // 3->1, 1->2, 2->3 would form a cycle; third link must be skipped
+  const transitiveRes=attachImportedDepsWithCycleGuard(transitive,['3FS','1FS','2FS']);
+  assert('transitive cycle: two edges added',transitiveRes.added,2);
+  assert('transitive cycle: one edge skipped',transitiveRes.skippedCircular,1);
+  assert('transitive: row1 depends on row3',transitive[0].deps[0].id,'t3');
+  assert('transitive: row2 depends on row1',transitive[1].deps[0].id,'t1');
+  assert('transitive: row3 dep skipped',transitive[2].deps.length,0);
+
+  const nonCycle=[
+    {id:'n1',deps:[]},
+    {id:'n2',deps:[]},
+    {id:'n3',deps:[]},
+  ];
+  const nonCycleRes=attachImportedDepsWithCycleGuard(nonCycle,['','1FS','1SS+2d']);
+  assert('non-cycle: all links added',nonCycleRes.added,2);
+  assert('non-cycle: no skipped links',nonCycleRes.skippedCircular,0);
+  assert('non-cycle: type preserved',nonCycle[2].deps[0].type,'SS');
+  assert('non-cycle: lag preserved',nonCycle[2].deps[0].lag,2);
+}
+
 const result=summary();
 process.exit(result.failed?1:0);

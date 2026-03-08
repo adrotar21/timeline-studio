@@ -73,6 +73,64 @@ section('FF Dependency Variations');
   assert('FF lag=2: B start',es2,'2026-02-06');
 }
 
+section('SF Dependency Variations');
+{
+  resetItemCounter();
+  const A=makeItem('task',{id:'SFA',startDate:'2026-02-02',duration:5,endDate:'2026-02-06'});
+  const B=makeItem('task',{id:'SFB',startDate:'2026-02-10',duration:3,endDate:'2026-02-12'});
+  addDep(B,'SFA','SF',0);
+  initProj([A,B]);
+  const es=App.calcEarlyStart(App.gi('SFB'));
+  // SF: B depEnd >= A start. A start=Feb02, B dur=3 => B start=Jan30
+  assert('SF lag=0: B start',es,'2026-01-30');
+
+  const A2=makeItem('task',{id:'SFA2',startDate:'2026-02-02',duration:5,endDate:'2026-02-06'});
+  const B2=makeItem('task',{id:'SFB2',startDate:'2026-02-10',duration:3,endDate:'2026-02-12'});
+  addDep(B2,'SFA2','SF',2);
+  initProj([A2,B2]);
+  const es2=App.calcEarlyStart(App.gi('SFB2'));
+  // A start+2 => Feb04 required depEnd, B dur=3 => Feb01
+  assert('SF lag=2: B start',es2,'2026-02-01');
+
+  const A3=makeItem('task',{id:'SFA3',startDate:'2026-02-02',duration:5,endDate:'2026-02-06'});
+  const B3=makeItem('task',{id:'SFB3',startDate:'2026-02-10',duration:3,endDate:'2026-02-12'});
+  addDep(B3,'SFA3','SF',-1);
+  initProj([A3,B3]);
+  const es3=App.calcEarlyStart(App.gi('SFB3'));
+  // A start-1 => Feb01 required depEnd, B dur=3 => Jan29
+  assert('SF lag=-1: B start',es3,'2026-01-29');
+}
+
+section('SF with Working-Day Successor');
+{
+  resetItemCounter();
+  const A=makeItem('task',{id:'SFW_A',startDate:'2026-01-09',duration:2,endDate:'2026-01-10',durMode:'cal'});
+  const B=makeItem('task',{id:'SFW_B',startDate:'2026-01-20',duration:3,endDate:'2026-01-22',durMode:'work'});
+  addDep(B,'SFW_A','SF',0);
+  initProj([A,B],{scheduleAroundNonWorking:true});
+  const es=App.calcEarlyStart(App.gi('SFW_B'));
+  // Required depEnd=pred start (Fri Jan09). 3 working days ending Jan09 => Tue Jan06
+  assert('SF work-mode successor start',es,'2026-01-06');
+}
+
+section('SF Milestone Combinations');
+{
+  resetItemCounter();
+  const M=makeItem('milestone',{id:'SFM_M',date:'2026-02-10'});
+  const T=makeItem('task',{id:'SFM_T',startDate:'2026-02-20',duration:2,endDate:'2026-02-21'});
+  addDep(T,'SFM_M','SF',0);
+  initProj([M,T]);
+  // SF: successor depEnd >= predecessor start(date). 2d task => start two days earlier.
+  assert('SF milestone->task',App.calcEarlyStart(App.gi('SFM_T')),'2026-02-08');
+
+  const A=makeItem('task',{id:'SFM_A',startDate:'2026-02-10',duration:3,endDate:'2026-02-12'});
+  const M2=makeItem('milestone',{id:'SFM_M2',date:'2026-02-20'});
+  addDep(M2,'SFM_A','SF',0);
+  initProj([A,M2]);
+  // Milestone depEnd = date+1, so SF allows milestone date at pred start-1.
+  assert('SF task->milestone',App.calcEarlyStart(App.gi('SFM_M2')),'2026-02-09');
+}
+
 section('Milestone as Predecessor');
 {
   resetItemCounter();
@@ -191,6 +249,24 @@ section('FF Violation Detection');
   const v2=App.getViolatedDepIds();
   // D depEnd=Jan10, C depEnd=Jan10 → D end >= C end → not violated
   assertF('FF not violated when ends match',v2.has('FVD'));
+}
+
+section('SF Violation Detection');
+{
+  resetItemCounter();
+  const A=makeItem('task',{id:'SFV_A',startDate:'2026-01-05',duration:5,endDate:'2026-01-09'});
+  const B=makeItem('task',{id:'SFV_B',startDate:'2026-01-01',duration:3,endDate:'2026-01-03'});
+  addDep(B,'SFV_A','SF',0);
+  initProj([A,B]);
+  const v=App.getViolatedDepIds();
+  assertT('SF violated: B ends before A starts',v.has('SFV_B'));
+
+  const C=makeItem('task',{id:'SFV_C',startDate:'2026-01-05',duration:5,endDate:'2026-01-09'});
+  const D=makeItem('task',{id:'SFV_D',startDate:'2026-01-02',duration:3,endDate:'2026-01-04'});
+  addDep(D,'SFV_C','SF',0);
+  initProj([C,D]);
+  const v2=App.getViolatedDepIds();
+  assertF('SF not violated when successor depEnd matches pred start',v2.has('SFV_D'));
 }
 
 section('Scheduled Mode — Chain Propagation');

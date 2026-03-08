@@ -216,13 +216,13 @@ When a dependency link has a non-zero lag, display the lag value as a small labe
 
 **In Properties Panel — Dependency Chips:**
 
-Current dep chips show: `[Predecessor Name] [✕]`
+Current dep chips show: `[Predecessor Name] [Remove]`
 
-New dep chips show: `[Predecessor Name] [FS] [+0d] [✕]`
+New dep chips show: `[Predecessor Name] [Type dropdown] [Lag input] [Remove]`
 
-- Clicking the type badge (`FS`) does nothing in Phase 1. In Phase 2, it cycles through FS → SS → FF.
-- Clicking the lag badge (`+0d`) opens an inline input to type a number. Enter/blur commits. Negative values allowed (lead time).
-- The `[✕]` remove button unchanged.
+- Dependency type control supports FS, SS, FF, and SF.
+- Lag is edited in the inline number input on each dependency chip. Positive or negative values are allowed.
+- The remove button behavior is unchanged.
 
 **In Data View — Deps Column:**
 
@@ -509,16 +509,17 @@ If a user enables scheduled mode but has no dependencies defined, nothing happen
 
 ### 3.6 Dependency Type Cycling (Phase 2 Only)
 
-In Phase 1, all links are FS and the type badge is non-interactive.
+Early rollout used FS-only links; current UI supports all dependency types directly.
 
-In Phase 2, clicking the type badge on a dep chip in the Properties panel cycles: **FS → SS → FF → FS**
+In current implementation, dependency type is editable from a dropdown on each dependency chip in the Properties panel.
 
-No SF type. It's too rare and confusing to justify the UI and logic complexity.
+Supported types: **FS, SS, FF, SF** (with lag).
 
 **Visual on arrows:**
 - FS arrows: connect predecessor's right edge → successor's left edge (current behavior)
 - SS arrows: connect predecessor's left edge → successor's left edge
 - FF arrows: connect predecessor's right edge → successor's right edge
+- SF arrows: connect predecessor's left edge to successor's right edge
 
 Arrow routing (the Bézier path calculation) uses different attachment points but the same rendering style. No visual changes to stroke, color, or curvature.
 
@@ -642,8 +643,8 @@ Arrow routing (the Bézier path calculation) uses different attachment points bu
 | R9.5 | Dragging root items triggers engine on mouseup | 2 | Must |
 | R9.6 | Dragging non-pinned items with predecessors: snap back or auto-pin per 3.3.2 | 2 | Must |
 | R9.7 | Propagate hidden in context menu in scheduled mode | 2 | Must |
-| R9.8 | SS/FF link types functional in scheduled mode | 2 | Must |
-| R9.9 | Type badge on dep chips clickable to cycle FS/SS/FF in scheduled mode | 2 | Must |
+| R9.8 | FS/SS/FF/SF link types functional in scheduled mode | 2 | Must |
+| R9.9 | Dependency type control on dep chips supports FS/SS/FF/SF in scheduled mode | 2 | Must |
 
 ---
 
@@ -698,7 +699,7 @@ Arrow routing (the Bézier path calculation) uses different attachment points bu
 - Conditional field editability in panel
 - Drag behavior changes
 - Calculated-date indicators
-- SS/FF link types
+- FS/SS/FF/SF link types
 - Type cycling on dep chips
 
 **Session 8: Polish & Edge Cases**
@@ -713,7 +714,6 @@ Arrow routing (the Bézier path calculation) uses different attachment points bu
 ## 6. Out of Scope
 
 The following are explicitly NOT planned:
-- SF (Start-to-Finish) dependency type
 - Resource assignment or leveling
 - WBS / task hierarchy / summary tasks / indent-outdent
 - Baseline snapshots or variance tracking

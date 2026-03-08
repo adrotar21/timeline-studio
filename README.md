@@ -72,9 +72,9 @@ A spreadsheet-style table for fast editing, filtering, and bulk operations. Swit
 
 ### Dependencies & Scheduling
 
-A full dependency engine with three link types, lag support, and two scheduling modes.
+A full dependency engine with four link types, lag support, and two scheduling modes.
 
-- **Link types:** Finish-Start (FS), Start-Start (SS), Finish-Finish (FF) with positive or negative lag
+- **Link types:** Finish-Start (FS), Start-Start (SS), Finish-Finish (FF), Start-Finish (SF) with positive or negative lag
 - **Manual mode** -- you control all dates; propagate changes on demand with Ctrl+Shift+P
 - **Auto-Scheduled mode** -- dates auto-calculate from dependencies and durations
 - **Critical path** highlighting shows zero-float items in your dependency chain

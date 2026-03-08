@@ -152,7 +152,7 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 ```
 
 ### Dependency Engine
-- Supports FS (Finish-Start), SS (Start-Start), FF (Finish-Finish) link types
+- Supports FS (Finish-Start), SS (Start-Start), FF (Finish-Finish), SF (Start-Finish) link types
 - Lag support (positive/negative, calendar or working days)
 - Topological sort for scheduling order
 - Cycle detection and violation highlighting

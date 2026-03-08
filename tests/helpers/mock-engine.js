@@ -116,6 +116,13 @@ const App={
     }
     return U.iso(d)
   },
+  _startFromRequiredEnd(item,reqEnd,dm){
+    if(!reqEnd)return null;
+    if(item.type==='milestone'){
+      return dm!=='cal'?this._addLagWorkingDays(reqEnd,-1,dm):U.addDays(reqEnd,-1);
+    }
+    return dm!=='cal'?this._subtractWorkingDays(reqEnd,item.duration||0):U.addDays(reqEnd,-(item.duration||0));
+  },
   _fmtDurLabel(it){
     if(!it.startDate||!it.endDate)return'';
     const isWork=this.proj.scheduleAroundNonWorking&&(it.durMode||'cal')==='work';
@@ -143,7 +150,8 @@ const App={
       let cand=null;
       if(type==='FS'){const pEnd=this._depEnd(pred);if(pEnd)cand=this._addLagWorkingDays(pEnd,lag,dm)}
       else if(type==='SS'){const pStart=pred.type==='task'?pred.startDate:pred.date;if(pStart)cand=this._addLagWorkingDays(pStart,lag,dm)}
-      else if(type==='FF'){const pEnd=this._depEnd(pred);if(pEnd){const reqEnd=this._addLagWorkingDays(pEnd,lag,dm);cand=dm!=='cal'?this._subtractWorkingDays(reqEnd,item.duration||0):U.addDays(reqEnd,-(item.duration||0))}}
+      else if(type==='FF'){const pEnd=this._depEnd(pred);if(pEnd){const reqEnd=this._addLagWorkingDays(pEnd,lag,dm);cand=this._startFromRequiredEnd(item,reqEnd,dm)}}
+      else if(type==='SF'){const pStart=pred.type==='task'?pred.startDate:pred.date;if(pStart){const reqEnd=this._addLagWorkingDays(pStart,lag,dm);cand=this._startFromRequiredEnd(item,reqEnd,dm)}}
       if(cand&&(!earliest||cand>earliest))earliest=cand}
     return earliest?(dm==='work'?this._skipNonWorking(earliest):earliest):null
   },
@@ -179,6 +187,7 @@ const App={
         if(type==='FS'){const pEnd=this._depEnd(pred);if(pEnd)required=this._addLagWorkingDays(pEnd,lag,dm)}
         else if(type==='SS'){const pStart=pred.type==='task'?pred.startDate:pred.date;if(pStart)required=this._addLagWorkingDays(pStart,lag,dm)}
         else if(type==='FF'){const pEnd=this._depEnd(pred);const iEnd=this._depEnd(item);if(pEnd&&iEnd&&iEnd<this._addLagWorkingDays(pEnd,lag,dm))violated.add(item.id);continue}
+        else if(type==='SF'){const pStart=pred.type==='task'?pred.startDate:pred.date;const iEnd=this._depEnd(item);if(pStart&&iEnd&&iEnd<this._addLagWorkingDays(pStart,lag,dm))violated.add(item.id);continue}
         if(required){const curStart=item.type==='task'?item.startDate:item.date;
           if(curStart&&curStart<required)violated.add(item.id)}
       }
@@ -213,7 +222,8 @@ const App={
       let candidate=null;
       if(type==='FS'){const pEnd=this._depEnd(pred);if(pEnd)candidate=this._addLagWorkingDays(pEnd,lag,dm)}
       else if(type==='SS'){const pStart=pred.type==='task'?pred.startDate:pred.date;if(pStart)candidate=this._addLagWorkingDays(pStart,lag,dm)}
-      else if(type==='FF'){const pEnd=this._depEnd(pred);if(pEnd){const reqEnd=this._addLagWorkingDays(pEnd,lag,dm);candidate=dm!=='cal'?this._subtractWorkingDays(reqEnd,item.duration||0):U.addDays(reqEnd,-(item.duration||0))}}
+      else if(type==='FF'){const pEnd=this._depEnd(pred);if(pEnd){const reqEnd=this._addLagWorkingDays(pEnd,lag,dm);candidate=this._startFromRequiredEnd(item,reqEnd,dm)}}
+      else if(type==='SF'){const pStart=pred.type==='task'?pred.startDate:pred.date;if(pStart){const reqEnd=this._addLagWorkingDays(pStart,lag,dm);candidate=this._startFromRequiredEnd(item,reqEnd,dm)}}
       if(candidate&&(!earliest||candidate>earliest))earliest=candidate;
     }
     return earliest?(dm==='work'?this._skipNonWorking(earliest):earliest):null
@@ -227,13 +237,12 @@ const App={
       const earliest=this._computeEarliestStart(it);
       if(!earliest)continue;
       const curStart=it.type==='task'?it.startDate:it.date;
-      if(curStart<earliest){
-        if(dryRun){changes.push({id,name:it.name,oldStart:curStart,newStart:earliest})}
-        else{
-          if(it.type==='task'){it.startDate=earliest;it.endDate=this._calcEndDate(it)}
-          else it.date=earliest;
-          applied++
-        }
+      if(curStart===earliest)continue;
+      if(dryRun){changes.push({id,name:it.name,oldStart:curStart,newStart:earliest})}
+      else{
+        if(it.type==='task'){it.startDate=earliest;it.endDate=this._calcEndDate(it)}
+        else it.date=earliest;
+        applied++
       }
     }
     return dryRun?changes:applied
@@ -266,7 +275,7 @@ const App={
     for(const id of rev){const it=this.gi(id);if(!it||!ef.get(id))continue;
       const dur=it.type==='task'?Math.max(0,it.duration||0):0;
       const succs=items.filter(s=>s.deps?.some(d=>this.depId(d)===id));
-      let minLF=null;let ssLS=null;
+      let minLF=null;let minLS=null;
       if(succs.length){
         for(const s of succs){const sls=ls.get(s.id);if(!sls)continue;
           const link=s.deps.find(d=>this.depId(d)===id);if(!link)continue;
@@ -280,7 +289,7 @@ const App={
               if(cand&&(!minLF||cand<minLF))minLF=cand}
           }else if(type==='SS'){
             const cand=this._addLagWorkingDays(sls,-lag,sdm);
-            if(cand&&(!ssLS||cand<ssLS))ssLS=cand;
+            if(cand&&(!minLS||cand<minLS))minLS=cand;
           }else if(type==='FF'){
             const pEF=ef.get(id);
             if(pEF){let fwdContrib=this._addLagWorkingDays(pEF,lag,sdm);
@@ -293,6 +302,10 @@ const App={
               }else{sLF=U.addDays(sls,sDur)}
               const cand=fwdContrib?U.addDays(pEF,U.days(fwdContrib,sLF)):null;
               if(cand&&(!minLF||cand<minLF))minLF=cand}
+          }else if(type==='SF'){
+            const sLF=lf.get(s.id);
+            if(sLF){const cand=this._addLagWorkingDays(sLF,-lag,sdm);
+              if(cand&&(!minLS||cand<minLS))minLS=cand}
           }
         }
       }
@@ -301,7 +314,7 @@ const App={
       if(it.type==='task'&&this.proj.scheduleAroundNonWorking&&(it.durMode||'cal')!=='cal'){
         lsVal=this._subtractWorkingDays(lfVal,dur);
       }else{lsVal=U.addDays(lfVal,-dur)}
-      if(ssLS&&ssLS<lsVal)lsVal=ssLS;
+      if(minLS&&minLS<lsVal)lsVal=minLS;
       if(it.type==='milestone')lsVal=U.addDays(lsVal,-1);
       ls.set(id,lsVal)}
     for(const it of items){

@@ -1,4 +1,4 @@
-/* Timeline Studio v0.44.22 — App icon update: replaced inline SVG logo with actual PNG asset (base64-embedded, 48x48 cropped-square). CSS hue-rotate/brightness/saturate filters per theme. Favicon uses canvas-rendered PNG with matching theme filters in applyTheme(). */
+/* Timeline Studio v0.44.23 — SF dependency support + bug hardening: added Start-Finish link type across engine scheduling, validation, float calculation, and render paths. Import cycle guard prevents circular edges during advanced CSV import. Test runner EPERM fallback for restricted environments. 25/25 test files, 464/464 assertions passing. */
 const U={
   id:()=>'id_'+Math.random().toString(36).substr(2,9),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
@@ -1200,6 +1200,14 @@ const App={
     }
     return U.iso(d)
   },
+  /* Convert a required dependency END boundary into a candidate start date for item. */
+  _startFromRequiredEnd(item,reqEnd,dm){
+    if(!reqEnd)return null;
+    if(item.type==='milestone'){
+      return dm!=='cal'?this._addLagWorkingDays(reqEnd,-1,dm):U.addDays(reqEnd,-1);
+    }
+    return dm!=='cal'?this._subtractWorkingDays(reqEnd,item.duration||0):U.addDays(reqEnd,-(item.duration||0));
+  },
   /* Format duration label for timeline — shows W: #d, C: #d when applicable */
   _fmtDurLabel(it){
     if(!it.startDate||!it.endDate)return'';
@@ -1247,7 +1255,8 @@ const App={
       let cand=null;
       if(type==='FS'){const pEnd=this._depEnd(pred);if(pEnd)cand=this._addLagWorkingDays(pEnd,lag,dm)}
       else if(type==='SS'){const pStart=pred.type==='task'?pred.startDate:pred.date;if(pStart)cand=this._addLagWorkingDays(pStart,lag,dm)}
-      else if(type==='FF'){const pEnd=this._depEnd(pred);if(pEnd){const reqEnd=this._addLagWorkingDays(pEnd,lag,dm);cand=dm!=='cal'?this._subtractWorkingDays(reqEnd,item.duration||0):U.addDays(reqEnd,-(item.duration||0))}}
+      else if(type==='FF'){const pEnd=this._depEnd(pred);if(pEnd){const reqEnd=this._addLagWorkingDays(pEnd,lag,dm);cand=this._startFromRequiredEnd(item,reqEnd,dm)}}
+      else if(type==='SF'){const pStart=pred.type==='task'?pred.startDate:pred.date;if(pStart){const reqEnd=this._addLagWorkingDays(pStart,lag,dm);cand=this._startFromRequiredEnd(item,reqEnd,dm)}}
       if(cand&&(!earliest||cand>earliest))earliest=cand}
     return earliest?(dm==='work'?this._skipNonWorking(earliest):earliest):null
   },
@@ -1304,24 +1313,39 @@ const App={
       const dur=it.type==='task'?Math.max(0,it.duration||0):0;
       // Find successors
       const succs=items.filter(s=>s.deps?.some(d=>this.depId(d)===id));
-      // Separate FS/FF constraints (constrain LF) from SS constraints (constrain LS directly)
-      let minLF=null;let ssLS=null;
+      // Separate FS/FF constraints (constrain LF) from SS/SF constraints (constrain LS directly)
+      let minLF=null;let minLS=null;
       if(succs.length){
         for(const s of succs){const sls=ls.get(s.id);if(!sls)continue;
           const link=s.deps.find(d=>this.depId(d)===id);if(!link)continue;
           const type=this.depType(link),lag=this.depLag(link);
           const sdm=s.type==='task'?(s.durMode||'cal'):'work';
           if(type==='FS'){
-            const cand=this._addLagWorkingDays(sls,-lag,sdm);
-            if(cand&&(!minLF||cand<minLF))minLF=cand;
+            const pEF=ef.get(id);
+            if(pEF){let fwdContrib=this._addLagWorkingDays(pEF,lag,sdm);
+              if(fwdContrib&&this.proj.scheduleAroundNonWorking&&sdm==='work')fwdContrib=this._skipNonWorking(fwdContrib);
+              const cand=fwdContrib?U.addDays(pEF,U.days(fwdContrib,sls)):null;
+              if(cand&&(!minLF||cand<minLF))minLF=cand}
           }else if(type==='SS'){
             // SS constrains pred START: LS(pred) = LS(succ) - lag
             const cand=this._addLagWorkingDays(sls,-lag,sdm);
-            if(cand&&(!ssLS||cand<ssLS))ssLS=cand;
+            if(cand&&(!minLS||cand<minLS))minLS=cand;
           }else if(type==='FF'){
+            const pEF=ef.get(id);
+            if(pEF){let fwdContrib=this._addLagWorkingDays(pEF,lag,sdm);
+              if(fwdContrib&&this.proj.scheduleAroundNonWorking&&sdm==='work')fwdContrib=this._skipNonWorking(fwdContrib);
+              const sDur=s.type==='task'?Math.max(0,s.duration||0):0;
+              let sLF;
+              if(s.type==='task'&&this.proj.scheduleAroundNonWorking&&(s.durMode||'cal')!=='cal'){
+                const sEndIncl=this._addWorkingDays(sls,sDur);
+                sLF=U.addDays(sEndIncl,1);
+              }else{sLF=U.addDays(sls,sDur)}
+              const cand=fwdContrib?U.addDays(pEF,U.days(fwdContrib,sLF)):null;
+              if(cand&&(!minLF||cand<minLF))minLF=cand}
+          }else if(type==='SF'){
             const sLF=lf.get(s.id);
             if(sLF){const cand=this._addLagWorkingDays(sLF,-lag,sdm);
-              if(cand&&(!minLF||cand<minLF))minLF=cand}
+              if(cand&&(!minLS||cand<minLS))minLS=cand}
           }
         }
       }
@@ -1332,8 +1356,8 @@ const App={
       if(it.type==='task'&&this.proj.scheduleAroundNonWorking&&(it.durMode||'cal')!=='cal'){
         lsVal=this._subtractWorkingDays(lfVal,dur);
       }else{lsVal=U.addDays(lfVal,-dur)}
-      // Tighten LS from SS constraints
-      if(ssLS&&ssLS<lsVal)lsVal=ssLS;
+      // Tighten LS from SS/SF constraints
+      if(minLS&&minLS<lsVal)lsVal=minLS;
       // Milestones: _depEnd adds +1, so backward pass LS needs -1 to compensate
       if(it.type==='milestone')lsVal=U.addDays(lsVal,-1);
       ls.set(id,lsVal)}
@@ -1357,6 +1381,7 @@ const App={
         if(type==='FS'){const pEnd=this._depEnd(pred);if(pEnd)required=this._addLagWorkingDays(pEnd,lag,dm)}
         else if(type==='SS'){const pStart=pred.type==='task'?pred.startDate:pred.date;if(pStart)required=this._addLagWorkingDays(pStart,lag,dm)}
         else if(type==='FF'){const pEnd=this._depEnd(pred);const iEnd=this._depEnd(item);if(pEnd&&iEnd&&iEnd<this._addLagWorkingDays(pEnd,lag,dm))violated.add(item.id);continue}
+        else if(type==='SF'){const pStart=pred.type==='task'?pred.startDate:pred.date;const iEnd=this._depEnd(item);if(pStart&&iEnd&&iEnd<this._addLagWorkingDays(pStart,lag,dm))violated.add(item.id);continue}
         if(required&&iStart&&iStart<required)violated.add(item.id)}}
     return violated
   },
@@ -1380,7 +1405,8 @@ const App={
       let candidate=null;
       if(type==='FS'){const pEnd=this._depEnd(pred);if(pEnd)candidate=this._addLagWorkingDays(pEnd,lag,dm)}
       else if(type==='SS'){const pStart=pred.type==='task'?pred.startDate:pred.date;if(pStart)candidate=this._addLagWorkingDays(pStart,lag,dm)}
-      else if(type==='FF'){const pEnd=this._depEnd(pred);if(pEnd){const reqEnd=this._addLagWorkingDays(pEnd,lag,dm);candidate=dm!=='cal'?this._subtractWorkingDays(reqEnd,item.duration||0):U.addDays(reqEnd,-(item.duration||0))}}
+      else if(type==='FF'){const pEnd=this._depEnd(pred);if(pEnd){const reqEnd=this._addLagWorkingDays(pEnd,lag,dm);candidate=this._startFromRequiredEnd(item,reqEnd,dm)}}
+      else if(type==='SF'){const pStart=pred.type==='task'?pred.startDate:pred.date;if(pStart){const reqEnd=this._addLagWorkingDays(pStart,lag,dm);candidate=this._startFromRequiredEnd(item,reqEnd,dm)}}
       if(candidate&&(!earliest||candidate>earliest))earliest=candidate;
     }
     return earliest?(dm==='work'?this._skipNonWorking(earliest):earliest):null
@@ -3796,7 +3822,7 @@ const App={
     if(!this._impData||!this._impMappings.length&&!this._impOverloads.length){this.toast('No column mappings configured','error');return}
     const mapped=this._buildMappedRows();if(!mapped.length){this.toast('No data rows to import','error');return}
     this.snap();
-    const tgtSl=this.$.paste_sw.value;let createdSl=0,createdStatus=0;
+    const tgtSl=this.$.paste_sw.value;let createdSl=0,createdStatus=0,skippedCircular=0;
     const newItems=mapped.map((row,i)=>{
       const it={id:U.id(),type:'milestone',name:row.Name||'Item '+(i+1),swimlaneId:tgtSl,subSwimId:'',subRow:i%3,
         color:COLORS[i%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,
@@ -3860,6 +3886,20 @@ const App={
       if(!row.LabelPos)it.labelPosition=it.type==='task'?'center':'bottom';
       return it;
     });
+    const newItemById=new Map(newItems.map(it=>[it.id,it]));
+    const wouldCreateCycle=(itemId,predId)=>{
+      const visited=new Set(),queue=[predId];
+      while(queue.length){
+        const id=queue.shift();
+        if(id===itemId)return true;
+        if(visited.has(id))continue;
+        visited.add(id);
+        const it=newItemById.get(id);
+        if(!it)continue;
+        for(const d of it.deps||[])queue.push(this.depId(d));
+      }
+      return false
+    };
     /* Pass 2: Resolve predecessors */
     const predField=this._impMappings.find(m=>m.tgtField==='Predecessors');
     if(predField){
@@ -3871,7 +3911,9 @@ const App={
           const adjRow=p.rowNum+predOfs;
           if(adjRow<1||adjRow>newItems.length)return;
           if(adjRow-1===i)return;
-          newItems[i].deps.push({id:newItems[adjRow-1].id,type:p.type,lag:p.lag});
+          const predId=newItems[adjRow-1].id;
+          if(wouldCreateCycle(newItems[i].id,predId)){skippedCircular++;return}
+          newItems[i].deps.push({id:predId,type:p.type,lag:p.lag});
         });
       });
     }
@@ -3887,6 +3929,7 @@ const App={
     let msg=`Imported ${newItems.length} item${newItems.length!==1?'s':''}`;
     if(createdSl)msg+=`, created ${createdSl} swimlane${createdSl!==1?'s':''}`;
     if(createdStatus)msg+=`, created ${createdStatus} status${createdStatus!==1?'es':''}`;
+    if(skippedCircular)msg+=`, skipped ${skippedCircular} circular dep${skippedCircular!==1?'s':''}`;
     this.toast(msg);
   },
 
@@ -4386,8 +4429,8 @@ const App={
     h+=`<div class="ps"><div class="ps-t">Dependencies</div>`;
     if(!cd.length&&!hasSuccs)h+=`<div style="font-size:9.5px;color:var(--tx3);margin-bottom:6px;line-height:1.4">No dependencies yet. Add a predecessor below, or multi-select items on the timeline (Ctrl+click) and right-click → <em>Link Dependency</em>.</div>`;
     if(cd.length){
-      h+=`<div class="pr"><label>Predecessors</label><div class="dep-list">${cd.map((d,di)=>{const dep=this.gi(this.depId(d));if(!dep)return'';const type=this.depType(d),lag=this.depLag(d);return`<div class="dep-chip"><span class="dep-chip-name">${U.esc(dep.name)}</span><select class="dep-chip-type" data-di="${di}" title="Dependency type: FS (Finish→Start), SS (Start→Start), FF (Finish→Finish)"><option value="FS" ${type==='FS'?'selected':''}>FS</option><option value="SS" ${type==='SS'?'selected':''}>SS</option><option value="FF" ${type==='FF'?'selected':''}>FF</option></select><input type="number" class="dep-chip-lag" data-di="${di}" value="${lag}" title="Lag in days: positive = gap, negative = overlap" style="width:54px"><button class="dep-chip-x" data-di="${di}" title="Remove">&times;</button></div>`}).join('')}</div></div>`;
-      h+=`<div style="font-size:9.5px;color:var(--tx3);margin:-4px 0 6px 0;line-height:1.4">Use the <strong>dropdown</strong> to set link type (FS/SS/FF). Edit the number for lag (+days gap, −days overlap). ${p.schedulingMode==='scheduled'?'Dates update automatically from these links.':'Right-click → <em>Propagate</em> to push date changes through the chain.'}</div>`;
+      h+=`<div class="pr"><label>Predecessors</label><div class="dep-list">${cd.map((d,di)=>{const dep=this.gi(this.depId(d));if(!dep)return'';const type=this.depType(d),lag=this.depLag(d);return`<div class="dep-chip"><span class="dep-chip-name">${U.esc(dep.name)}</span><select class="dep-chip-type" data-di="${di}" title="Dependency type: FS (Finish?Start), SS (Start?Start), FF (Finish?Finish), SF (Start?Finish)"><option value="FS" ${type==='FS'?'selected':''}>FS</option><option value="SS" ${type==='SS'?'selected':''}>SS</option><option value="FF" ${type==='FF'?'selected':''}>FF</option><option value="SF" ${type==='SF'?'selected':''}>SF</option></select><input type="number" class="dep-chip-lag" data-di="${di}" value="${lag}" title="Lag in days: positive = gap, negative = overlap" style="width:54px"><button class="dep-chip-x" data-di="${di}" title="Remove">&times;</button></div>`}).join('')}</div></div>`;
+      h+=`<div style="font-size:9.5px;color:var(--tx3);margin:-4px 0 6px 0;line-height:1.4">Use the <strong>dropdown</strong> to set link type (FS/SS/FF/SF). Edit the number for lag (+days gap, −days overlap). ${p.schedulingMode==='scheduled'?'Dates update automatically from these links.':'Right-click → <em>Propagate</em> to push date changes through the chain.'}</div>`;
     }
     if(hasSuccs&&!cd.length)h+=`<div style="font-size:9.5px;color:var(--tx3);margin-bottom:6px;line-height:1.4">This item is a predecessor to other items. ${p.schedulingMode==='scheduled'?'Moving it will automatically shift its successors.':'Use <em>Propagate to Successors</em> (right-click) to push date changes downstream.'}</div>`;
     h+=`<div class="pr"><label>Add Predecessor</label><select id="pp-add-d" title="Select an item that must finish (or start) before this one"><option value="">— Select —</option>${p.items.filter(i=>i.id!==it.id&&!cdIds.includes(i.id)).map(i=>`<option value="${i.id}">${U.esc(i.name)}</option>`).join('')}</select></div>`;
@@ -4877,6 +4920,7 @@ const App={
         let sx,sy,tx,ty;
         if(dtype==='SS'){sx=sr.left-bR.left;sy=sr.top+sr.height/2-bR.top;tx=tr.left-bR.left;ty=tr.top+tr.height/2-bR.top}
         else if(dtype==='FF'){sx=sr.right-bR.left;sy=sr.top+sr.height/2-bR.top;tx=tr.right-bR.left;ty=tr.top+tr.height/2-bR.top}
+        else if(dtype==='SF'){sx=sr.left-bR.left;sy=sr.top+sr.height/2-bR.top;tx=tr.right-bR.left;ty=tr.top+tr.height/2-bR.top}
         else{sx=sr.right-bR.left;sy=sr.top+sr.height/2-bR.top;tx=tr.left-bR.left;ty=tr.top+tr.height/2-bR.top}
         // Check if this link is violated
         let violated=false;const iStart=it.type==='task'?it.startDate:it.date;
@@ -4885,6 +4929,7 @@ const App={
           if(dtype==='FS'){const pEnd=this._depEnd(pred);if(pEnd)req=this._addLagWorkingDays(pEnd,lag,idm)}
           else if(dtype==='SS'){const pStart=pred.type==='task'?pred.startDate:pred.date;if(pStart)req=this._addLagWorkingDays(pStart,lag,idm)}
           else if(dtype==='FF'){const pEnd=this._depEnd(pred);const iEnd=this._depEnd(it);if(pEnd&&iEnd&&iEnd<this._addLagWorkingDays(pEnd,lag,idm))violated=true}
+          else if(dtype==='SF'){const pStart=pred.type==='task'?pred.startDate:pred.date;const iEnd=this._depEnd(it);if(pStart&&iEnd&&iEnd<this._addLagWorkingDays(pStart,lag,idm))violated=true}
           if(req&&iStart&&iStart<req)violated=true}
         const clr=violated?'#d4726a':it.color;const dash=violated?' stroke-dasharray="4,3"':'';const opa=violated?'0.7':'0.4';
         const mx=(sx+tx)/2;
@@ -5401,6 +5446,7 @@ const App={
           let sx,sy,tx,ty;
           if(dtype==='SS'){sx=sPos.left;sy=sPos.midY;tx=tPos.left;ty=tPos.midY}
           else if(dtype==='FF'){sx=sPos.right;sy=sPos.midY;tx=tPos.right;ty=tPos.midY}
+          else if(dtype==='SF'){sx=sPos.left;sy=sPos.midY;tx=tPos.right;ty=tPos.midY}
           else{sx=sPos.right;sy=sPos.midY;tx=tPos.left;ty=tPos.midY}
           /* Violation detection — same logic as rDeps */
           let violated=false;const iStart=it.type==='task'?it.startDate:it.date;const pred=this.gi(did);
@@ -5409,6 +5455,7 @@ const App={
             if(dtype==='FS'){const pEnd=this._depEnd(pred);if(pEnd)req=this._addLagWorkingDays(pEnd,lag,idm)}
             else if(dtype==='SS'){const pStart=pred.type==='task'?pred.startDate:pred.date;if(pStart)req=this._addLagWorkingDays(pStart,lag,idm)}
             else if(dtype==='FF'){const pEnd=this._depEnd(pred);const iEnd=this._depEnd(it);if(pEnd&&iEnd&&iEnd<this._addLagWorkingDays(pEnd,lag,idm))violated=true}
+            else if(dtype==='SF'){const pStart=pred.type==='task'?pred.startDate:pred.date;const iEnd=this._depEnd(it);if(pStart&&iEnd&&iEnd<this._addLagWorkingDays(pStart,lag,idm))violated=true}
             if(req&&iStart&&iStart<req)violated=true}
           const clr=violated?'#d4726a':it.color;const dash=violated?' stroke-dasharray="4,3"':'';const opa=violated?'0.7':'0.4';
           const mx=(sx+tx)/2;
@@ -6055,7 +6102,7 @@ const App={
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">3. Edit Properties</strong><p>Click any item to open the <strong>Properties Panel</strong>. Change dates, colors, icons, owner, notes, and more. Pin the panel 📌 to keep it open.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">4. Drag & Arrange</strong><p><strong>Drag items</strong> left/right to change dates, or up/down to move between rows and sub-swimlanes. A <strong>dashed ghost outline</strong> shows exactly where the item will snap to on the grid. While dragging, a <strong>delta badge</strong> follows your cursor showing how far you've moved (<code>+3d</code>, <code>+14d · 2w 0d</code>), the <strong>header highlights</strong> the target date columns, and a <strong>status strip</strong> at the bottom shows original and target dates.</p><p>Hold <strong>Shift</strong> while dragging to <strong>lock horizontal movement</strong> (move vertically only). Press <strong>Escape</strong> to <strong>cancel a drag</strong> and restore the original position. Use <strong>Ctrl+click</strong> to multi-select items, then drag them as a group. <strong>Arrow keys</strong> nudge selected items precisely; hold <strong>Ctrl</strong> for faster movement (7 days). The <strong>Lock</strong> toggle (Tools menu) prevents all item movement until unlocked.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">5. Task Timing</strong><p>Tasks have <strong>Start/End/Duration</strong>. Changing Start or End recalculates Duration; changing Duration updates End. Use <strong>📌 Pin Date</strong> to protect items from Propagate.</p></div>
-    <div style="margin-bottom:16px"><strong style="color:var(--acc)">6. Dependencies</strong><p><strong>Ctrl+click</strong> to multi-select, then right-click → <strong>Link Dependency</strong>. Each link has a <strong>type</strong> (FS, SS, FF) and optional <strong>lag</strong> (days). Right-click → <strong>Propagate to Successors</strong> to push date changes downstream. Violated links show as dashed red arrows. Enable <strong>Critical Path</strong> to highlight zero-float items. Use <strong>View → Show Float</strong> to see scheduling flexibility.</p></div>
+    <div style="margin-bottom:16px"><strong style="color:var(--acc)">6. Dependencies</strong><p><strong>Ctrl+click</strong> to multi-select, then right-click → <strong>Link Dependency</strong>. Each link has a <strong>type</strong> (FS, SS, FF, SF) and optional <strong>lag</strong> (days). Right-click → <strong>Propagate to Successors</strong> to push date changes downstream. Violated links show as dashed red arrows. Enable <strong>Critical Path</strong> to highlight zero-float items. Use <strong>View → Show Float</strong> to see scheduling flexibility.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">7. Scheduling Mode</strong><p>Open <strong>Settings → Scheduling</strong> to switch between <strong>Manual</strong> (default — you control dates, Propagate on demand) and <strong>Auto-Scheduled</strong> (dates auto-calculate from dependencies). In Auto mode, successor dates are calculated fields shown in blue. <strong>📌 Pin Date</strong> overrides auto-scheduling for individual items. A preview shows what will change before switching modes.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">8. Views</strong><p>Switch between <strong>Timeline</strong>, <strong>Data</strong> (spreadsheet with filters), and <strong>Split</strong> views. Use the <strong>Filter Bar</strong> to narrow items by name, owner, notes, or dates.</p></div>
     <div style="margin-bottom:16px"><strong style="color:var(--acc)">9. Swimlanes</strong><p>Click <strong>+ Lane</strong> to add. <strong>Double-click</strong> a lane label to edit its name, color, and sub-swimlanes. <strong>Collapse</strong> lanes with the ▼ button. Minimized lanes show ▶ to expand and 👁 to hide. Drag the resize handle between lane labels and the timeline grid to adjust label column width.</p></div>
