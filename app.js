@@ -2000,7 +2000,7 @@ const App={
   doZoom(d){
     const bs=this.$.tl_body_scroll;
     const oldZ=this.proj.zoom||100;
-    const newZ=U.clamp(oldZ+d,30,300);
+    const newZ=U.clamp(oldZ+d,10,300);
     if(newZ===oldZ)return;
     const panelW=this.panelCollapsed?28:290;
     const vpW=bs.clientWidth-panelW;
@@ -2172,15 +2172,43 @@ const App={
       z=z*(vpW/needed);/* scale z to fit */
     }
     const newZoom=U.clamp(Math.round(z*100),10,300);
+    /* Check if labels will clip at final zoom (renderTL computes authoritative _fitLeftPad) */
+    const zFinal=newZoom/100;
+    let fitMinAbs=Infinity;
+    for(const g of itemGeom)fitMinAbs=Math.min(fitMinAbs,zFinal*g.bL-g.tL);
+    const willClip=fitMinAbs<0;
     p.zoom=newZoom;
     this.sched();
     /* Compute scroll position at final zoom */
     requestAnimationFrame(()=>{
-      const zFinal=newZoom/100;
+      const zF=newZoom/100;
       let minAbs=Infinity;
-      for(const g of itemGeom)minAbs=Math.min(minAbs,zFinal*g.bL-g.tL);
-      bs.scrollLeft=Math.max(0,minAbs-20);/* 20px left padding */
+      for(const g of itemGeom)minAbs=Math.min(minAbs,zF*g.bL-g.tL);
+      bs.scrollLeft=Math.max(0,minAbs-20+(this._fitLeftPad||0));
     });
+    /* Suggest coarser timescale when labels clip or zoom is very low */
+    if(willClip||newZoom<=30){
+      const scaleOrder=['days','weeks','months','quarters','years'];
+      const curIdx=scaleOrder.indexOf(p.timescale);
+      if(curIdx<scaleOrder.length-1){
+        const baseCws={days:28,weeks:60,months:100,quarters:200,years:400};
+        const start2=new Date(p.timelineStart+'T12:00:00'),end2=new Date(p.timelineEnd+'T12:00:00');
+        let suggested=null;
+        for(let si=curIdx+1;si<scaleOrder.length;si++){
+          const sc=scaleOrder[si];let tc=0;
+          if(sc==='days')tc=Math.max(1,U.days(p.timelineStart,p.timelineEnd)+1);
+          else if(sc==='weeks')tc=Math.max(1,Math.ceil((U.days(p.timelineStart,p.timelineEnd)+1)/7));
+          else if(sc==='months')tc=Math.max(1,(end2.getFullYear()-start2.getFullYear())*12+(end2.getMonth()-start2.getMonth())+1);
+          else if(sc==='quarters')tc=Math.max(1,(end2.getFullYear()-start2.getFullYear())*4+(Math.floor(end2.getMonth()/3)-Math.floor(start2.getMonth()/3))+1);
+          else tc=Math.max(1,end2.getFullYear()-start2.getFullYear()+1);
+          if(tc*baseCws[sc]*0.10<vpW*0.85){suggested=sc;break}
+        }
+        const switchTo=suggested||'years';
+        const label=switchTo.charAt(0).toUpperCase()+switchTo.slice(1);
+        const switchFn=()=>{this.snap();p.timescale=switchTo;this.$.ts_sel.value=switchTo;this._syncHdrFmtUI();this.smartZoomForScale(switchTo);this.sched();this.autoSave()};
+        setTimeout(()=>{this.toast('Content clipped \u2014 try '+label+' view for this timeline length','info',5000,'Switch',switchFn)},300);
+      }
+    }
     this.toast('Fit to content');
   },
   fitToSelection(){
@@ -2261,7 +2289,7 @@ const App={
     /* Small timeline → just fit everything */
     if(totalCols<=targetCols*1.3){this._pendingFit=true;this.sched();return}
     /* Compute target zoom */
-    const targetZoom=U.clamp(Math.round((vpW/(targetCols*baseCw))*100),30,300);
+    const targetZoom=U.clamp(Math.round((vpW/(targetCols*baseCw))*100),10,300);
     p.zoom=targetZoom;
     /* Determine scroll anchor: today > selection centroid > viewport center */
     const todayIso=U.iso(new Date());
@@ -4304,8 +4332,9 @@ const App={
   _syncPanelPad(){
     const w=this.panelCollapsed?28:290;
     const sbW=this.$.tl_body_scroll.offsetWidth-this.$.tl_body_scroll.clientWidth;
-    this.$.tl_body.style.width=(this._tlTW||0)+w+'px';
-    this.$.tl_hdr.style.width=(this._tlTW||0)+w+sbW+'px';
+    const lp=this._fitLeftPad||0;
+    this.$.tl_body.style.width=(this._tlTW||0)+w+lp+'px';
+    this.$.tl_hdr.style.width=(this._tlTW||0)+w+sbW+lp+'px';
     if(this.$.data_table_wrap)this.$.data_table_wrap.style.paddingRight=w+'px';
     const dtb=document.getElementById('data-toolbar');if(dtb)dtb.style.paddingRight=w+'px';
     const dfb=this.$.data_filter_bar;if(dfb)dfb.style.paddingRight=w+'px'
@@ -4673,23 +4702,31 @@ const App={
     document.documentElement.style.setProperty('--sl-w',(p.labelWidth||160)+'px');
     this.$.tl_container.style.background=th.bg;
     if(!this._presMode){if(this._panMode)this.$.tl_body.style.cursor='grab';else if(this._lassoMode)this.$.tl_body.style.cursor='crosshair';else if(this._fpMode)this.$.tl_body.style.cursor='copy';else this.$.tl_body.style.cursor=''}
+    /* Compute _fitLeftPad: prevent left-side label clipping at any zoom */
+    {const fitItems=p.items.filter(i=>!(p.hideMode&&i.hidden));let fitMin=Infinity;
+    for(const it of fitItems){const{labelW,edgeLW}=this._itemLabelWidths(it);const lp=it.labelPosition||'right';let bL;
+    if(it.type==='task'){const x1=this.dX(it.startDate,tl);if(x1===null)continue;bL=x1}else{const x=this.dXMid(it.date,tl);if(x===null)continue;bL=x-8}
+    let tL=0;if(it.type==='task'){if(lp==='left')tL=6+labelW;else if(lp==='top'||lp==='bottom'){const x2=this.dXEnd(it.endDate,tl);const half=labelW/2,barHalf=((x2||bL)-bL)/2;if(half>barHalf)tL=half-barHalf}}else{if(lp==='left')tL=12+labelW;else if(lp==='top'||lp==='bottom'||lp==='center'){const half=labelW/2;if(half>8)tL=half-8}}
+    if(edgeLW)tL=Math.max(tL,edgeLW);fitMin=Math.min(fitMin,bL-tL)}
+    this._fitLeftPad=fitMin<0?Math.ceil(-fitMin)+20:0}
     const hc=th.hdr,hR=this.buildHdrRows(tl),rowH=22,totalHdrH=hR.length*rowH;
     this.$.tl_hdr_corner.style.height=totalHdrH+'px';this.$.tl_hdr_corner.style.background=hc;
     const hFs=p.headerFontSize||10.5;
     const isDaysHybrid=p.timescale==='days'&&(p.dayLabelFormat||'letter')==='hybrid';
     const _holDateSet=new Set();if(p.timescale==='days'&&p.holidays&&p.holidays.length){for(const hol of p.holidays){const hs=new Date(hol.start+'T12:00:00'),he=new Date(hol.end+'T12:00:00');const cur=new Date(hs);while(cur<=he){_holDateSet.add(U.iso(cur));cur.setDate(cur.getDate()+1)}}}
-    let hh='';hR.forEach((row,ri)=>{hh+=`<div class="th-row" style="background:${hc};height:${rowH}px;width:${tl.tw}px">`;let cellLeft=0;row.forEach((cell,ci)=>{const w=cell.width!=null?cell.width:cell.span*tl.cw;const x=cell.width!=null?cellLeft:cellLeft;let xCls=cell.boundary?' th-cell-boundary':'';if(p.timescale==='days'&&ri===hR.length-1){const col=tl.cols[ci];if(col){if(_holDateSet.has(col.start))xCls+=' th-day-holiday';else if(col.isWeekend)xCls+=' th-day-weekend'}}if(isDaysHybrid&&ri===hR.length-1&&cell.dayLetter){hh+=`<div class="th-cell th-cell-hybrid${xCls}" style="left:${x}px;width:${w}px;font-size:${hFs}px">${cell.label}<span class="th-day-letter">${cell.dayLetter}</span></div>`}else{hh+=`<div class="th-cell${xCls}" style="left:${x}px;width:${w}px;font-size:${hFs}px">${cell.label}</div>`}cellLeft+=w});hh+=`</div>`});
     const _panPad=this.panelCollapsed?28:290;
     /* Add scrollbar width to header so max scrollLeft matches body.
      * Body has overflow:auto (vertical scrollbar), header has overflow:hidden (no scrollbar).
      * Without this, the header's max scrollLeft is ~15px less than the body's,
      * causing the body to keep scrolling while the header is clamped at the far right. */
     const _sbW=this.$.tl_body_scroll.offsetWidth-this.$.tl_body_scroll.clientWidth;
-    this.$.tl_hdr.style.width=(tl.tw+_panPad+_sbW)+'px';this.$.tl_hdr.innerHTML=hh;
+    const _lPad=this._fitLeftPad||0;
+    let hh='';hR.forEach((row,ri)=>{hh+=`<div class="th-row" style="background:${hc};height:${rowH}px;width:${tl.tw+_lPad}px;left:${-_lPad}px">`;let cellLeft=0;row.forEach((cell,ci)=>{const w=cell.width!=null?cell.width:cell.span*tl.cw;const ox=cellLeft+_lPad;const dx=ci===0?0:ox;const dw=ci===0?w+_lPad:w;let xCls=cell.boundary?' th-cell-boundary':'';if(p.timescale==='days'&&ri===hR.length-1){const col=tl.cols[ci];if(col){if(_holDateSet.has(col.start))xCls+=' th-day-holiday';else if(col.isWeekend)xCls+=' th-day-weekend'}}if(isDaysHybrid&&ri===hR.length-1&&cell.dayLetter){hh+=`<div class="th-cell th-cell-hybrid${xCls}" style="left:${dx}px;width:${dw}px;font-size:${hFs}px">${cell.label}<span class="th-day-letter">${cell.dayLetter}</span></div>`}else{hh+=`<div class="th-cell${xCls}" style="left:${dx}px;width:${dw}px;font-size:${hFs}px">${cell.label}</div>`}cellLeft+=w});hh+=`</div>`});
+    this.$.tl_hdr.style.paddingLeft=_lPad+'px';this.$.tl_hdr.style.width=(tl.tw+_panPad+_sbW+_lPad)+'px';this.$.tl_hdr.innerHTML=hh;
     // Apply resize header highlight if active (survives innerHTML rebuild)
     if(this._resizeHdr){const rh=this._resizeHdr;let sc=-1,ec=-1;for(let ci=0;ci<tl.cols.length;ci++){if(sc<0&&rh.s>=tl.cols[ci].start&&rh.s<=tl.cols[ci].end)sc=ci;if(rh.e>=tl.cols[ci].start&&rh.e<=tl.cols[ci].end)ec=ci}if(ec<0)ec=sc;const hdrRows=this.$.tl_hdr.querySelectorAll('.th-row');const lastRow=hdrRows[hdrRows.length-1];if(lastRow&&sc>=0){const cells=lastRow.children;for(let ci=0;ci<cells.length;ci++)cells[ci].classList.toggle('drag-target',ci>=sc&&ci<=ec)}}
     this.$.tl_hdr_scroll.scrollLeft=this.$.tl_body_scroll.scrollLeft;
-    let labelsH='',bodyH='';const violatedIds=this.getViolatedDepIds();
+    let labelsH='',bodyH='',overlayH='';const violatedIds=this.getViolatedDepIds();
     const critIds=this._critPath?this.getCriticalPath():null;
     const vLines=[];
     const slYMap=new Map();const itemYMap=new Map();let slYAccum=0;
@@ -4722,7 +4759,7 @@ const App={
       labelsH+=`</div>`;
 
       bodyH+=`<div class="sw-row${isMinimized?' collapsed':''}" data-sl-id="${sl.id}" style="height:${totalH}px">`;
-      for(let ci=0;ci<tl.cols.length;ci++)bodyH+=`<div class="grid-col" style="left:${ci*tl.cw}px;width:${tl.cw}px"></div>`;
+      {const _gPad=this._fitLeftPad||0;for(let ci=0;ci<tl.cols.length;ci++){const gx=ci===0&&_gPad?-_gPad:ci*tl.cw;const gw=ci===0&&_gPad?tl.cw+_gPad:tl.cw;bodyH+=`<div class="grid-col" style="left:${gx}px;width:${gw}px"></div>`}}
       if(!isCollapsed){
         let yOff=0;
         for(let smi=0;smi<subMeta.length;smi++){
@@ -4758,7 +4795,7 @@ const App={
             const diffWeeks=Math.round(diffDays/7);
             const label=it.id===p.tttMilestoneId?'0':String(diffWeeks);
             const clr=(it.id===p.tttMilestoneId||diffWeeks>=0)?'#2ea043':'#e5534b';
-            bodyH+=`<div class="ttt-label" style="left:${ix+(it.type==='task'?0:8)+2}px;top:${iy+23}px;color:${clr}">${label}</div>`;
+            overlayH+=`<div class="ttt-label" style="left:${ix+(it.type==='task'?0:8)+2}px;top:${iy+23}px;color:${clr}">${label}</div>`;
           }
         }
       }
@@ -4777,7 +4814,7 @@ const App={
         const ix=it.type==='task'?this.dXEnd(it.endDate,tl):this.dXMid(it.date,tl);if(ix===null)continue;
         const f=it._float;
         const clr=f===0?'#e5534b':'#888';const fw=f===0?'700':'600';
-        bodyH+=`<div style="position:absolute;left:${ix+(it.type==='task'?2:10)}px;top:${iy+23}px;font-size:8px;font-family:monospace;color:${clr};font-weight:${fw};pointer-events:none;z-index:4;white-space:nowrap">${f}d</div>`;
+        overlayH+=`<div style="position:absolute;left:${ix+(it.type==='task'?2:10)}px;top:${iy+23}px;font-size:8px;font-family:monospace;color:${clr};font-weight:${fw};pointer-events:none;z-index:4;white-space:nowrap">${f}d</div>`;
       }
     }
     // Weekend shading
@@ -4792,7 +4829,7 @@ const App={
             const dayIdx=U.days(c.start,U.iso(cur));
             const dayX=Math.round(ci*tl.cw+(dayIdx/numDays)*tl.cw);
             const dayW=Math.round(ci*tl.cw+((dayIdx+1)/numDays)*tl.cw)-dayX;
-            bodyH+=`<div class="wknd-shade" style="left:${dayX}px;width:${Math.max(1,dayW)}px;height:${slYAccum}px;opacity:${opacity}"></div>`;
+            overlayH+=`<div class="wknd-shade" style="left:${dayX}px;width:${Math.max(1,dayW)}px;height:${slYAccum}px;opacity:${opacity}"></div>`;
           }
           cur.setDate(cur.getDate()+1);
         }
@@ -4809,18 +4846,18 @@ const App={
         if(x1===null||x2===null)continue;
         const hw=Math.max(1,x2-x1);
         if(x1+hw<0||x1>tl.tw)continue;
-        bodyH+=`<div class="hol-shade" style="left:${x1}px;width:${hw}px;height:${slYAccum}px;background:rgba(${hr},${hg},${hb},${hOp});pointer-events:none;position:absolute;top:0;z-index:1"></div>`;
+        overlayH+=`<div class="hol-shade" style="left:${x1}px;width:${hw}px;height:${slYAccum}px;background:rgba(${hr},${hg},${hb},${hOp});pointer-events:none;position:absolute;top:0;z-index:1"></div>`;
         if(p.holidayLabels){
           const DNAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MNAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
           const _hd=ds=>{const dt=new Date(ds+'T12:00:00');return DNAMES[dt.getDay()]+' '+MNAMES[dt.getMonth()]+' '+dt.getDate()};
           const rangeStr=hol.start===hol.end?_hd(hol.start):_hd(hol.start)+' – '+_hd(hol.end);
           const saFlag=hol.schedAround!==false?' ⏩':' ○';
           const labelText=U.esc(hol.name)+' · '+rangeStr+saFlag;
-          bodyH+=`<div class="hol-label" style="left:${x1+1}px;top:2px;position:absolute;z-index:3;pointer-events:none;writing-mode:vertical-rl;text-orientation:mixed;font-size:9px;color:rgba(${hr},${hg},${hb},${Math.min(1,hOp*3+.25)});font-weight:600;letter-spacing:0.3px;max-height:${slYAccum-4}px;overflow:hidden;text-overflow:clip;white-space:nowrap;line-height:1" title="${U.esc(hol.name)} (${rangeStr})${hol.schedAround!==false?' — scheduling skips this day':' — scheduling allowed'}">${labelText}</div>`;
+          overlayH+=`<div class="hol-label" style="left:${x1+1}px;top:2px;position:absolute;z-index:3;pointer-events:none;writing-mode:vertical-rl;text-orientation:mixed;font-size:9px;color:rgba(${hr},${hg},${hb},${Math.min(1,hOp*3+.25)});font-weight:600;letter-spacing:0.3px;max-height:${slYAccum-4}px;overflow:hidden;text-overflow:clip;white-space:nowrap;line-height:1" title="${U.esc(hol.name)} (${rangeStr})${hol.schedAround!==false?' — scheduling skips this day':' — scheduling allowed'}">${labelText}</div>`;
         }
       }
     }
-    if(p.showToday){const tx=this.dX(U.iso(new Date()),tl);if(tx!==null&&tx>=0&&tx<=tl.tw)bodyH+=`<div class="today-marker" style="left:${tx}px;height:${slYAccum}px"><div class="today-marker-tri"></div><div class="today-marker-lbl">Today</div></div>`}
+    if(p.showToday){const tx=this.dX(U.iso(new Date()),tl);if(tx!==null&&tx>=0&&tx<=tl.tw)overlayH+=`<div class="today-marker" style="left:${tx}px;height:${slYAccum}px"><div class="today-marker-tri"></div><div class="today-marker-lbl">Today</div></div>`}
     // Vertical Lines
     for(const vl of vLines){const v=vl.it.vLine;if(!v)continue;
       const dash=v.style==='dashed'?'border-left:2px dashed '+v.color:'border-left:2px solid '+v.color;
@@ -4829,9 +4866,10 @@ const App={
       else if(v.extent==='swim'){top=vl.slY;bot=vl.slY+vl.slH}
       if(v.direction==='down'){top=vl.slY+vl.iy}
       else if(v.direction==='up'){bot=vl.slY+vl.iy+16}
-      bodyH+=`<div style="position:absolute;left:${vl.x}px;top:${top}px;height:${bot-top}px;${dash};pointer-events:none;z-index:2;opacity:0.6"></div>`}
+      overlayH+=`<div style="position:absolute;left:${vl.x}px;top:${top}px;height:${bot-top}px;${dash};pointer-events:none;z-index:2;opacity:0.6"></div>`}
+    {const _fLP=this._fitLeftPad||0;bodyH+='<div id="tl-overlays" style="position:absolute;top:0;left:'+_fLP+'px;width:'+tl.tw+'px;height:100%;pointer-events:none">'+overlayH+'</div>'}
     bodyH+=`<svg id="dep-svg" style="width:${tl.tw}px;height:100%"></svg>`;
-    this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this._tlTW=tl.tw;this.$.tl_body.style.width=tl.tw+(this.panelCollapsed?28:290)+'px';
+    this.$.tl_sl_labels.innerHTML=labelsH;this.$.tl_body.innerHTML=bodyH;this._tlTW=tl.tw;const _bLPad=this._fitLeftPad||0;this.$.tl_body.style.paddingLeft=_bLPad+'px';this.$.tl_body.style.width=(tl.tw+(this.panelCollapsed?28:290)+_bLPad)+'px';
     if(this._pinFlashIds&&this._pinFlashIds.size)requestAnimationFrame(()=>{if(this._pinFlashIds)this._pinFlashIds.clear()});
     /* Empty-state hint for new users */
     if(p.items.length===0){const _hc=th.tlTx,_hc2=th.tlTx2;this.$.tl_body.innerHTML+=`<div class="tl-empty-hint" style="color:${_hc}"><div style="font-size:28px;margin-bottom:8px">📋</div><div>Click <strong>+ Task</strong> or <strong>+ Milestone</strong> in the toolbar to add your first item.</div><div style="margin-top:6px;font-size:11px;color:${_hc2}">Or choose a template from <strong style="color:${_hc}">New</strong> (✨).<br>Right-click the timeline to add at a specific date.</div></div>`}
