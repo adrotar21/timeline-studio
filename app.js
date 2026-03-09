@@ -4686,6 +4686,8 @@ const App={
      * causing the body to keep scrolling while the header is clamped at the far right. */
     const _sbW=this.$.tl_body_scroll.offsetWidth-this.$.tl_body_scroll.clientWidth;
     this.$.tl_hdr.style.width=(tl.tw+_panPad+_sbW)+'px';this.$.tl_hdr.innerHTML=hh;
+    // Apply resize header highlight if active (survives innerHTML rebuild)
+    if(this._resizeHdr){const rh=this._resizeHdr;let sc=-1,ec=-1;for(let ci=0;ci<tl.cols.length;ci++){if(sc<0&&rh.s>=tl.cols[ci].start&&rh.s<=tl.cols[ci].end)sc=ci;if(rh.e>=tl.cols[ci].start&&rh.e<=tl.cols[ci].end)ec=ci}if(ec<0)ec=sc;const hdrRows=this.$.tl_hdr.querySelectorAll('.th-row');const lastRow=hdrRows[hdrRows.length-1];if(lastRow&&sc>=0){const cells=lastRow.children;for(let ci=0;ci<cells.length;ci++)cells[ci].classList.toggle('drag-target',ci>=sc&&ci<=ec)}}
     this.$.tl_hdr_scroll.scrollLeft=this.$.tl_body_scroll.scrollLeft;
     let labelsH='',bodyH='';const violatedIds=this.getViolatedDepIds();
     const critIds=this._critPath?this.getCriticalPath():null;
@@ -5236,7 +5238,36 @@ const App={
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);document.addEventListener('keydown',esc)},
 
   startTR(e,rh){e.stopPropagation();e.preventDefault();const iid=rh.dataset.iid,side=rh.dataset.side,it=this.gi(iid);if(!it)return;
-    const tl=this.met(),sx=e.clientX,oS=it.startDate,oE=it.endDate;const isWork=this.proj.scheduleAroundNonWorking&&(it.durMode||'cal')==='work';this.snap();const mv=ev=>{const dx=ev.clientX-sx,dayD=Math.round((dx/tl.tw)*U.days(tl.start,tl.end));if(side==='left'){it.startDate=U.addDays(oS,dayD);if(U.days(it.startDate,it.endDate)<0)it.startDate=it.endDate}else{it.endDate=U.addDays(oE,dayD);if(U.days(it.startDate,it.endDate)<0)it.endDate=it.startDate}it.duration=isWork?this._countWorkingDays(it.startDate,U.addDays(it.endDate,1)):(U.days(it.startDate,it.endDate)+1);this.sched(true,false);this.refreshPanel()};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);if(this.proj.autoRange)this.autoRange();this.sched();this.autoSave();this.refreshPanel()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)},
+    const tl=this.met(),sx=e.clientX,oS=it.startDate,oE=it.endDate,oDur=it.duration;const isWork=this.proj.scheduleAroundNonWorking&&(it.durMode||'cal')==='work';
+    const oCalDur=U.days(oS,oE)+1;const oWorkDur=isWork?this._countWorkingDays(oS,U.addDays(oE,1)):oCalDur;
+    this.snap();
+    let tipEl=null,stripEl=null,prevHdrStart=-1,prevHdrEnd=-1;
+    // Orphan cleanup
+    document.querySelectorAll('.drag-delta-tip,.drag-date-strip').forEach(el=>el.remove());
+    const mv=ev=>{const dx=ev.clientX-sx,dayD=Math.round((dx/tl.tw)*U.days(tl.start,tl.end));
+      if(side==='left'){it.startDate=U.addDays(oS,dayD);if(U.days(it.startDate,it.endDate)<0)it.startDate=it.endDate}
+      else{it.endDate=U.addDays(oE,dayD);if(U.days(it.startDate,it.endDate)<0)it.endDate=it.startDate}
+      it.duration=isWork?this._countWorkingDays(it.startDate,U.addDays(it.endDate,1)):(U.days(it.startDate,it.endDate)+1);
+      // --- Resize date feedback (mirrors startDrag pattern) ---
+      // Delta badge at cursor
+      if(!tipEl){tipEl=document.createElement('div');tipEl.className='drag-delta-tip';document.body.appendChild(tipEl)}
+      tipEl.textContent=this._fmtDragDelta(dayD);
+      tipEl.style.left=(ev.clientX+16)+'px';tipEl.style.top=(ev.clientY-28)+'px';
+      // Bottom status strip
+      if(!stripEl){stripEl=document.createElement('div');stripEl.className='drag-date-strip';document.body.appendChild(stripEl)}
+      const calDays=U.days(it.startDate,it.endDate)+1;const workDays=isWork?it.duration:calDays;
+      const durStr=isWork&&calDays!==workDays?'Duration: W:'+oWorkDur+'d → '+workDays+'d  C:'+oCalDur+'d → '+calDays+'d':'Duration: '+oCalDur+'d → '+calDays+'d';
+      if(side==='left'){stripEl.textContent='Start: '+U.fmt(oS,'MMM D')+' → '+U.fmt(it.startDate,'MMM D')+'    End: '+U.fmt(it.endDate,'MMM D')+'    '+durStr}
+      else{stripEl.textContent='Start: '+U.fmt(it.startDate,'MMM D')+'    End: '+U.fmt(oE,'MMM D')+' → '+U.fmt(it.endDate,'MMM D')+'    '+durStr}
+      // Header column highlight (applied inside renderTL via _resizeHdr flag to survive innerHTML rebuild)
+      this._resizeHdr={s:it.startDate,e:it.endDate};
+      this.sched(true,false);this.refreshPanel()};
+    const _cleanFeedback=()=>{this._resizeHdr=null;if(tipEl){tipEl.remove();tipEl=null}if(stripEl){stripEl.remove();stripEl=null}
+      const hdrRows=this.$.tl_hdr.querySelectorAll('.th-row');const lastRow=hdrRows[hdrRows.length-1];
+      if(lastRow){for(const c of lastRow.children)c.classList.remove('drag-target')}prevHdrStart=prevHdrEnd=-1};
+    const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('keydown',esc);_cleanFeedback();if(this.proj.autoRange)this.autoRange();this.sched();this.autoSave();this.refreshPanel()};
+    const esc=ev2=>{if(ev2.key==='Escape'){ev2.preventDefault();it.startDate=oS;it.endDate=oE;it.duration=oDur;document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('keydown',esc);_cleanFeedback();if(this.undoStack.length)this.undoStack.pop();this.sched();this.refreshPanel()}};
+    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);document.addEventListener('keydown',esc)},
 
   bindRH(){document.querySelectorAll('.sl-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();const sl=this.gs(h.dataset.slId);if(!sl)return;const slEl=h.closest('.sw-row'),lblEl=this.$.tl_sl_labels.querySelector(`[data-sl-id="${sl.id}"]`);const sY=e.clientY,sH=slEl.offsetHeight;const hasSubs=sl.subSwimlanes?.length>0&&sl.collapsed==='expanded';const lastSs=hasSubs?sl.subSwimlanes[sl.subSwimlanes.length-1]:null;const startLastH=lastSs?(lastSs.height||50):0;const mv=ev=>{const nh=Math.max(50,sH+ev.clientY-sY);if(hasSubs&&lastSs){lastSs.height=Math.max(50,startLastH+ev.clientY-sY)}else{sl.height=nh}slEl.style.height=nh+'px';if(lblEl)lblEl.style.height=nh+'px';this.sched(true,false)};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}});document.querySelectorAll('.sub-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();e.stopPropagation();const sl=this.gs(h.dataset.slId);if(!sl)return;const ss=sl.subSwimlanes.find(s=>s.id===h.dataset.ssId);if(!ss)return;const sY=e.clientY,startH=ss.height||50;const mv=ev=>{ss.height=Math.max(50,startH+ev.clientY-sY);this.sched(true,false)};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}})},
 
