@@ -77,6 +77,9 @@ body.theme-midnight .app-brand img{filter:hue-rotate(11deg) brightness(1.25)}
 .save-dd-item.dd-disabled{opacity:.35;cursor:default}
 .save-dd-item.dd-disabled:hover{background:transparent;color:var(--tx2)}
 .dd-hint{padding:0 12px 6px 32px;font-size:9.5px;color:var(--tx3);font-style:italic;line-height:1.3}
+.dd-chrome-hint{display:flex;align-items:center;gap:6px;padding:7px 12px;font-size:10px;color:var(--tx3);border-top:1px solid var(--brd);margin-top:4px}
+.dd-chrome-hint a{font-size:10px}
+.dd-chrome-hint svg{opacity:.5;flex-shrink:0}
 /* MRU Recent Files (F55) */
 #file-dropdown{min-width:220px}
 #mru-section:not(.hidden){border-left:1px solid var(--brd);margin-left:10px}
@@ -334,7 +337,9 @@ body.theme-midnight #props-panel{box-shadow:-4px 0 20px rgba(0,0,0,.4)}
 /* Settings modal: sticky footer */
 .settings-modal-content{display:flex;flex-direction:column;overflow:hidden!important}
 .settings-modal-body{flex:1;display:flex;gap:0;padding:0!important;overflow:hidden;max-height:calc(85vh - 110px)}
-.settings-modal-footer{flex-shrink:0;border-top:1px solid var(--brd)}
+.settings-modal-footer{flex-shrink:0;border-top:1px solid var(--brd);align-items:center}
+.settings-modal-footer .s-footer-help{width:26px;height:26px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.settings-modal-footer .s-footer-support{font-size:11px;padding:5px 10px}
 /* Settings modal: live-preview draggable mode */
 .modal.modal-live .modal-overlay{pointer-events:none;background:transparent}
 .modal.modal-live .modal-content{position:absolute;cursor:default;box-shadow:0 8px 32px rgba(0,0,0,.45);border:1.5px solid var(--acc)}

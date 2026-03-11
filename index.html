@@ -41,6 +41,9 @@
           <div class="save-dd-item" id="btn-save-as"><span>🗃️</span> Save As… <span class="dd-shortcut">Ctrl+Shift+S</span></div>
           <div style="border-top:1px solid var(--brd);margin:4px 0"></div>
           <div class="save-dd-item" id="btn-share"><span>🔗</span> Share via Link</div>
+          <div style="border-top:1px solid var(--brd);margin:4px 0"></div>
+          <div class="save-dd-item" id="btn-help"><span>📖</span> Help</div>
+          <div class="save-dd-item" id="btn-bug-report" data-tooltip="Bug reports · Feature requests · Questions"><span>📝</span> Contact Support</div>
         </div>
       </div>
       <div class="toolbar-separator"></div>
@@ -171,8 +174,7 @@
         </div>
       </div>
       <div class="toolbar-separator"></div>
-      <button class="toolbar-btn" id="btn-settings" data-tooltip="Project Settings">⚙</button>
-      <button class="toolbar-btn" id="btn-help" data-tooltip="Help">?</button>
+      <button class="toolbar-btn" id="btn-settings" data-tooltip="Project Settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="2"/></svg><span>Settings</span></button>
     </div>
   </header>
   <div id="share-banner" class="share-banner hidden">
@@ -623,7 +625,7 @@
 
         </div>
       </div>
-      <div class="modal-footer settings-modal-footer"><button class="btn btn-secondary" data-close-modal>Cancel</button><button class="btn btn-primary" id="btn-s-apply">Apply</button></div>
+      <div class="modal-footer settings-modal-footer"><button class="btn btn-secondary s-footer-help" id="s-open-help" data-tooltip="Open Help Guide">?</button><button class="btn btn-secondary s-footer-support" id="s-open-support" data-tooltip="Bug reports · Feature requests · Questions">📝 Contact Support</button><span style="flex:1"></span><button class="btn btn-secondary" data-close-modal>Cancel</button><button class="btn btn-primary" id="btn-s-apply">Apply</button></div>
     </div>
   </div>
   <div id="sw-modal" class="modal hidden"><div class="modal-overlay"></div>
@@ -683,6 +685,20 @@
   </div><div class="modal-footer"><button class="btn btn-secondary" data-close-modal>Cancel</button><button class="btn btn-primary" id="btn-np-create">Create</button></div></div></div>
   <!-- Help Modal -->
   <div id="help-modal" class="modal hidden"><div class="modal-overlay"></div><div class="modal-content modal-lg" style="max-height:90vh"><div class="modal-header"><h2>📖 Help</h2><button class="modal-close" data-close-modal>&times;</button></div><div class="modal-body" id="help-body" style="max-height:70vh;overflow-y:auto;font-size:12px;line-height:1.6;color:var(--tx2)"></div></div></div>
+  <!-- Contact Support Modal -->
+  <div id="bug-modal" class="modal hidden"><div class="modal-overlay"></div><div class="modal-content" style="width:420px"><div class="modal-header"><h2>📝 Contact Support</h2><button class="modal-close" data-close-modal>&times;</button></div><div class="modal-body" id="bug-body">
+    <label style="font-size:11px;color:var(--tx2);font-weight:600">Type</label>
+    <select id="bug-type" class="form-input" style="width:100%;margin:4px 0 12px"><option value="Bug">Bug Report</option><option value="Feature">Feature Request</option><option value="Question">Question</option><option value="Other">Other</option></select>
+    <label style="font-size:11px;color:var(--tx2);font-weight:600">Category</label>
+    <select id="bug-cat" class="form-input" style="width:100%;margin:4px 0 12px"><option>File handling (save/open/export)</option><option>Timeline display &amp; rendering</option><option>Data view &amp; editing</option><option>Dependencies &amp; scheduling</option><option>Import &amp; paste</option><option>Keyboard shortcuts</option><option>Sharing &amp; links</option><option>Settings &amp; configuration</option><option>Licensing &amp; billing</option><option>Performance</option><option>Other</option></select>
+    <label style="font-size:11px;color:var(--tx2);font-weight:600">Severity</label>
+    <select id="bug-sev" class="form-input" style="width:100%;margin:4px 0 12px"><option>Blocker — can't use the app</option><option>Major — feature broken but can work around</option><option>Minor — small issue, low impact</option><option>Cosmetic — visual/text only</option></select>
+    <label style="font-size:11px;color:var(--tx2);font-weight:600">Description</label>
+    <textarea id="bug-desc" rows="5" style="width:100%;margin:4px 0 12px;background:var(--bg2);color:var(--tx1);border:1px solid var(--brd);border-radius:5px;padding:8px;font-family:var(--font);font-size:11px;resize:vertical" placeholder="What happened? What did you expect?"></textarea>
+    <p style="font-size:10px;color:var(--tx3);margin:0 0 12px">Tip: If applicable, attach your .tlproj file and/or screenshots to the email so we can reproduce the issue.</p>
+    <button id="bug-submit" class="btn btn-primary" style="width:100%">Open in Email for Submission</button>
+    <p style="font-size:9px;color:var(--tx3);margin:6px 0 0;text-align:center">Email content (To, Subject, and details) will also be copied to your clipboard as a fallback.</p>
+  </div></div></div>
   <!-- Data Export Modal -->
   <div id="data-export-modal" class="modal hidden"><div class="modal-overlay"></div><div class="modal-content"><div class="modal-header"><h2>Export Data</h2><button class="modal-close" data-close-modal>&times;</button></div><div class="modal-body">
     <div class="form-group"><label>Columns</label><select id="de-mode" class="form-input"><option value="all">All Properties</option><option value="custom">Custom Selection</option></select></div>

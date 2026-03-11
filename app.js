@@ -171,6 +171,7 @@ function _skDec(o){
 function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,depFilter:'all',locked:false,lockH:false,lockV:false,hideMode:false,theme:'warm',bgColor:'#FAF7F2',headerColor:'#292524',zoom:100,fontSize:11,monthFormat:'short',quarterFormat:'withYear',headerFontSize:10.5,dayLabelFormat:'letter',dayColumnWidth:'normal',watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
 const App={
+  _version:'0.44.28',
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
   view:'timeline',panelCollapsed:false,panelLocked:false,editItem:null,
   _panelHintCooldown:0,_wasExpandedBeforeDataView:false,_lockPillHintCD:0,_hidePillHintCD:0,_pillHoverTimer:null,
@@ -1609,6 +1610,14 @@ const App={
       const _or=document.getElementById('btn-open-recent');if(_or){_or.innerHTML='<span>\uD83D\uDDC2\uFE0F</span> Open <span class="dd-shortcut">Ctrl+O</span>';_or.classList.remove('mru-toggle')}
       const _ms=document.getElementById('mru-section');if(_ms)_ms.style.display='none';
       if(this.$.file_subtitle)this.$.file_subtitle.style.cursor='default';
+      /* Chrome recommendation hint */
+      const _ch=document.createElement('div');
+      _ch.className='dd-chrome-hint';
+      _ch.innerHTML='<svg width="14" height="14" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="24" r="8" fill="none" stroke="currentColor" stroke-width="3"/><path d="M24 4a20 20 0 0117.3 10H24" fill="none" stroke="currentColor" stroke-width="3"/><path d="M6.7 14a20 20 0 008.6 27.3L24 24" fill="none" stroke="currentColor" stroke-width="3"/><path d="M32.7 41.3A20 20 0 0044.7 14L24 24" fill="none" stroke="currentColor" stroke-width="3"/></svg>'
+        +'<span>Best experience on Chrome. <a href="#" id="chrome-why-link" style="color:var(--acc)">Why?</a></span>';
+      this.$.file_dropdown.appendChild(_ch);
+      const _cw=document.getElementById('chrome-why-link');
+      if(_cw)_cw.onclick=e=>{e.preventDefault();e.stopPropagation();this.$.file_dropdown.classList.add('hidden');this.showHelp();setTimeout(()=>{const s=document.getElementById('help-chrome-section');if(s)s.scrollIntoView({behavior:'smooth',block:'start'})},100)};
     }
     on('btn-file-menu',()=>{
       this.closeAllDD();
@@ -1662,7 +1671,27 @@ const App={
     // Tools dropdown
     on('btn-tools-menu',()=>{this.closeAllDD();this.$.tools_dropdown.classList.toggle('hidden');this.posDD(this.$.tools_dropdown)});
     on('btn-settings',()=>this.showSettings());
-    on('btn-help',()=>this.showHelp());
+    on('btn-help',()=>{this.$.file_dropdown.classList.add('hidden');this.showHelp()});
+    on('btn-bug-report',()=>{this.$.file_dropdown.classList.add('hidden');this.showModal('bug-modal')});
+    on('bug-submit',async()=>{
+      const type=document.getElementById('bug-type').value;
+      const cat=document.getElementById('bug-cat').value;
+      const sev=document.getElementById('bug-sev').value;
+      const desc=document.getElementById('bug-desc').value;
+      const ua=navigator.userAgent;
+      const bName=/Edg\//.test(ua)?'Edge':/Chrome\//.test(ua)?'Chrome':/Safari\//.test(ua)?'Safari':/Firefox\//.test(ua)?'Firefox':'Unknown';
+      const bVer=(ua.match(/(?:Edg|Chrome|Firefox|Version)\/(\d+)/)||[])[1]||'?';
+      const os=/Mac/.test(ua)?'Mac':/Windows/.test(ua)?'Windows':/Linux/.test(ua)?'Linux':'Unknown';
+      const subj='['+type+'] '+cat;
+      const bodyText='To: timelinestudiosupport@gmail.com\nSubject: '+subj+'\n\nType: '+type+'\nCategory: '+cat+'\nSeverity: '+sev+'\nBrowser: '+bName+' '+bVer+' ('+os+')\nApp Version: '+(this._version||'unknown')+'\n\nDescription:\n'+desc+'\n\n---\nPlease attach your .tlproj file and/or screenshots if applicable.';
+      /* Copy to clipboard as fallback */
+      try{await navigator.clipboard.writeText(bodyText)}catch(e){}
+      /* Attempt mailto: */
+      window.open('mailto:timelinestudiosupport@gmail.com?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(bodyText.split('\n\n').slice(1).join('\n\n')),'_blank');
+      document.getElementById('bug-desc').value='';
+      document.getElementById('bug-modal').classList.add('hidden');
+      this.toast('Email content copied to clipboard — if your email client didn\u2019t open, paste into a new email to timelinestudiosupport@gmail.com','info',6000);
+    });
     on('btn-collapse',()=>this.collapsePanel(false));
     on('btn-lock-collapse',()=>this.collapsePanel(true));
     this.$.panel_tab.addEventListener('click',()=>this.expandPanel());
@@ -1708,6 +1737,8 @@ const App={
     on('btn-tools-exp-csv',()=>{this.$.tools_dropdown.classList.add('hidden');this.exportDataCSV()});
     on('btn-tools-exp-json',()=>{this.$.tools_dropdown.classList.add('hidden');this.saveFile()});
     document.getElementById('tools-sc-link')?.addEventListener('click',e=>{e.preventDefault();this.$.tools_dropdown.classList.add('hidden');this.showSettingsShortcuts()});
+    document.getElementById('s-open-help')?.addEventListener('click',e=>{e.preventDefault();document.getElementById('settings-modal').classList.add('hidden');this._resetSettingsLive();this.showHelp()});
+    document.getElementById('s-open-support')?.addEventListener('click',e=>{e.preventDefault();document.getElementById('settings-modal').classList.add('hidden');this._resetSettingsLive();this.showModal('bug-modal')});
     /* Format Painter split button */
     {const fpMain=document.getElementById('btn-fp');
     const fpDD=document.getElementById('btn-fp-dd');
@@ -6212,7 +6243,28 @@ const App={
     <li><strong>Can't move or nudge items?</strong> The <strong>Lock</strong> toggle (Tools menu) prevents all item movement. Check the toolbar — if Lock is active, click it to unlock.</li>
     <li><strong>Missing items on the timeline?</strong> You may have <strong>Hide Mode</strong> enabled (eye icon in the toolbar). Hidden items are only visible when Hide Mode is off (shown at 30% opacity). Toggle Hide Mode to see everything.</li>
     <li><strong>Quick selection tricks:</strong> In <strong>Data View</strong>, use the <strong>⇅</strong> button (top-left header) to <strong>Invert Selection</strong> — select a few items, then invert to operate on everything else.</li>
-    </ul></div>`;
+    </ul>
+    <h3 style="color:var(--tx1);margin:16px 0 12px;font-size:14px" id="help-chrome-section">🌐 Browser Compatibility</h3>
+    <div style="margin-bottom:8px">
+    <p><strong>Chrome / Edge (Recommended)</strong></p>
+    <ul style="padding-left:18px;margin:4px 0">
+    <li>Save files directly — File → Save overwrites in place</li>
+    <li>Recent files list (Open &amp; Recent)</li>
+    <li>Auto-reconnects to last-opened file</li>
+    <li>"Save As" for copies under a new name</li>
+    </ul>
+    <p style="margin-top:10px"><strong>Safari / Firefox</strong></p>
+    <ul style="padding-left:18px;margin:4px 0">
+    <li>Save works as <strong>Download</strong> — creates a new file each time</li>
+    <li>No recent files list (no file handle support)</li>
+    <li>No auto-reconnect to previous files</li>
+    <li>All other features work identically</li>
+    </ul>
+    <p style="margin-top:10px;font-size:11px;color:var(--tx3)">This is due to the <strong>File System Access API</strong>, currently only in Chromium browsers (Chrome, Edge, Opera, Arc).</p>
+    </div>
+    <h3 style="color:var(--tx1);margin:16px 0 12px;font-size:14px" id="help-bug-section">📝 Need Help?</h3>
+    <p>Use <strong>File → Contact Support</strong> to send us feedback — bug reports, feature requests, or questions. Include your browser, what happened, and attach your .tlproj file if applicable.</p>
+    </div>`;
     this.$.help_body.innerHTML=h;this.showModal('help-modal')
   },
 
