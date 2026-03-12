@@ -170,8 +170,27 @@ function _skDec(o){
 
 function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,depFilter:'all',locked:false,lockH:false,lockV:false,hideMode:false,theme:'warm',bgColor:'#FAF7F2',headerColor:'#292524',zoom:100,fontSize:11,monthFormat:'short',quarterFormat:'withYear',headerFontSize:10.5,dayLabelFormat:'letter',dayColumnWidth:'normal',watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
 
+/* ── Tier & Licensing Config ────────────────────────────────────────── */
+const _TIER_CONFIG_DEFAULTS={
+  tiers:{
+    free:{rank:0,label:'Free',limits:{swimlanes:5,items:25}},
+    beta_boardroom:{rank:1,label:'Beta Access',limits:{swimlanes:Infinity,items:Infinity}},
+    boardroom:{rank:1,label:'Boardroom',limits:{swimlanes:Infinity,items:Infinity}},
+    execution:{rank:2,label:'Execution',limits:{swimlanes:Infinity,items:Infinity}},
+  },
+  features:{
+    themes_all:1,export_clean:1,csv_export:1,csv_import:1,
+    critical_path:1,auto_scheduling:1,dependencies:1,
+    presenter_mode:1,show_float:1,
+  },
+  freeThemes:['warm','cool'],
+  variantMap:{boardroom_annual:'boardroom',execution_annual:'execution'},
+};
+
 const App={
-  _version:'0.44.28',
+  _version:'0.45.0',
+  _LICENSING_ENABLED:true, /* Kill switch: set false to bypass all tier gating — flip to true when ready to enforce */
+  _tierConfig:null,_resolvedTier:'free',
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
   view:'timeline',panelCollapsed:false,panelLocked:false,editItem:null,
   _panelHintCooldown:0,_wasExpandedBeforeDataView:false,_lockPillHintCD:0,_hidePillHintCD:0,_pillHoverTimer:null,
@@ -470,7 +489,7 @@ const App={
     fullscreen(){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>this.toast('Fullscreen not supported','error'))},
     expandAll(){this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')},
     collapseAll(){this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')},
-    showFloat(){this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')},
+    showFloat(){if(!this.proj.showFloat&&!this._checkTier('show_float')){this._gateToast('Float Labels');return}this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')},
     cycleDeps(){const p=this.proj;if(!p.showDeps){p.showDeps=true;p.depFilter='all';this.toast('Dependencies: All')}else if((p.depFilter||'all')==='all'){p.depFilter='swimlane';this.toast('Dependencies: Within swimlane')}else{p.showDeps=false;this.toast('Dependencies: Off')}this.sched();this.autoSave();const vdf=document.getElementById('view-dep-filter');if(vdf)vdf.value=p.showDeps?(p.depFilter||'all'):'off'},
     autoFitHeights(){this.autoFitHeights()},
     propagate(){if(this.sel.length&&this.proj.schedulingMode!=='scheduled')this.propagateFrom(this.sel)},
@@ -546,9 +565,27 @@ const App={
      'imp-opts-wrap','imp-durmode','imp-defdur','imp-datefmt','imp-snapwork',
      'pill-group','pill-lock','pill-hide','pill-auto','pill-fp','pill-sel','pill-cp',
      'panel-tab','panel-tab-icon','btn-collapse','btn-lock-collapse',
+     's-lic-key','btn-lic-activate','btn-lic-deactivate',
+     'lic-card','lic-tier-name','lic-badge','lic-details',
+     'lic-deactivate-wrap','lic-free-info',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
+    /* Tier config & license initialization */
+    this._initTierConfig();
+    /* GitHub Pages: skip all licensing — serve as full-featured beta */
+    this._isGitHubPages=location.origin==='https://adrotar21.github.io';
+    if(this._isGitHubPages){
+      this._resolvedTier='beta_boardroom';this._tier='beta_boardroom';
+      /* Hide License nav item and section */
+      const licNav=document.querySelector('#settings-nav a[href="#sect-license"]');if(licNav)licNav.style.display='none';
+      const licSect=document.getElementById('sect-license');if(licSect)licSect.style.display='none';
+      /* Set default active nav to Project */
+      const projNav=document.querySelector('#settings-nav a[href="#sect-project"]');if(projNav)projNav.classList.add('active');
+    }else{
     /* Beta tier activation from URL params (e.g. ?tier=beta_boardroom&ref=signup or ?ref=gm) */
     {const _bp=new URLSearchParams(location.search);let _bt=_bp.get('tier');const _br=_bp.get('ref');if(_br==='gm'&&!_bt)_bt='beta_boardroom';if(_bt){localStorage.setItem('tls3_tier',_bt);if(_br)localStorage.setItem('tls3_ref',_br);const _bu=new URL(location.href);_bu.searchParams.delete('tier');_bu.searchParams.delete('ref');history.replaceState(null,'',_bu.pathname+(_bu.hash||''));setTimeout(()=>this.toast('Beta access activated!','success',3000),800)}this._tier=localStorage.getItem('tls3_tier')||'free';this._tierRef=localStorage.getItem('tls3_ref')||''}
+    this._loadLicense();
+    this._applyMenuGating();
+    }
     if(!await this._loadFromHash()){if(this._shareLoadFailed)this.proj=newProj();else this.loadAuto()}this.migrate();this._loadShortcuts();this._buildShortcutMap();
     try{this.panelCollapsed=localStorage.getItem('tls3_panelCollapsed')==='1';this.panelLocked=localStorage.getItem('tls3_panelLocked')==='1'}catch(e){}
     if(this.panelCollapsed){this.$.panel_tab.classList.remove('hidden');this.$.props_panel.classList.add('panel-hidden');this._syncLockTab()}else{this._renderEmptyPanel()}
@@ -795,8 +832,347 @@ const App={
   },
   toast(m,t='success',dur=2200,actionLabel=null,actionFn=null){const el=document.createElement('div');el.className=`toast toast-${t}`;if(actionLabel&&actionFn){el.innerHTML=U.esc(m)+` <span class="toast-action">${U.esc(actionLabel)}</span>`;el.querySelector('.toast-action').onclick=()=>{el.remove();actionFn()}}else{el.textContent=m}const active=document.querySelectorAll('.toast');const offset=active.length*40;el.style.bottom=(18+offset)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),dur)},
 
+  /* ── Licensing & Tier Gating ─────────────────────────────────────── */
+  _initTierConfig(){
+    try{const raw=localStorage.getItem('tls3_tierConfig');if(raw){const parsed=JSON.parse(raw);this._tierConfig={tiers:{..._TIER_CONFIG_DEFAULTS.tiers,...parsed.tiers},features:{..._TIER_CONFIG_DEFAULTS.features,...parsed.features},freeThemes:parsed.freeThemes||_TIER_CONFIG_DEFAULTS.freeThemes,variantMap:{..._TIER_CONFIG_DEFAULTS.variantMap,...parsed.variantMap}};return}}catch(e){}
+    this._tierConfig={tiers:{..._TIER_CONFIG_DEFAULTS.tiers},features:{..._TIER_CONFIG_DEFAULTS.features},freeThemes:[..._TIER_CONFIG_DEFAULTS.freeThemes],variantMap:{..._TIER_CONFIG_DEFAULTS.variantMap}};
+  },
+  _checkTier(feature){
+    if(!this._LICENSING_ENABLED)return true;
+    const cfg=this._tierConfig;const tierKey=this._resolvedTier||'free';
+    const tier=cfg.tiers[tierKey]||cfg.tiers.free;
+    const req=cfg.features[feature];
+    if(req===undefined)return true;
+    return tier.rank>=req;
+  },
+  _checkLimit(type){
+    if(!this._LICENSING_ENABLED)return true;
+    const cfg=this._tierConfig;const tierKey=this._resolvedTier||'free';
+    const tier=cfg.tiers[tierKey]||cfg.tiers.free;
+    if(type==='swimlanes')return this.proj.swimlanes.length<tier.limits.swimlanes;
+    if(type==='items')return this.proj.items.length<tier.limits.items;
+    return true;
+  },
+  _gateToast(label){this.toast(label+' requires a Boardroom license','info',4000,'Upgrade',()=>this._openUpgradeSettings())},
+  _limitToast(type){
+    const lim=this._tierLimits();
+    const msg=type==='swimlanes'?'Free plan limited to '+lim.swimlanes+' swimlanes':'Free plan limited to '+lim.items+' items';
+    this.toast(msg,'info',4000,'Upgrade',()=>this._openUpgradeSettings());
+  },
+  _openUpgradeSettings(){
+    document.querySelectorAll('.save-dropdown').forEach(d=>d.classList.add('hidden'));
+    const modal=document.getElementById('settings-modal');
+    if(!modal||modal.classList.contains('hidden'))this.showSettings();
+    setTimeout(()=>{const sect=document.getElementById('sect-license');if(sect)sect.scrollIntoView({behavior:'smooth',block:'start'})},100);
+  },
+  _applyMenuGating(){
+    if(!this._LICENSING_ENABLED)return;
+    const map=[{id:'btn-present',feature:'presenter_mode'},{id:'btn-crit-path',feature:'critical_path'},{id:'btn-toggle-sched',feature:'auto_scheduling'},{id:'btn-show-float',feature:'show_float'},{id:'btn-tools-exp-csv',feature:'csv_export'}];
+    map.forEach(({id,feature})=>{const el=document.getElementById(id);if(!el)return;const gated=!this._checkTier(feature);el.classList.toggle('dd-gated',gated);let badge=el.querySelector('.pro-badge');if(gated&&!badge){badge=document.createElement('span');badge.className='pro-badge';badge.style.marginLeft='auto';badge.textContent='PRO';el.appendChild(badge)}else if(!gated&&badge)badge.remove()});
+    const impTog=document.getElementById('imp-adv-toggle');
+    if(impTog){const gated=!this._checkTier('csv_import');let badge=impTog.querySelector('.pro-badge');if(gated&&!badge){badge=document.createElement('span');badge.className='pro-badge';badge.style.marginLeft='6px';badge.textContent='PRO';impTog.appendChild(badge)}else if(!gated&&badge)badge.remove()}
+  },
+  _tierLabel(){
+    const cfg=this._tierConfig;const tierKey=this._resolvedTier||'free';
+    return(cfg.tiers[tierKey]||cfg.tiers.free).label;
+  },
+  _tierLimits(){
+    const cfg=this._tierConfig;const tierKey=this._resolvedTier||'free';
+    return(cfg.tiers[tierKey]||cfg.tiers.free).limits;
+  },
+
+  /* License cache & API methods */
+  _loadLicense(){
+    /* Dev tier override takes precedence */
+    try{const devTier=localStorage.getItem('tls3_devTier');if(devTier&&this._tierConfig.tiers[devTier]){this._resolvedTier=devTier;return}}catch(e){}
+    /* Check cached license (localStorage first) */
+    const lic=this._readLicenseCache();
+    if(lic){this._applyLicenseCache(lic);return}
+    /* localStorage empty — try IndexedDB recovery (async) */
+    this._resolvedTier=this._tier||'free';
+    this._recoverLicenseAsync();
+  },
+  _readLicenseCache(){
+    try{const raw=localStorage.getItem('tls3_license');if(raw){const lic=JSON.parse(raw);if(lic.valid&&lic.tier)return lic}}catch(e){}
+    return null;
+  },
+  _applyLicenseCache(lic){
+    if(lic.expiresAt&&new Date(lic.expiresAt)<new Date()){
+      this._resolvedTier=this._tier||'free';
+      this._clearLicenseStorage();return;
+    }
+    this._resolvedTier=lic.tier;
+    /* Background revalidate if stale (>3 days) */
+    const age=Date.now()-new Date(lic.lastChecked||0).getTime();
+    if(age>3*24*60*60*1000)this._revalidateLicense(lic.key);
+  },
+  async _recoverLicenseAsync(){
+    /* Try IndexedDB */
+    const idbLic=await this._loadLicenseIDB();
+    if(idbLic&&idbLic.valid&&idbLic.tier){
+      this._applyLicenseCache(idbLic);
+      try{localStorage.setItem('tls3_license',JSON.stringify(idbLic))}catch(e){}
+      this._populateLicenseSection();
+      return;
+    }
+    /* Try project file — license key embedded in proj._licenseKey */
+    if(this.proj&&this.proj._licenseKey){
+      this._activateLicense(this.proj._licenseKey);
+    }
+  },
+
+  /* Validate-only flow: never calls /activate, so no instance slots are burned.
+     Cache clears just mean re-entering the key — zero cost, unlimited activations. */
+  async _activateLicense(key){
+    try{
+      const res=await fetch('https://api.lemonsqueezy.com/v1/licenses/validate',{
+        method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:JSON.stringify({license_key:key})
+      });
+      const data=await res.json();
+      console.log('[License] Validation response:',JSON.stringify(data,null,2));
+      if(data.valid){
+        const lk=data.license_key||{};const meta=data.meta||{};
+        const variantName=(meta.variant_name||'').toLowerCase().replace(/\s+/g,'_');
+        const tier=this._tierConfig.variantMap[variantName]||'boardroom';
+        const lic={
+          key,tier,valid:true,
+          variant:variantName,
+          expiresAt:lk.expires_at||null,
+          lastChecked:new Date().toISOString(),
+          customerEmail:meta.customer_email||lk.customer_email||'',
+          customerName:meta.customer_name||''
+        };
+        this._storeLicense(lic);
+        this._resolvedTier=tier;
+        this.toast('License activated! — '+this._tierLabel(),'success',3000);
+        this._populateLicenseSection();
+      }else{
+        const msg=data.error||data.message||(data.license_key&&data.license_key.status_formatted)||'Invalid license key';
+        this.toast(msg,'error',4000);
+      }
+    }catch(e){
+      this.toast('Network error — check your connection and try again','error',4000);
+    }
+  },
+
+  async _revalidateLicense(key){
+    try{
+      const res=await fetch('https://api.lemonsqueezy.com/v1/licenses/validate',{
+        method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:JSON.stringify({license_key:key})
+      });
+      const data=await res.json();
+      if(data.valid){
+        const raw=localStorage.getItem('tls3_license');
+        if(raw){const lic=JSON.parse(raw);lic.lastChecked=new Date().toISOString();if(data.license_key)lic.expiresAt=data.license_key.expires_at||lic.expiresAt;this._storeLicense(lic)}
+      }else{
+        /* License revoked or expired server-side */
+        this._clearLicenseStorage();
+        this._resolvedTier=this._tier||'free';
+        this.toast('License is no longer valid — reverted to '+this._tierLabel(),'error',5000);
+        if(document.getElementById('settings-modal')&&!document.getElementById('settings-modal').classList.contains('hidden'))this._populateLicenseSection();
+      }
+    }catch(e){/* Network failure — keep cached tier (grace period) */}
+  },
+
+  async _deactivateLicense(){
+    this._clearLicenseStorage();
+    this._resolvedTier=this._tier||'free';
+    this.toast('License deactivated','info',3000);
+    this._populateLicenseSection();
+  },
+
+  /* ── License storage: localStorage + IndexedDB redundancy ── */
+  _storeLicense(lic){
+    try{localStorage.setItem('tls3_license',JSON.stringify(lic));localStorage.setItem('tls3_tier',lic.tier)}catch(e){}
+    /* IndexedDB backup (async, fire-and-forget) */
+    this._storeLicenseIDB(lic);
+    /* Request persistent storage to reduce browser eviction */
+    if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+  },
+  _clearLicenseStorage(){
+    try{localStorage.removeItem('tls3_license')}catch(e){}
+    this._clearLicenseIDB();
+  },
+  async _storeLicenseIDB(lic){
+    try{const db=await this._openHandleDB();const tx=db.transaction('handles','readwrite');tx.objectStore('handles').put(lic,'tls3_license');await new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=j});db.close()}catch(e){}
+  },
+  async _loadLicenseIDB(){
+    try{const db=await this._openHandleDB();const tx=db.transaction('handles','readonly');const req=tx.objectStore('handles').get('tls3_license');const lic=await new Promise((r,j)=>{req.onsuccess=()=>r(req.result);req.onerror=j});db.close();return lic||null}catch(e){return null}
+  },
+  async _clearLicenseIDB(){
+    try{const db=await this._openHandleDB();const tx=db.transaction('handles','readwrite');tx.objectStore('handles').delete('tls3_license');db.close()}catch(e){}
+  },
+
+  _populateLicenseSection(){
+    const tierName=this._tierLabel();
+    const tierKey=this._resolvedTier||'free';
+    const cfg=this._tierConfig;const tierDef=cfg.tiers[tierKey]||cfg.tiers.free;
+    let lic=null;try{const raw=localStorage.getItem('tls3_license');if(raw)lic=JSON.parse(raw)}catch(e){}
+    const isBeta=tierKey==='beta_boardroom';
+    const isLicensed=lic&&lic.valid&&lic.tier;
+    const isExpired=lic&&lic.expiresAt&&new Date(lic.expiresAt)<new Date();
+    /* Tier name */
+    if(this.$.lic_tier_name)this.$.lic_tier_name.textContent=isLicensed?(tierName):isBeta?'Beta Access':'Free Plan';
+    /* Badge */
+    if(this.$.lic_badge){
+      this.$.lic_badge.className='license-badge';
+      if(isExpired){this.$.lic_badge.textContent='Expired';this.$.lic_badge.classList.add('license-badge-expired')}
+      else if(isLicensed){this.$.lic_badge.textContent='Active';this.$.lic_badge.classList.add('license-badge-active')}
+      else if(isBeta){this.$.lic_badge.textContent='Beta';this.$.lic_badge.classList.add('license-badge-beta')}
+      else{this.$.lic_badge.textContent='Free';this.$.lic_badge.classList.add('license-badge-free')}
+    }
+    /* Details */
+    if(this.$.lic_details){
+      let html='';
+      if(isLicensed&&lic){
+        if(lic.customerEmail)html+='Licensed to: '+U.esc(lic.customerEmail)+'<br>';
+        else if(lic.customerName)html+='Licensed to: '+U.esc(lic.customerName)+'<br>';
+        if(lic.expiresAt){const exp=new Date(lic.expiresAt);html+='Expires: '+exp.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})+'<br>'}
+        if(lic.key){const masked=lic.key.length>4?'····'+lic.key.slice(-4):lic.key;html+='Key: '+U.esc(masked)}
+      }else if(isBeta){
+        html='Full feature access during beta period';
+      }
+      this.$.lic_details.innerHTML=html;
+    }
+    /* Toggle visibility */
+    if(this.$.lic_deactivate_wrap)this.$.lic_deactivate_wrap.classList.toggle('hidden',!isLicensed);
+    if(this.$.lic_free_info)this.$.lic_free_info.classList.toggle('hidden',isLicensed||isBeta);
+    if(this.$.s_lic_key){this.$.s_lic_key.value='';this.$.s_lic_key.closest('.form-group').classList.toggle('hidden',isBeta)}
+    this._applyMenuGating();
+  },
+
+  /* ── Dev Panel ──────────────────────────────────────────────────── */
+  /* Feature-gate friendly labels for Dev Panel */
+  _devFeatLabels:{themes_all:'All Themes (Light, Midnight)',export_clean:'Clean Export (no watermark)',csv_export:'CSV Export',csv_import:'CSV Import',critical_path:'Critical Path',auto_scheduling:'Auto-Scheduling',dependencies:'Dependencies (all types)',presenter_mode:'Presenter Mode',show_float:'Show Float Labels'},
+  _devTierOpts:[{value:0,label:'Free'},{value:1,label:'Boardroom'},{value:2,label:'Execution'}],
+
+  _showDevPanel(){
+    const modal=document.getElementById('dev-panel');if(!modal)return;
+    const cfg=this._tierConfig;
+    /* Kill switch */
+    document.getElementById('dev-lic-enabled').checked=this._LICENSING_ENABLED;
+    /* Tier radios */
+    const radios=document.getElementById('dev-tier-radios');radios.innerHTML='';
+    const devTier=localStorage.getItem('tls3_devTier')||'';
+    const tierKeys=Object.keys(cfg.tiers);
+    tierKeys.forEach(k=>{
+      const lbl=document.createElement('label');lbl.style.cssText='font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer';
+      const r=document.createElement('input');r.type='radio';r.name='dev-tier';r.value=k;r.checked=(devTier===k);
+      lbl.appendChild(r);lbl.appendChild(document.createTextNode(cfg.tiers[k].label));radios.appendChild(lbl);
+    });
+    const noneLbl=document.createElement('label');noneLbl.style.cssText='font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer';
+    const noneR=document.createElement('input');noneR.type='radio';noneR.name='dev-tier';noneR.value='';noneR.checked=!devTier;
+    noneLbl.appendChild(noneR);noneLbl.appendChild(document.createTextNode('None (use license)'));radios.appendChild(noneLbl);
+    /* Limits */
+    document.getElementById('dev-limit-sw').value=cfg.tiers.free.limits.swimlanes===Infinity?999:cfg.tiers.free.limits.swimlanes;
+    document.getElementById('dev-limit-items').value=cfg.tiers.free.limits.items===Infinity?9999:cfg.tiers.free.limits.items;
+    /* Features — dropdown per feature */
+    const feats=document.getElementById('dev-features');feats.innerHTML='';
+    Object.keys(cfg.features).forEach(f=>{
+      const row=document.createElement('div');row.className='dev-feat-row';
+      const lbl=document.createElement('span');lbl.textContent=this._devFeatLabels[f]||f.replace(/_/g,' ');
+      const sel=document.createElement('select');sel.className='form-input dev-feat-sel';sel.dataset.feat=f;
+      this._devTierOpts.forEach(o=>{const opt=document.createElement('option');opt.value=o.value;opt.textContent=o.label;if(cfg.features[f]===o.value)opt.selected=true;sel.appendChild(opt)});
+      row.appendChild(lbl);row.appendChild(sel);feats.appendChild(row);
+    });
+    /* Variant mapping */
+    this._renderDevVariants();
+    /* Current state */
+    this._updateDevState();
+    modal.classList.remove('hidden');
+  },
+  _renderDevVariants(){
+    const wrap=document.getElementById('dev-variants');if(!wrap)return;wrap.innerHTML='';
+    const cfg=this._tierConfig;const tierKeys=Object.keys(cfg.tiers);
+    Object.entries(cfg.variantMap).forEach(([vname,tier])=>{
+      const row=document.createElement('div');row.className='dev-var-row';
+      const inp=document.createElement('input');inp.type='text';inp.className='form-input';inp.value=vname;inp.placeholder='variant_name';inp.dataset.origKey=vname;
+      const arrow=document.createElement('span');arrow.textContent=' \u2192 ';arrow.style.cssText='color:var(--tx3);flex-shrink:0';
+      const sel=document.createElement('select');sel.className='form-input';
+      tierKeys.forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=cfg.tiers[k].label;if(k===tier)o.selected=true;sel.appendChild(o)});
+      const del=document.createElement('span');del.className='dev-var-del';del.textContent='\u00d7';del.title='Remove this mapping';del.onclick=()=>row.remove();
+      row.appendChild(inp);row.appendChild(arrow);row.appendChild(sel);row.appendChild(del);wrap.appendChild(row);
+    });
+  },
+  _updateDevState(){
+    const el=document.getElementById('dev-state');if(!el)return;
+    let lic=null;try{const r=localStorage.getItem('tls3_license');if(r)lic=JSON.parse(r)}catch(e){}
+    const ago=lic&&lic.lastChecked?Math.round((Date.now()-new Date(lic.lastChecked).getTime())/3600000):null;
+    const devOverride=localStorage.getItem('tls3_devTier')||'';
+    const lines=[
+      {k:'Resolved Tier',v:this._resolvedTier,h:'The tier the app is currently using for all feature/limit checks'},
+      {k:'Kill Switch',v:this._LICENSING_ENABLED?'ON (gating active)':'OFF (all features open)',h:'Whether _checkTier() and _checkLimit() actually enforce gates'},
+      {k:'License Cached',v:lic?'Yes \u2014 '+U.esc(lic.tier)+(ago!==null?' (last validated '+ago+'h ago)':''):'No license stored',h:'Whether a Lemon Squeezy license is saved in localStorage'},
+      {k:'Dev Override',v:devOverride||'None',h:'If set, bypasses the license and forces this tier (from Simulate Tier above)'},
+      {k:'Legacy Tier',v:this._tier,h:'The beta tier from URL params (?tier=beta_boardroom) — used as fallback when no license is cached'},
+      {k:'Tier Ref',v:this._tierRef||'(none)',h:'Referral code from URL params (?ref=gm) — for tracking beta user source'},
+    ];
+    el.innerHTML=lines.map(l=>'<div class="dev-state-row"><span class="dev-state-key" title="'+U.esc(l.h)+'">'+U.esc(l.k)+'</span> <b>'+U.esc(l.v)+'</b></div>').join('');
+  },
+  _applyDevPanel(){
+    const cfg=this._tierConfig;
+    /* Kill switch */
+    this._LICENSING_ENABLED=document.getElementById('dev-lic-enabled').checked;
+    /* Limits */
+    const sw=parseInt(document.getElementById('dev-limit-sw').value)||5;
+    const it=parseInt(document.getElementById('dev-limit-items').value)||25;
+    cfg.tiers.free.limits.swimlanes=sw>=999?Infinity:sw;
+    cfg.tiers.free.limits.items=it>=9999?Infinity:it;
+    /* Features — read from dropdowns */
+    document.querySelectorAll('#dev-features select[data-feat]').forEach(sel=>{
+      cfg.features[sel.dataset.feat]=parseInt(sel.value)||0;
+    });
+    /* Variant mapping */
+    const newMap={};
+    document.querySelectorAll('#dev-variants .dev-var-row').forEach(row=>{
+      const vname=row.querySelector('input').value.trim();
+      const tier=row.querySelector('select').value;
+      if(vname)newMap[vname]=tier;
+    });
+    cfg.variantMap=newMap;
+    /* Simulate tier */
+    const selRadio=document.querySelector('input[name="dev-tier"]:checked');
+    const devTier=selRadio?selRadio.value:'';
+    if(devTier){localStorage.setItem('tls3_devTier',devTier);this._resolvedTier=devTier}
+    else{localStorage.removeItem('tls3_devTier');this._loadLicense()}
+    /* Save config override */
+    try{localStorage.setItem('tls3_tierConfig',JSON.stringify(cfg))}catch(e){}
+    this._updateDevState();
+    this.toast('Dev config applied','success',2000);
+  },
+  _resetDevPanel(){
+    localStorage.removeItem('tls3_tierConfig');localStorage.removeItem('tls3_devTier');
+    this._LICENSING_ENABLED=false;
+    this._initTierConfig();this._loadLicense();
+    this._showDevPanel();
+    this.toast('Reset to defaults','info',2000);
+  },
+  _copyDevConfig(){
+    const cfg=this._tierConfig;
+    /* Build a clean JSON that can be pasted into _TIER_CONFIG_DEFAULTS */
+    const out={
+      _LICENSING_ENABLED:this._LICENSING_ENABLED,
+      tiers:{},features:{...cfg.features},freeThemes:[...cfg.freeThemes],variantMap:{...cfg.variantMap}
+    };
+    Object.entries(cfg.tiers).forEach(([k,v])=>{out.tiers[k]={rank:v.rank,label:v.label,limits:{swimlanes:v.limits.swimlanes===Infinity?'Infinity':v.limits.swimlanes,items:v.limits.items===Infinity?'Infinity':v.limits.items}}});
+    const json=JSON.stringify(out,null,2);
+    navigator.clipboard.writeText(json).then(()=>this.toast('Config copied to clipboard','success',2000)).catch(()=>{
+      /* Fallback: select in a textarea */
+      const ta=document.createElement('textarea');ta.value=json;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+      this.toast('Config copied to clipboard','success',2000);
+    });
+  },
+
   async saveFile(saveAs=false){
+    /* Embed license key in local project file for cache-clear recovery */
+    const licRaw=localStorage.getItem('tls3_license');
+    if(licRaw){try{const lic=JSON.parse(licRaw);if(lic.key)this.proj._licenseKey=lic.key}catch(e){}}
+    else delete this.proj._licenseKey;
     const data=JSON.stringify(this.proj,null,2);
+    /* Clean up: don't keep _licenseKey in live proj object beyond serialization */
+    delete this.proj._licenseKey;
     /* F53: Try stored handle if no active handle (auto-reconnect on Ctrl+S) */
     if(!saveAs&&!this._fileHandle){const stored=await this._loadHandle();if(stored){try{const perm=await stored.requestPermission({mode:'readwrite'});if(perm==='granted')this._fileHandle=stored;else this._clearHandle()}catch(e){this._clearHandle()}}}
     if(!saveAs&&this._fileHandle){try{/* Fix D: stale file check before overwrite */if(this._fileLastModified){try{const chk=await this._fileHandle.getFile();if(chk.lastModified!==this._fileLastModified){if(!confirm('This file was modified outside this tab (possibly by another tab or program). Overwrite with your version?'))return}}catch(e){}}const w=await this._fileHandle.createWritable();await w.write(data);await w.close();try{const saved=await this._fileHandle.getFile();this._fileLastModified=saved.lastModified}catch(e){}this.markClean();this.toast('Saved!');this.autoSave();try{localStorage.setItem('tls3_fileName',this._fileHandle.name)}catch(e){}this._updateFileIndicator();this._updateMRU(this._fileHandle,this._fileHandle.name,this.proj.name);return}catch(e){}}
@@ -806,6 +1182,8 @@ const App={
   /* ── Share-link compression pipeline ── */
   _packProj(src){
     const p=U.deep(src||this.proj);
+    /* Never include license key in share links */
+    delete p._licenseKey;
     const def=newProj();
     /* project-level: strip fields matching defaults */
     const projStrip=['owner','dateFormat','timescale','headerLayers','autoRange','showToday','showDeps','depFilter',
@@ -1556,6 +1934,7 @@ const App={
       this.sched();this.autoSave();
       this.toast('Switched to Manual mode — all dates preserved');
     }else{
+      if(!this._checkTier('auto_scheduling')){this._gateToast('Auto-Scheduling');return}
       // Switch to scheduled via transition preview
       this.showScheduleTransition();
     }
@@ -1657,7 +2036,7 @@ const App={
     on('btn-view-menu',()=>{this.closeAllDD();this.$.view_dropdown.classList.toggle('hidden');this.posDD(this.$.view_dropdown);const vdf0=document.getElementById('view-dep-filter');if(vdf0)vdf0.value=this.proj.showDeps?(this.proj.depFilter||'all'):'off'});
     on('btn-today',()=>{this.$.view_dropdown.classList.add('hidden');this.goToday()});
     on('btn-fullscreen',()=>{this.$.view_dropdown.classList.add('hidden');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>this.toast('Fullscreen not supported','error'))});
-    on('btn-show-float',()=>{this.$.view_dropdown.classList.add('hidden');this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')});
+    on('btn-show-float',()=>{this.$.view_dropdown.classList.add('hidden');this._scDispatch.showFloat.call(this)});
     const vdf=document.getElementById('view-dep-filter');if(vdf)vdf.onchange=()=>{this.$.view_dropdown.classList.add('hidden');const val=vdf.value;if(val==='off'){this.proj.showDeps=false}else{this.proj.showDeps=true;this.proj.depFilter=val}this.sched();this.autoSave();this.toast('Dependencies: '+(val==='off'?'Off':val==='all'?'All':'Within swimlane'))};
     on('btn-zoom100',()=>this.doZoomTo(100));
     on('btn-fit',()=>this.sel.length?this.fitToSelection():this.fitToContent());
@@ -1797,6 +2176,10 @@ const App={
     if(dwSel)dwSel.onchange=e=>{this.snap();this.proj.dayColumnWidth=e.target.value;const hp=document.getElementById('hdr-pop-dayw-fmt');if(hp)hp.value=e.target.value;this.sched();this.autoSave()};
     this.$.file_input.onchange=e=>this.handleOpen(e);
     on('btn-s-apply',()=>this.applySettings());on('btn-save-sw',()=>this.saveSwM());on('btn-del-sw',()=>this.delSwM());
+    on('btn-lic-activate',()=>{const k=this.$.s_lic_key?this.$.s_lic_key.value.trim():'';if(!k){this.toast('Enter a license key','error');return}this._activateLicense(k)});
+    on('btn-lic-deactivate',()=>{if(!confirm('Deactivate your license on this device?'))return;this._deactivateLicense()});
+    on('dev-apply',()=>this._applyDevPanel());on('dev-reset',()=>this._resetDevPanel());on('dev-copy-config',()=>this._copyDevConfig());
+    on('dev-add-variant',()=>{const wrap=document.getElementById('dev-variants');if(!wrap)return;const cfg=this._tierConfig;const tierKeys=Object.keys(cfg.tiers);const row=document.createElement('div');row.className='dev-var-row';const inp=document.createElement('input');inp.type='text';inp.className='form-input';inp.placeholder='variant_name';const arrow=document.createElement('span');arrow.textContent=' \u2192 ';arrow.style.cssText='color:var(--tx3);flex-shrink:0';const sel=document.createElement('select');sel.className='form-input';tierKeys.forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=cfg.tiers[k].label;sel.appendChild(o)});const del=document.createElement('span');del.className='dev-var-del';del.textContent='\u00d7';del.title='Remove this mapping';del.onclick=()=>row.remove();row.appendChild(inp);row.appendChild(arrow);row.appendChild(sel);row.appendChild(del);wrap.appendChild(row)});
     on('btn-sched-apply',()=>this.applyScheduleTransition());
     on('btn-sched-pin-all',()=>this.pinAllAndStayManual());
     // Draggable transition modal
@@ -1879,7 +2262,7 @@ const App={
     document.getElementById('btn-sc-reset').onclick=()=>{this._pendingShortcuts={};this._hideScMsg();this.renderScList();this.toast('Shortcuts reset to defaults')};
     document.getElementById('hol-paste-ta').oninput=()=>{const r=this.parseHolidays(document.getElementById('hol-paste-ta').value);document.getElementById('hol-paste-prev').textContent=r.length?`Found ${r.length} holiday${r.length>1?'s':''}`:''};
     const opSlider=document.getElementById('s-wknd-opacity');if(opSlider)opSlider.oninput=function(){document.getElementById('s-wknd-opval').textContent=this.value+'%';const b=document.getElementById('s-wknd-color-box');if(b)b.style.opacity=(0.3+(this.value/30)*0.7).toFixed(2)};
-    document.querySelectorAll('.theme-card').forEach(c=>{c.onclick=()=>{document.querySelectorAll('.theme-card').forEach(x=>x.classList.remove('active'));c.classList.add('active');this.proj.theme=c.dataset.theme;this.applyTheme()}});
+    document.querySelectorAll('.theme-card').forEach(c=>{c.onclick=()=>{const t=c.dataset.theme;if(!this._tierConfig.freeThemes.includes(t)&&!this._checkTier('themes_all')){this._gateToast('Premium themes');return}document.querySelectorAll('.theme-card').forEach(x=>x.classList.remove('active'));c.classList.add('active');this.proj.theme=t;this.applyTheme()}});
     document.querySelectorAll('[data-close-modal]').forEach(b=>{b.onclick=e=>{const m=e.target.closest('.modal');if(m){m.classList.add('hidden');if(m.id==='settings-modal')this._resetSettingsLive()}}});
     document.querySelectorAll('.modal-overlay').forEach(el=>{el.onclick=()=>{const m=el.closest('.modal');if(m){m.classList.add('hidden');if(m.id==='settings-modal')this._resetSettingsLive()}}});
     /* Bulk URL Links modal wiring */
@@ -1903,6 +2286,8 @@ const App={
     // Keyboard — dispatch via shortcut map
     document.addEventListener('keydown',e=>{
       const combo=this._normalizeKey(e);if(!combo)return;
+      /* Dev Panel shortcut — Ctrl+Shift+L */
+      if(combo==='Ctrl+Shift+l'){e.preventDefault();this._showDevPanel();return}
       // B36: Prevent Tab from focusing offscreen panel elements
       if(e.key==='Tab'){const inp=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);if(!inp){e.preventDefault();return}}
       const actionId=this._scMap[combo.toLowerCase()];if(!actionId)return;
@@ -2535,6 +2920,7 @@ const App={
   },
 
   addItem(type,atDate,atSlId,atSubSwId,atSubRow){
+    if(!this._checkLimit('items')){this._limitToast('items');return}
     this.snap();
     let sl=atSlId?this.gs(atSlId):this.getTargetSl();
     // If swimlane is collapsed/hidden, find next available expanded swimlane
@@ -2558,7 +2944,7 @@ const App={
     if(this.proj.autoRange)this.autoRange();this.sched();this.autoSave()
   },
   deleteSel(){if(!this.sel.length)return;this.snap();const s=new Set(this.sel);this.proj.items.forEach(i=>i.deps=(i.deps||[]).filter(d=>!s.has(this.depId(d))));this.proj.items=this.proj.items.filter(i=>!s.has(i.id));this.sel=[];this.closePanel();this.sched();this.autoSave()},
-  dupSel(){if(!this.sel.length)return;this.snap();const ns=[];this.sel.forEach(id=>{const o=this.gi(id);if(!o)return;const c=U.deep(o);c.id=U.id();c.name+=' (copy)';c.subRow=(o.subRow||0)+1;c.deps=[];if(c.status)c.statusDate=U.iso(new Date());ns.push(c)});this.proj.items.push(...ns);this.sel=ns.map(i=>i.id);this.sched();this.autoSave()},
+  dupSel(){if(!this.sel.length)return;if(!this._checkLimit('items')){this._limitToast('items');return}this.snap();const ns=[];this.sel.forEach(id=>{const o=this.gi(id);if(!o)return;const c=U.deep(o);c.id=U.id();c.name+=' (copy)';c.subRow=(o.subRow||0)+1;c.deps=[];if(c.status)c.statusDate=U.iso(new Date());ns.push(c)});this.proj.items.push(...ns);this.sel=ns.map(i=>i.id);this.sched();this.autoSave()},
   clearSelDeps(){if(!this.sel.length)return;this.snap();this.sel.forEach(id=>{const it=this.gi(id);if(it)it.deps=[]});this.sched();this.autoSave();this.toast('Selected deps cleared')},
 
   showCtx(e,iid){
@@ -2717,7 +3103,9 @@ const App={
   },
 
   linkDepFromSel(){
-    if(this.sel.length<2)return;this.snap();
+    if(this.sel.length<2)return;
+    if(!this._checkTier('dependencies')){this._gateToast('Dependencies');return}
+    this.snap();
     const items=this.sel.map(id=>this.gi(id)).filter(Boolean);
     items.sort((a,b)=>{const da=a.date||a.startDate||'',db=b.date||b.startDate||'';return da<db?-1:da>db?1:0});
     let linked=0;
@@ -2744,6 +3132,7 @@ const App={
   /* ===== SWIMLANE MODAL ===== */
   _esl:null,_tmpSubs:[],
   showSwM(sl=null){
+    if(!sl&&!this._checkLimit('swimlanes')){this._limitToast('swimlanes');return}
     this._esl=sl;this.$.sw_modal_title.textContent=sl?'Edit Swimlane':'Add Swimlane';
     this.$.sw_name.value=sl?sl.name:'';this.$.sw_color.value=sl?sl.color:COLORS[this.proj.swimlanes.length%COLORS.length];
     document.getElementById('btn-del-sw').classList.toggle('hidden',!sl);
@@ -3071,6 +3460,7 @@ const App={
     if(this._settingsOrigTheme!=null){this.proj.theme=this._settingsOrigTheme;this.applyTheme();this._settingsOrigTheme=null}
   },
   showSettings(){
+    if(!this._isGitHubPages)this._populateLicenseSection();
     const p=this.proj;this._settingsOrigTheme=p.theme;
     this.$.s_name.value=p.name;this.$.s_owner.value=p.owner||'';
     this.$.s_start.value=p.timelineStart;this.$.s_end.value=p.timelineEnd;
@@ -3088,6 +3478,10 @@ const App={
       dfSel.onchange=function(){if(cfGrp)cfGrp.style.display=this.value==='custom'?'':'none'}
     }
     document.querySelectorAll('.theme-card').forEach(c=>c.classList.toggle('active',c.dataset.theme===p.theme));
+    /* PRO badges on locked theme cards */
+    if(this._LICENSING_ENABLED&&!this._checkTier('themes_all')){
+      document.querySelectorAll('.theme-card').forEach(c=>{const span=c.querySelector('span:not(.pro-badge)');if(!this._tierConfig.freeThemes.includes(c.dataset.theme)){c.classList.add('theme-locked');if(span&&!span.querySelector('.pro-badge'))span.insertAdjacentHTML('beforeend',' <span class="pro-badge">PRO</span>')}else{c.classList.remove('theme-locked');const b=c.querySelector('.pro-badge');if(b)b.remove()}});
+    }else{document.querySelectorAll('.theme-card').forEach(c=>{c.classList.remove('theme-locked');const b=c.querySelector('.pro-badge');if(b)b.remove()})}
     document.getElementById('s-show-weekends').checked=p.showWeekends;
     document.getElementById('weekend-inline').classList.toggle('hidden',!p.showWeekends);
     document.getElementById('weekend-opts').classList.toggle('hidden',!p.showWeekends);
@@ -3231,6 +3625,11 @@ const App={
           if(td)td.textContent=a?(cc.dataset.mode==='manual'?'✅ Manual':'✅ Auto-Scheduled'):(cc.dataset.mode==='manual'?'◻ Manual':'◻ Auto-Scheduled')})}
       })
     }
+    /* PRO badge on Auto-Scheduled card if gated */
+    if(this._LICENSING_ENABLED&&!this._checkTier('auto_scheduling')){
+      const sc=document.querySelector('.sched-card[data-mode="scheduled"]');
+      if(sc){sc.style.opacity='.55';const td=sc.querySelector('div');if(td&&!td.querySelector('.pro-badge'))td.insertAdjacentHTML('beforeend',' <span class="pro-badge">PRO</span>')}
+    }
     }catch(err){console.error('[Timeline Studio] Card setup error:',err)}
     // Status section
     const sStatusShow=document.getElementById('s-status-show');
@@ -3264,10 +3663,10 @@ const App={
     if(sContent)sContent.scrollTop=0;
     if(sNav){
       const links=sNav.querySelectorAll('a');
-      /* Reset active to first link */
-      links.forEach((a,i)=>a.classList.toggle('active',i===0));
+      /* Reset active to first visible link */
+      let firstVis=true;links.forEach(a=>{const vis=a.style.display!=='none';a.classList.toggle('active',vis&&firstVis);if(vis&&firstVis)firstVis=false});
       /* Scroll-spy: highlight nav link whose section is nearest the top of the scroll container */
-      const spy=()=>{const cTop=sContent.getBoundingClientRect().top;let best=null,bestD=Infinity;links.forEach(a=>{const s=document.getElementById(a.getAttribute('href').slice(1));if(!s)return;const d=Math.abs(s.getBoundingClientRect().top-cTop);if(d<bestD){bestD=d;best=a}});if(best)links.forEach(a=>a.classList.toggle('active',a===best))};
+      const spy=()=>{const cTop=sContent.getBoundingClientRect().top;let best=null,bestD=Infinity;links.forEach(a=>{if(a.style.display==='none')return;const s=document.getElementById(a.getAttribute('href').slice(1));if(!s)return;const d=Math.abs(s.getBoundingClientRect().top-cTop);if(d<bestD){bestD=d;best=a}});if(best)links.forEach(a=>a.classList.toggle('active',a===best))};
       sContent.onscroll=spy;
       /* Click-to-jump */
       links.forEach(a=>{a.onclick=e=>{e.preventDefault();const tgt=document.getElementById(a.getAttribute('href').slice(1));if(tgt)tgt.scrollIntoView({behavior:'smooth',block:'start'})}});
@@ -3284,7 +3683,8 @@ const App={
     // Date format
     const dfSel=document.getElementById('s-date-fmt');
     if(dfSel){if(dfSel.value==='custom'){const cf=document.getElementById('s-custom-fmt')?.value||'DDMMMYY';p.dateFormat='custom:'+cf}else{p.dateFormat=dfSel.value}}
-    p.theme=document.querySelector('.theme-card.active')?.dataset.theme||'warm';
+    const pendingTheme=document.querySelector('.theme-card.active')?.dataset.theme||'warm';
+    if(!this._tierConfig.freeThemes.includes(pendingTheme)&&!this._checkTier('themes_all')){p.theme='warm'}else{p.theme=pendingTheme}
     p.showWeekends=document.getElementById('s-show-weekends').checked;
     p.weekendOpacity=+document.getElementById('s-wknd-opacity').value||8;
     p.weekendAutoHide=document.getElementById('s-wknd-auto').checked;
@@ -3347,6 +3747,7 @@ const App={
     const newMode=activeCard?.dataset?.mode||this._pendingSchedMode||p.schedulingMode||'manual';
     const oldMode=p.schedulingMode||'manual';
     if(newMode==='scheduled'&&oldMode==='manual'){
+      if(!this._checkTier('auto_scheduling')){this._gateToast('Auto-Scheduling');return}
       if(p.autoRange)this.autoRange();this.applyTheme();
       document.getElementById('settings-modal').classList.add('hidden');
       this.showScheduleTransition();
@@ -3374,7 +3775,7 @@ const App={
   showPaste(){this.$.paste_sw.innerHTML=this.proj.swimlanes.map(s=>`<option value="${s.id}">${U.esc(s.name)}</option>`).join('');this.$.paste_ta.value='';this.$.paste_prev.textContent='';this._impData=null;this._impMappings=[];this._impOverloads=[];this._impSelSrc=null;this._impStatusMap={};this._impPreset=null;this._impDetected=null;this._impDurMode='cal';this._impDefDur=14;this._impDateFmt='auto';this._impSnapWork=false;if(this.$.imp_opts_wrap)this.$.imp_opts_wrap.classList.add('hidden');if(this.$.imp_source_wrap)this.$.imp_source_wrap.classList.add('hidden');if(this.$.imp_file_name)this.$.imp_file_name.textContent='No file selected';if(this.$.imp_file_input)this.$.imp_file_input.value='';if(this.$.imp_map_area)this.$.imp_map_area.classList.add('hidden');if(this.$.imp_status_area)this.$.imp_status_area.classList.add('hidden');if(this.$.imp_perfect_match)this.$.imp_perfect_match.classList.add('hidden');if(this.$.imp_preview_wrap){this.$.imp_preview_wrap.classList.add('hidden');this.$.imp_preview_wrap.innerHTML=''}if(this.$.imp_overload_area){this.$.imp_overload_area.classList.add('hidden');this.$.imp_overload_area.innerHTML=''}if(this.$.imp_status)this.$.imp_status.textContent='';if(this.$.btn_imp_do)this.$.btn_imp_do.classList.add('hidden');if(this.$.imp_adv_toggle)this.$.imp_adv_toggle.classList.remove('open');if(this.$.imp_adv_body)this.$.imp_adv_body.classList.add('hidden');this.showModal('paste-modal');this.$.paste_ta.focus()},
   previewPaste(){const r=this.parsePaste(this.$.paste_ta.value);this.$.paste_prev.textContent=r.length?`Found ${r.length} items`:''},
   parsePaste(text){return text.trim().split('\n').filter(l=>l.trim()).map(line=>{const c=line.split('\t').map(s=>s.trim());if(c.length<2||!c[0])return null;if(c.length>=3){const d1=U.parseDate(c[1]),d2=U.parseDate(c[2]);if(d1&&d2)return{name:c[0],type:'task',startDate:U.iso(d1),endDate:U.iso(d2)};if(d1)return{name:c[0],type:'milestone',date:U.iso(d1)}}if(c.length>=2){const d=U.parseDate(c[1]);if(d)return{name:c[0],type:'milestone',date:U.iso(d)}}return null}).filter(Boolean)},
-  doPaste(){const rows=this.parsePaste(this.$.paste_ta.value);if(!rows.length){this.toast('No valid data','error');return}this.snap();const tgt=this.$.paste_sw.value;rows.forEach((r,i)=>{const it={id:U.id(),type:r.type,name:r.name,swimlaneId:tgt,subSwimId:'',subRow:i%3,color:COLORS[i%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:'',status:'',statusDate:'',vLine:{enabled:false,style:'dashed',color:'#999999',direction:'both',extent:'swim'},links:[]};if(r.type==='milestone')it.date=r.date;else{it.startDate=r.startDate;it.endDate=r.endDate;it.durMode='cal';it.duration=U.days(r.startDate,r.endDate)+1}this.proj.items.push(it)});if(this.proj.autoRange)this.autoRange();document.getElementById('paste-modal').classList.add('hidden');this.sched();this.autoSave();this.toast(`Imported ${rows.length} items`)},
+  doPaste(){const rows=this.parsePaste(this.$.paste_ta.value);if(!rows.length){this.toast('No valid data','error');return}if(!this._checkLimit('items')){this._limitToast('items');return}this.snap();const tgt=this.$.paste_sw.value;rows.forEach((r,i)=>{const it={id:U.id(),type:r.type,name:r.name,swimlaneId:tgt,subSwimId:'',subRow:i%3,color:COLORS[i%COLORS.length],iconType:'triangle',labelPosition:'right',showDate:true,showDuration:false,showOwner:false,durationFmt:'days',showStartDate:false,showEndDate:false,textColor:'',edgeTextColor:'',dateFormat:'',deps:[],progress:0,pinned:false,hidden:false,duration:null,fontSize:0,owner:'',notes:'',status:'',statusDate:'',vLine:{enabled:false,style:'dashed',color:'#999999',direction:'both',extent:'swim'},links:[]};if(r.type==='milestone')it.date=r.date;else{it.startDate=r.startDate;it.endDate=r.endDate;it.durMode='cal';it.duration=U.days(r.startDate,r.endDate)+1}this.proj.items.push(it)});if(this.proj.autoRange)this.autoRange();document.getElementById('paste-modal').classList.add('hidden');this.sched();this.autoSave();this.toast(`Imported ${rows.length} items`)},
 
   /* ===== ADVANCED IMPORT (F35) ===== */
   _IMP_TGT_FIELDS:['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Predecessors','Status','StatusDate','Progress','Notes','Color','Pinned','Hidden','LabelPos','FontSize','TextColor','DateFormat','ShowDate'],
@@ -3457,13 +3858,16 @@ const App={
   /* Toggle / File Handling */
   toggleAdvImport(){
     const tg=this.$.imp_adv_toggle,bd=this.$.imp_adv_body;if(!tg||!bd)return;
+    /* Gate: block opening advanced import (CSV) section for free tier */
+    if(!tg.classList.contains('open')&&!this._checkTier('csv_import')){this._gateToast('Advanced Import');return}
     tg.classList.toggle('open');bd.classList.toggle('hidden');
   },
   handleImportFile(e){
     const file=e.target.files&&e.target.files[0];if(!file)return;
+    const ext=file.name.split('.').pop().toLowerCase();
+    if(ext!=='json'&&!this._checkTier('csv_import')){this._gateToast('CSV Import');e.target.value='';return}
     this.$.imp_file_name.textContent=file.name;
     file.text().then(text=>{
-      const ext=file.name.split('.').pop().toLowerCase();
       let rows;
       if(ext==='json'){
         const jr=this.parseJSON(text);if(!jr||!jr.headers.length){this.toast('JSON file has no importable data','error');return}
@@ -3849,6 +4253,7 @@ const App={
     const nl=name.toLowerCase().trim();
     const match=this.proj.swimlanes.find(s=>s.name.toLowerCase().trim()===nl);
     if(match)return match.id;
+    if(!this._checkLimit('swimlanes'))return this.proj.swimlanes[0]?this.proj.swimlanes[0].id:'';
     const newSl={id:U.id(),name:name.trim(),color:COLORS[this.proj.swimlanes.length%COLORS.length],height:120,subSwimlanes:[],collapsed:'expanded'};
     this.proj.swimlanes.push(newSl);return newSl.id;
   },
@@ -3884,6 +4289,7 @@ const App={
   /* Main Import Execution */
   doAdvancedImport(){
     if(!this._impData||!this._impMappings.length&&!this._impOverloads.length){this.toast('No column mappings configured','error');return}
+    if(!this._checkLimit('items')){this._limitToast('items');return}
     const mapped=this._buildMappedRows();if(!mapped.length){this.toast('No data rows to import','error');return}
     this.snap();
     const tgtSl=this.$.paste_sw.value;let createdSl=0,createdStatus=0,skippedCircular=0;
@@ -4614,6 +5020,7 @@ const App={
     q('pp-sown')?.addEventListener('change',function(){up(()=>it.showOwner=this.checked)});
     q('pp-durfmt')?.addEventListener('change',function(){up(()=>it.durationFmt=this.value)});
     q('pp-add-d').onchange=function(){if(!this.value)return;
+      if(!App._checkTier('dependencies')){App._gateToast('Dependencies');this.value='';return}
       if(App.hasCycle(it.id,this.value)){App.toast('Cannot link — circular dependency','error');this.value='';return}
       up(()=>{if(!it.deps)it.deps=[];it.deps.push({id:this.value,type:'FS',lag:0})});App.renderPanel(it)};
     const propBtn=q('pp-propagate');if(propBtn)propBtn.onclick=()=>{App.propagateFrom([it.id])};
@@ -6126,11 +6533,12 @@ const App={
     this.sched();this.toast(this._lassoMode?'Lasso mode ON — click and drag to select':'Lasso mode OFF')
   },
 
-  exportSVG(){const svg=this.buildExportSVG();const b=new Blob([svg],{type:'image/svg+xml'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.svg';a.click();URL.revokeObjectURL(a.href);this.toast('SVG exported!')},
+  exportSVG(){const forceWm=!this.proj.watermark&&!this._checkTier('export_clean');if(forceWm){this.proj.watermark=true}const svg=this.buildExportSVG();if(forceWm){this.proj.watermark=false}const b=new Blob([svg],{type:'image/svg+xml'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.svg';a.click();URL.revokeObjectURL(a.href);this.toast(forceWm?'SVG exported (watermark required on Free plan)':'SVG exported!')},
 
-  async exportPNG(){try{this.toast('Generating PNG…');const svg=this.buildExportSVG();const img=new Image();const blob=new Blob([svg],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);let dpr=Math.max(3,window.devicePixelRatio||3);img.onload=()=>{if(!img.naturalWidth||!img.naturalHeight){this.toast('Image failed to render','error');URL.revokeObjectURL(url);return}const maxDim=16384;if(img.naturalWidth*dpr>maxDim||img.naturalHeight*dpr>maxDim)dpr=Math.floor(maxDim/Math.max(img.naturalWidth,img.naturalHeight))||1;const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*dpr);c.height=Math.round(img.naturalHeight*dpr);const ctx=c.getContext('2d');if(!ctx){this.toast('Canvas too large to export','error');URL.revokeObjectURL(url);return}ctx.scale(dpr,dpr);ctx.drawImage(img,0,0);c.toBlob(b=>{if(!b){this.toast('Render failed','error');URL.revokeObjectURL(url);return}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.png';a.click();URL.revokeObjectURL(a.href);this.toast('PNG exported!')},'image/png')};img.onerror=()=>{this.toast('PNG generation failed','error');URL.revokeObjectURL(url)};img.src=url}catch(err){this.toast('PNG export not supported','error')}},
+  async exportPNG(){try{const forceWm=!this.proj.watermark&&!this._checkTier('export_clean');if(forceWm)this.proj.watermark=true;this.toast('Generating PNG…');const svg=this.buildExportSVG();if(forceWm)this.proj.watermark=false;const img=new Image();const blob=new Blob([svg],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);let dpr=Math.max(3,window.devicePixelRatio||3);img.onload=()=>{if(!img.naturalWidth||!img.naturalHeight){this.toast('Image failed to render','error');URL.revokeObjectURL(url);return}const maxDim=16384;if(img.naturalWidth*dpr>maxDim||img.naturalHeight*dpr>maxDim)dpr=Math.floor(maxDim/Math.max(img.naturalWidth,img.naturalHeight))||1;const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*dpr);c.height=Math.round(img.naturalHeight*dpr);const ctx=c.getContext('2d');if(!ctx){this.toast('Canvas too large to export','error');URL.revokeObjectURL(url);return}ctx.scale(dpr,dpr);ctx.drawImage(img,0,0);c.toBlob(b=>{if(!b){this.toast('Render failed','error');URL.revokeObjectURL(url);return}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.png';a.click();URL.revokeObjectURL(a.href);this.toast('PNG exported!')},'image/png')};img.onerror=()=>{this.toast('PNG generation failed','error');URL.revokeObjectURL(url)};img.src=url}catch(err){this.toast('PNG export not supported','error')}},
 
   exportDataCSV(){
+    if(!this._checkTier('csv_export')){this._gateToast('CSV Export');return}
     const p=this.proj,rows=[['Name','Owner','Type','Start','End','Duration','Swimlane','Row','Color','Progress','Pinned','Hidden','Notes','Predecessors','Status','StatusDate','URL Links']];
     for(const sl of p.swimlanes){for(const it of p.items.filter(i=>i.swimlaneId===sl.id)){
       const sd=this._getStatusDef(it.status);rows.push([it.name,it.owner||'',it.type,it.type==='milestone'?it.date:it.startDate,it.endDate||'',it.duration||'',sl.name,it.subRow||0,it.color,it.progress||0,it.pinned?'Y':'N',it.hidden?'Y':'N',it.notes||'',this._fmtPreds(it),sd?sd.name:'',it.statusDate||'',(it.links||[]).map(lk=>lk.url).join('; ')])}}
@@ -6150,6 +6558,7 @@ const App={
     this.showModal('data-export-modal')
   },
   doDataExport(target){
+    if(!this._checkTier('csv_export')){this._gateToast('CSV Export');return}
     const p=this.proj,mode=document.getElementById('de-mode').value;
     const allCols=['Name','Owner','Type','Start','End','Duration','Swimlane','SubSwim','Row','Color','Progress','Pinned','Hidden','Notes','Predecessors','Status','StatusDate','LabelPos','FontSize','TextColor','DateFormat','ShowDate','URL Links'];
     const cols=mode==='all'?allCols:[...this._deSelectedCols];
@@ -6271,6 +6680,7 @@ const App={
   /* Critical Path */
   _critPath:false,
   toggleCritPath(){
+    if(!this._critPath&&!this._checkTier('critical_path')){this._gateToast('Critical Path');return}
     this._critPath=!this._critPath;document.getElementById('btn-crit-path')?.classList.toggle('active',this._critPath);
     this.sched();this.toast(this._critPath?'Critical path ON':'Critical path OFF')
   },
@@ -6353,6 +6763,7 @@ const App={
 
   /* ── Presentation Mode ─────────────────────────────────────────── */
   togglePresMode(){
+    if(!this._presMode&&!this._checkTier('presenter_mode')){this._gateToast('Presenter Mode');return}
     this._presMode=!this._presMode;
     const tb=document.getElementById('pres-toolbar');
     const cv=document.getElementById('pres-canvas');

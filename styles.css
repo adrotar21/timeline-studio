@@ -674,6 +674,52 @@ body.theme-light .toggle-slider::after{background:#fff;box-shadow:0 1px 3px rgba
 .settings-collapsible-summary{font-weight:400;font-size:10px;color:var(--tx3);margin-left:2px}
 .settings-collapsible-body{padding:8px 8px 4px 22px}
 .settings-collapsible-desc{font-size:9.5px;font-style:italic;color:var(--tx3);line-height:1.4;margin-bottom:8px}
+/* License section */
+.license-card{background:var(--bg2);border:1px solid var(--brd);border-radius:8px;padding:14px 16px}
+.license-card-header{display:flex;align-items:center;justify-content:space-between}
+.license-tier-name{font-size:15px;font-weight:600;color:var(--tx)}
+.license-badge{font-size:11px;padding:2px 10px;border-radius:10px;font-weight:500}
+.license-badge-active{background:#22c55e22;color:#22c55e}
+.license-badge-beta{background:#3b82f622;color:#3b82f6}
+.license-badge-free{background:var(--bg3,#e5e5e5);color:var(--tx3)}
+.license-badge-expired{background:#ef444422;color:#ef4444}
+.license-card-details{margin-top:8px;font-size:12px;color:var(--tx3);line-height:1.6}
+.license-card-details:empty{display:none}
+/* PRO badge & gating visuals */
+.pro-badge{display:inline-block;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 5px;border-radius:3px;background:rgba(210,153,34,.15);color:#d29922;vertical-align:middle;margin-left:4px;line-height:1.4}
+.theme-card.theme-locked{opacity:.55}
+.theme-card.theme-locked:hover{opacity:.7}
+.save-dd-item.dd-gated{opacity:.5}
+.save-dd-item.dd-gated:hover{opacity:.65}
+/* Upgrade info box */
+.lic-upgrade-box{background:var(--bg2);border:1px solid var(--brd);border-radius:8px;padding:14px 16px}
+.lic-upgrade-title{font-size:13px;font-weight:700;color:var(--tx1)}
+.lic-upgrade-list{list-style:none;padding:0;margin:0 0 12px}
+.lic-upgrade-list li{font-size:11px;color:var(--tx2);line-height:1.8;padding-left:18px;position:relative}
+.lic-upgrade-list li::before{content:'\2713';position:absolute;left:0;color:var(--success);font-weight:700}
+.lic-upgrade-steps{border-top:1px solid var(--brd);padding-top:10px;margin-top:4px}
+.lic-upgrade-steps-title{font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:4px}
+.lic-upgrade-steps ol{margin:0;padding-left:18px}
+.lic-upgrade-steps li{font-size:11px;color:var(--tx3);line-height:1.8}
+.lic-upgrade-link{display:inline-block;margin-top:10px;color:var(--acc);text-decoration:underline;font-size:12px;font-weight:500}
+.lic-upgrade-link:hover{color:var(--acc2)}
+/* Dev Panel */
+.dev-section{margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--brd)}
+.dev-section:last-child{border-bottom:none}
+.dev-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--acc);margin-bottom:4px}
+.dev-help{font-size:10.5px;color:var(--tx3);line-height:1.5;margin-bottom:4px}
+.dev-help code{background:var(--bg2);padding:1px 4px;border-radius:3px;font-size:10px}
+.dev-help b{color:var(--tx2)}
+.dev-feat-row{display:flex;align-items:center;justify-content:space-between;font-size:11px;padding:3px 0}
+.dev-feat-sel{width:110px;font-size:11px;padding:2px 4px;flex-shrink:0}
+.dev-var-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px}
+.dev-var-row input{flex:1;font-size:11px}
+.dev-var-row select{font-size:11px;padding:2px 4px;width:110px}
+.dev-var-row .dev-var-del{cursor:pointer;color:var(--tx3);font-size:14px;flex-shrink:0}
+.dev-var-row .dev-var-del:hover{color:#ef4444}
+.dev-state-row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--brd)}
+.dev-state-row:last-child{border-bottom:none}
+.dev-state-key{color:var(--tx3);cursor:help}
 /* Settings TOC sidebar */
 .settings-nav{width:130px;flex-shrink:0;border-right:1px solid var(--brd);padding:14px 0;position:sticky;top:0;align-self:flex-start}
 .settings-nav a{display:block;padding:6px 12px;font-size:10px;color:var(--tx2);text-decoration:none;border-left:2px solid transparent;cursor:pointer;transition:all .1s}

@@ -361,7 +361,8 @@
     <div class="modal-content modal-lg settings-modal-content"><div class="modal-header"><h2>Project Settings</h2><button class="modal-close" data-close-modal>&times;</button></div>
       <div class="modal-body settings-modal-body">
         <nav class="settings-nav" id="settings-nav">
-          <a href="#sect-project" class="active">Project</a>
+          <a href="#sect-license" class="active">License & Upgrades</a>
+          <a href="#sect-project">Project</a>
           <a href="#sect-appearance">Appearance</a>
           <a href="#sect-scheduling">Scheduling</a>
           <a href="#sect-holidays">Holidays</a>
@@ -373,6 +374,47 @@
           <a href="#sect-advanced">Advanced</a>
         </nav>
         <div class="settings-content" id="settings-content">
+
+        <!-- ═══ LICENSE ═══ -->
+        <div class="settings-section" id="sect-license"><div class="settings-section-title">License & Upgrades</div>
+          <div class="license-card" id="lic-card">
+            <div class="license-card-header">
+              <span class="license-tier-name" id="lic-tier-name">Free Plan</span>
+              <span class="license-badge license-badge-free" id="lic-badge">Free</span>
+            </div>
+            <div class="license-card-details" id="lic-details"></div>
+          </div>
+          <div class="form-group" style="margin-top:16px"><label>License Key</label>
+            <div style="display:flex;gap:6px"><input type="text" id="s-lic-key" class="form-input" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" spellcheck="false" autocomplete="off" style="flex:1;font-family:monospace;letter-spacing:0.5px"><button class="btn btn-primary" id="btn-lic-activate" style="padding:6px 14px">Activate</button></div>
+          </div>
+          <div id="lic-deactivate-wrap" class="hidden" style="margin-top:8px"><button class="btn btn-secondary btn-sm" id="btn-lic-deactivate">Deactivate License</button></div>
+          <div class="settings-group-divider" style="margin-top:16px"></div>
+          <div id="lic-free-info" class="lic-upgrade-box" style="margin-top:12px">
+            <div class="lic-upgrade-title">&#9733; Upgrade to Boardroom</div>
+            <p style="margin:8px 0 10px;font-size:11px;color:var(--tx2);line-height:1.5">Unlock the full Timeline Studio experience:</p>
+            <ul class="lic-upgrade-list">
+              <li>All themes (Light, Midnight, and future themes)</li>
+              <li>CSV import &amp; export</li>
+              <li>Auto-scheduling with dependency engine</li>
+              <li>Critical path analysis</li>
+              <li>Presenter mode</li>
+              <li>Float labels</li>
+              <li>Dependencies (create &amp; modify)</li>
+              <li>Clean exports (no watermark)</li>
+              <li>Unlimited swimlanes &amp; items</li>
+            </ul>
+            <div class="lic-upgrade-steps">
+              <div class="lic-upgrade-steps-title">How to upgrade:</div>
+              <ol>
+                <li>Purchase a license at timelinestudio.io</li>
+                <li>You'll receive a license key via email</li>
+                <li>Enter your key above and click Activate</li>
+                <li>Your license stays with your project files</li>
+              </ol>
+            </div>
+            <a href="https://timelinestudio.io/#pricing" target="_blank" rel="noopener" class="lic-upgrade-link">Purchase a license &rarr;</a>
+          </div>
+        </div>
 
         <!-- ═══ PROJECT (merged: Project Info + Timeline Range) ═══ -->
         <div class="settings-section" id="sect-project"><div class="settings-section-title">Project</div>
@@ -626,6 +668,62 @@
         </div>
       </div>
       <div class="modal-footer settings-modal-footer"><button class="btn btn-secondary s-footer-help" id="s-open-help" data-tooltip="Open Help Guide">?</button><button class="btn btn-secondary s-footer-support" id="s-open-support" data-tooltip="Bug reports · Feature requests · Questions">📝 Contact Support</button><span style="flex:1"></span><button class="btn btn-secondary" data-close-modal>Cancel</button><button class="btn btn-primary" id="btn-s-apply">Apply</button></div>
+    </div>
+  </div>
+  <!-- Dev Panel: Tier Configuration (Ctrl+Shift+L) -->
+  <div id="dev-panel" class="modal hidden"><div class="modal-overlay"></div>
+    <div class="modal-content modal-lg" style="max-width:620px"><div class="modal-header"><h2>Dev Panel: Licensing</h2><button class="modal-close" data-close-modal>&times;</button></div>
+      <div class="modal-body" style="max-height:calc(80vh - 100px);overflow-y:auto;padding:14px 18px">
+
+        <div class="dev-section">
+          <div class="dev-section-title">Kill Switch</div>
+          <div class="dev-help">Master on/off for the entire licensing system. When OFF, <code>_checkTier()</code> and <code>_checkLimit()</code> always return <code>true</code> &mdash; every feature is unlocked for every user regardless of their tier. Use this as an emergency fallback if the licensing system has a bug in production. When ON, features are gated based on the user&rsquo;s resolved tier below.</div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-top:8px"><input type="checkbox" id="dev-lic-enabled"> Licensing Enabled</label>
+        </div>
+
+        <div class="dev-section">
+          <div class="dev-section-title">Simulate Tier</div>
+          <div class="dev-help">Overrides the user&rsquo;s actual tier for testing. Select a tier to force the app into that mode &mdash; this is how you test what a Free user vs. Boardroom user sees. &ldquo;None&rdquo; means use the real tier from the license key or beta URL param. Persists across page reloads (stored in <code>localStorage</code>).</div>
+          <div id="dev-tier-radios" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px"></div>
+        </div>
+
+        <div class="dev-section">
+          <div class="dev-section-title">Free Tier Limits</div>
+          <div class="dev-help">Max number of swimlanes and total items (milestones + tasks) a Free-tier user can create. When a user tries to add beyond these limits, the app blocks the action and shows an upgrade prompt. Change these to test the limit enforcement with smaller numbers.</div>
+          <div style="display:flex;gap:16px;align-items:center;margin-top:8px">
+            <label style="font-size:12px">Swimlanes: <input type="number" id="dev-limit-sw" class="form-input" style="width:60px" min="1" max="999"></label>
+            <label style="font-size:12px">Items: <input type="number" id="dev-limit-items" class="form-input" style="width:60px" min="1" max="9999"></label>
+          </div>
+        </div>
+
+        <div class="dev-section">
+          <div class="dev-section-title">Feature Gates</div>
+          <div class="dev-help">Each feature can be set to a tier: <b>Free</b> (available to everyone), <b>Boardroom</b> (requires Boardroom or higher), or <b>Execution</b> (requires Execution tier). This controls what <code>_checkTier('feature_name')</code> returns. When a user on a lower tier tries to use a gated feature, the app shows a lock icon and upgrade prompt instead.</div>
+          <div id="dev-features" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-top:8px"></div>
+        </div>
+
+        <div class="dev-section">
+          <div class="dev-section-title">Variant Mapping</div>
+          <div class="dev-help">When a user activates a license key, Lemon Squeezy returns a <b>variant name</b> (e.g. &ldquo;Boardroom Annual&rdquo;). This table maps those variant names to app tiers. The left field is the variant name from Lemon Squeezy (lowercased, spaces replaced with underscores). The right dropdown is which app tier that variant unlocks.<br><br>
+          <b>How to configure:</b> In your Lemon Squeezy dashboard, go to the product &rarr; Variants &rarr; copy the variant name &rarr; enter it here (lowercase with underscores) &rarr; select the tier it should unlock. Example: variant &ldquo;Boardroom Annual&rdquo; becomes <code>boardroom_annual</code> &rarr; maps to Boardroom tier.</div>
+          <div id="dev-variants" style="margin-top:8px"></div>
+          <button class="btn btn-secondary btn-sm" id="dev-add-variant" style="margin-top:6px;font-size:10px;padding:3px 8px">+ Add Variant</button>
+        </div>
+
+        <div class="dev-section">
+          <div class="dev-section-title">Current State</div>
+          <div class="dev-help">Live read-only snapshot of the licensing system&rsquo;s runtime state. Use this to verify your changes took effect after clicking Apply.</div>
+          <div id="dev-state" style="font-size:11px;font-family:monospace;color:var(--tx2);line-height:2;margin-top:8px"></div>
+        </div>
+
+        <div class="dev-section" style="border-bottom:none">
+          <div class="dev-section-title">Export Config</div>
+          <div class="dev-help">Copies the full current tier configuration as JSON. Paste this into a Claude Code session to set your production defaults in <code>_TIER_CONFIG_DEFAULTS</code>.</div>
+          <button class="btn btn-secondary btn-sm" id="dev-copy-config" style="margin-top:8px;font-size:11px;padding:4px 12px">Copy Config to Clipboard</button>
+        </div>
+
+      </div>
+      <div class="modal-footer"><button class="btn btn-secondary" id="dev-reset">Reset to Defaults</button><span style="flex:1"></span><button class="btn btn-secondary" data-close-modal>Close</button><button class="btn btn-primary" id="dev-apply">Apply</button></div>
     </div>
   </div>
   <div id="sw-modal" class="modal hidden"><div class="modal-overlay"></div>

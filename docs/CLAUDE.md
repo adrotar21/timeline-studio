@@ -327,3 +327,115 @@ See `docs/BACKLOG.md` for the prioritized and sized bug/feature backlog with ver
 - `sched(tl, dt)` marks timeline/datatable as dirty for next render frame
 - `met()` recalculates layout metrics (columns, cell widths, pixel positions)
 - `migrate()` handles backward-compatible loading of older project files
+
+## Licensing & Tier System
+
+### Architecture Overview
+- **Kill switch**: `App._LICENSING_ENABLED` (default `false`) — when OFF, all gates and visual indicators are no-ops
+- **Tier config**: `_TIER_CONFIG_DEFAULTS` constant merged with `localStorage['tls3_tierConfig']` at runtime into `App._tierConfig`
+- **Tiers**: `free` (rank 0), `beta_boardroom` (rank 1), `boardroom` (rank 1), `execution` (rank 2)
+- **`_resolvedTier`**: authoritative runtime tier; resolved from: (1) dev override `tls3_devTier`, (2) cached license `tls3_license`, (3) legacy `tls3_tier` from URL params
+- **Free limits**: 5 swimlanes, 25 items; Boardroom/Execution: unlimited
+
+### License API & Storage
+- **Lemon Squeezy validate-only flow**: `_activateLicense(key)` calls POST `/validate` (never `/activate`, no instance slots burned)
+- **`_revalidateLicense(key)`**: background revalidation when stale (>3 days)
+- **`_deactivateLicense()`**: local-only clear (no API call)
+- **3-layer storage**: `_storeLicense(lic)` writes to localStorage + IndexedDB + `navigator.storage.persist()`
+- **3-layer recovery**: `_recoverLicenseAsync()` tries localStorage -> IndexedDB -> project file `proj._licenseKey`
+- **Project file embedding**: `saveFile()` injects `_licenseKey` before write, strips after; `_packProj()` always strips for share links
+- **Offline-first**: cached license valid 30 days; background revalidation when stale
+
+### GitHub Pages Bypass
+- `App._isGitHubPages` = `true` when `location.origin === 'https://adrotar21.github.io'`
+- Sets `_resolvedTier = 'beta_boardroom'` (rank 1) — all features unlocked
+- Hides License & Upgrades section in Settings nav + content
+- Settings nav reset logic skips hidden links for first-visible active state
+
+### Feature Gates (9 features, all require rank >= 1)
+`_checkTier(feature)` returns `true` when kill switch is OFF or tier rank >= required rank.
+
+| Feature | Gate Location(s) | Notes |
+|---------|-----------------|-------|
+| `themes_all` | Theme card click + `applySettings()` | Free themes: warm, cool |
+| `export_clean` | `exportSVG()`, `exportPNG()` | Forces watermark temporarily for export |
+| `csv_export` | `exportDataCSV()`, `doDataExport()` | |
+| `csv_import` | `toggleAdvImport()`, `handleImportFile()` | JSON import stays free |
+| `critical_path` | `toggleCritPath()` | |
+| `auto_scheduling` | `toggleSchedulingMode()`, `applySettings()` | Manual mode stays free |
+| `dependencies` | `linkDepFromSel()`, panel dep add | Existing deps render read-only |
+| `presenter_mode` | `togglePresMode()` | Exit is always allowed |
+| `show_float` | `_scDispatch.showFloat.call(this)` | Note `.call(this)` for proper binding |
+
+### Limit Gates (2 limits)
+`_checkLimit(type)` returns `true` when kill switch is OFF or count < tier limit.
+
+| Limit | Gate Location(s) |
+|-------|-----------------|
+| `swimlanes` | `showSwM()`, `_resolveSwimlaneName()` (import) |
+| `items` | `addItem()`, `doPaste()`, `dupSel()`, `doAdvancedImport()` |
+
+### Visual Gating & Upgrade UX
+
+#### PRO Badges
+- **CSS class**: `.pro-badge` — gold badge (`background:rgba(210,153,34,.15); color:#d29922`), 8px uppercase
+- **Theme cards**: `showSettings()` adds `.theme-locked` class (opacity .55) + `.pro-badge` span to locked themes. Reads `_tierConfig.freeThemes` to determine which are locked
+- **Menu items**: `_applyMenuGating()` adds `.dd-gated` class (opacity .5) + `.pro-badge` to gated dropdown items
+- **Scheduling card**: `showSettings()` dims Auto-Scheduled card + adds `.pro-badge` when `auto_scheduling` is gated
+- **Advanced Import**: `_applyMenuGating()` adds `.pro-badge` to `#imp-adv-toggle`
+
+#### `_applyMenuGating()` Helper
+- Called from: `init()` (after `_loadLicense`), `_populateLicenseSection()`, `_recoverLicenseAsync()`
+- Iterates a mapping array of `{id, feature}` pairs for menu items
+- Toggles `.dd-gated` class and adds/removes `.pro-badge` spans
+- **To add a new gated menu item**: add `{id:'btn-id', feature:'feature_name'}` to the `map` array inside `_applyMenuGating()`
+
+#### Gate Toast → Settings Navigation
+- `_gateToast(label)` calls `toast()` with "Upgrade" action label + `_openUpgradeSettings()` callback
+- `_limitToast(type)` same pattern
+- `_openUpgradeSettings()`: closes all dropdowns, opens Settings modal (if not already open), scrolls to `#sect-license` with 100ms delay for modal animation
+- **Gotcha: Settings already open** — `_openUpgradeSettings()` checks if modal is hidden before calling `showSettings()`, otherwise just scrolls
+
+#### "License & Upgrades" Section (Settings)
+- Nav link text: "License & Upgrades" (renamed from "License")
+- Section title: "LICENSE & UPGRADES"
+- `#lic-free-info` contains upgrade info box (`.lic-upgrade-box`) with feature checklist, 4-step upgrade process, and purchase link
+- Auto-hidden when licensed or beta via `_populateLicenseSection()`: `lic_free_info.classList.toggle('hidden', isLicensed||isBeta)`
+- **Future**: Lemon Squeezy embedded checkout will replace/augment the purchase link in this box
+
+#### CSS Classes Reference
+| Class | Purpose |
+|-------|---------|
+| `.pro-badge` | Gold "PRO" badge (inline-block, 8px) |
+| `.theme-locked` | Dimmed theme card (opacity .55, .7 on hover) |
+| `.dd-gated` | Dimmed dropdown menu item (opacity .5, .65 on hover) |
+| `.lic-upgrade-box` | Upgrade info container (bg2, border, rounded) |
+| `.lic-upgrade-list` | Feature checklist (green checkmarks via ::before) |
+| `.lic-upgrade-steps` | "How to upgrade" ordered list |
+| `.lic-upgrade-link` | "Purchase a license" blue link |
+
+### Dev Panel
+- **Shortcut**: `Ctrl+Shift+L` — hidden admin modal
+- **Kill switch toggle**: enables/disables `_LICENSING_ENABLED`
+- **Tier simulation**: `tls3_devTier` in localStorage overrides `_resolvedTier`
+- **Feature gate dropdowns**: per-feature rank overrides
+- **Limit editing**: custom swimlane/item limits
+- **Variant mapping**: maps Lemon Squeezy variant names to tier keys
+- **Copy Config**: exports current `_tierConfig` to clipboard
+- Changing tier via Dev Panel: call `_applyMenuGating()` after changing `_resolvedTier` for immediate menu badge updates; re-open Settings for theme/sched card badge updates
+
+### localStorage Keys
+| Key | Contents |
+|-----|----------|
+| `tls3_license` | Cached license JSON (key, tier, valid, variant, expiresAt, customerEmail, etc.) |
+| `tls3_tierConfig` | Dev config override (merged with defaults) |
+| `tls3_devTier` | Dev tier simulation string (e.g. 'free', 'boardroom') |
+| `tls3_tier` | Legacy tier from URL params |
+| `tls3_ref` | Referral source from URL params |
+
+### Gotchas
+- `_scDispatch.showFloat()` must use `.call(this)` — `_scDispatch` is a plain object, `this` defaults to `_scDispatch` not `App`
+- `_applyMenuGating()` is called inside `_populateLicenseSection()` — no need for separate calls after license changes
+- Theme card + scheduling card badges are rendered in `showSettings()` (open-time), not dynamically — must close/reopen Settings to see badge changes after tier change
+- IDB transaction gotcha: Never `await` non-IDB async calls inside an IDB transaction — use read tx -> async work -> write tx pattern
+- Export watermark gate: `exportSVG()`/`exportPNG()` force watermark temporarily during export only — does NOT affect live view checkbox state
