@@ -383,36 +383,25 @@
               <span class="license-badge license-badge-free" id="lic-badge">Free</span>
             </div>
             <div class="license-card-details" id="lic-details"></div>
-          </div>
-          <div class="form-group" style="margin-top:16px"><label>License Key</label>
-            <div style="display:flex;gap:6px"><input type="text" id="s-lic-key" class="form-input" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" spellcheck="false" autocomplete="off" style="flex:1;font-family:monospace;letter-spacing:0.5px"><button class="btn btn-primary" id="btn-lic-activate" style="padding:6px 14px">Activate</button></div>
-          </div>
-          <div id="lic-deactivate-wrap" class="hidden" style="margin-top:8px"><button class="btn btn-secondary btn-sm" id="btn-lic-deactivate">Deactivate License</button></div>
-          <div class="settings-group-divider" style="margin-top:16px"></div>
-          <div id="lic-free-info" class="lic-upgrade-box" style="margin-top:12px">
-            <div class="lic-upgrade-title">&#9733; Upgrade to Boardroom</div>
-            <p style="margin:8px 0 10px;font-size:11px;color:var(--tx2);line-height:1.5">Unlock the full Timeline Studio experience:</p>
-            <ul class="lic-upgrade-list">
-              <li>All themes (Light, Midnight, and future themes)</li>
-              <li>CSV import &amp; export</li>
-              <li>Auto-scheduling with dependency engine</li>
-              <li>Critical path analysis</li>
-              <li>Presenter mode</li>
-              <li>Float labels</li>
-              <li>Dependencies (create &amp; modify)</li>
-              <li>Clean exports (no watermark)</li>
-              <li>Unlimited swimlanes &amp; items</li>
-            </ul>
-            <div class="lic-upgrade-steps">
-              <div class="lic-upgrade-steps-title">How to upgrade:</div>
-              <ol>
-                <li>Purchase a license at timelinestudio.io</li>
-                <li>You'll receive a license key via email</li>
-                <li>Enter your key above and click Activate</li>
-                <li>Your license stays with your project files</li>
-              </ol>
+            <!-- Key input row (hidden when licensed) -->
+            <div class="lic-key-row" id="lic-key-row" style="margin-top:10px">
+              <input type="text" id="s-lic-key" class="form-input" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" spellcheck="false" autocomplete="off" style="flex:1;font-family:monospace;letter-spacing:0.5px;font-size:12px">
+              <button class="btn btn-primary" id="btn-lic-activate" style="padding:5px 12px;font-size:12px">Activate</button>
             </div>
-            <a href="https://timelinestudio.io/#pricing" target="_blank" rel="noopener" class="lic-upgrade-link">Purchase a license &rarr;</a>
+            <!-- Licensed: expandable details -->
+            <div id="lic-details-expand" class="lic-details-expand hidden" style="position:relative">
+              <span class="lic-refresh-btn" id="btn-lic-refresh" data-tooltip="Re-check license status and pull latest data from server. Does not use an activation.">&#x21bb;</span>
+              <div id="lic-details-full"></div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+                <button class="btn btn-secondary btn-sm" id="btn-lic-deactivate" data-tooltip="Removes the license from this device only. Your license key stays valid and can be re-activated anytime.">Deactivate</button>
+                <a href="https://timelinestudio.io/#pricing" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" id="btn-lic-pricing" data-tooltip="View available plans and pricing on timelinestudio.io">Pricing &amp; Packages</a>
+              </div>
+            </div>
+            <!-- Free: upgrade summary + CTA -->
+            <div id="lic-free-info" style="margin-top:10px">
+              <div class="lic-upgrade-summary">&#9733; Upgrade to Boardroom &mdash; unlimited swimlanes, unlimited items &amp; priority support.</div>
+              <a href="https://timelinestudio.io/#pricing" target="_blank" rel="noopener" class="lic-purchase-btn">Get a License &rarr;</a>
+            </div>
           </div>
         </div>
 
@@ -683,7 +672,7 @@
 
         <div class="dev-section">
           <div class="dev-section-title">Simulate Tier</div>
-          <div class="dev-help">Overrides the user&rsquo;s actual tier for testing. Select a tier to force the app into that mode &mdash; this is how you test what a Free user vs. Boardroom user sees. &ldquo;None&rdquo; means use the real tier from the license key or beta URL param. Persists across page reloads (stored in <code>localStorage</code>).</div>
+          <div class="dev-help">Overrides the user&rsquo;s actual tier for testing. Select a tier to force the app into that mode &mdash; this is how you test what a Free user vs. Boardroom user sees. &ldquo;None&rdquo; means use the real tier from the license key. Persists across page reloads (stored in <code>localStorage</code>).</div>
           <div id="dev-tier-radios" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px"></div>
         </div>
 

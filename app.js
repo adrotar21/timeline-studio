@@ -174,21 +174,20 @@ function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner
 const _TIER_CONFIG_DEFAULTS={
   tiers:{
     free:{rank:0,label:'Free',limits:{swimlanes:5,items:25}},
-    beta_boardroom:{rank:1,label:'Beta Access',limits:{swimlanes:Infinity,items:Infinity}},
     boardroom:{rank:1,label:'Boardroom',limits:{swimlanes:Infinity,items:Infinity}},
     execution:{rank:2,label:'Execution',limits:{swimlanes:Infinity,items:Infinity}},
   },
   features:{
-    themes_all:1,export_clean:1,csv_export:1,csv_import:1,
-    critical_path:1,auto_scheduling:1,dependencies:1,
-    presenter_mode:1,show_float:1,
+    themes_all:0,export_clean:0,csv_export:0,csv_import:0,
+    critical_path:0,auto_scheduling:0,dependencies:0,
+    presenter_mode:0,show_float:0,
   },
-  freeThemes:['warm','cool'],
+  freeThemes:['warm','cool','light','midnight'],
   variantMap:{boardroom_annual:'boardroom',execution_annual:'execution'},
 };
 
 const App={
-  _version:'0.45.0',
+  _version:'0.46.0',
   _LICENSING_ENABLED:true, /* Kill switch: set false to bypass all tier gating — flip to true when ready to enforce */
   _tierConfig:null,_resolvedTier:'free',
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
@@ -567,22 +566,18 @@ const App={
      'panel-tab','panel-tab-icon','btn-collapse','btn-lock-collapse',
      's-lic-key','btn-lic-activate','btn-lic-deactivate',
      'lic-card','lic-tier-name','lic-badge','lic-details',
-     'lic-deactivate-wrap','lic-free-info',
+     'lic-key-row','lic-details-expand','lic-details-full','lic-free-info',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
     /* Tier config & license initialization */
     this._initTierConfig();
-    /* GitHub Pages: skip all licensing — serve as full-featured beta */
+    /* GitHub Pages: full-featured access, hide license UI */
     this._isGitHubPages=location.origin==='https://adrotar21.github.io';
     if(this._isGitHubPages){
-      this._resolvedTier='beta_boardroom';this._tier='beta_boardroom';
-      /* Hide License nav item and section */
+      this._resolvedTier='boardroom';
       const licNav=document.querySelector('#settings-nav a[href="#sect-license"]');if(licNav)licNav.style.display='none';
       const licSect=document.getElementById('sect-license');if(licSect)licSect.style.display='none';
-      /* Set default active nav to Project */
       const projNav=document.querySelector('#settings-nav a[href="#sect-project"]');if(projNav)projNav.classList.add('active');
     }else{
-    /* Beta tier activation from URL params (e.g. ?tier=beta_boardroom&ref=signup or ?ref=gm) */
-    {const _bp=new URLSearchParams(location.search);let _bt=_bp.get('tier');const _br=_bp.get('ref');if(_br==='gm'&&!_bt)_bt='beta_boardroom';if(_bt){localStorage.setItem('tls3_tier',_bt);if(_br)localStorage.setItem('tls3_ref',_br);const _bu=new URL(location.href);_bu.searchParams.delete('tier');_bu.searchParams.delete('ref');history.replaceState(null,'',_bu.pathname+(_bu.hash||''));setTimeout(()=>this.toast('Beta access activated!','success',3000),800)}this._tier=localStorage.getItem('tls3_tier')||'free';this._tierRef=localStorage.getItem('tls3_ref')||''}
     this._loadLicense();
     this._applyMenuGating();
     }
@@ -849,8 +844,8 @@ const App={
     if(!this._LICENSING_ENABLED)return true;
     const cfg=this._tierConfig;const tierKey=this._resolvedTier||'free';
     const tier=cfg.tiers[tierKey]||cfg.tiers.free;
-    if(type==='swimlanes')return this.proj.swimlanes.length<tier.limits.swimlanes;
-    if(type==='items')return this.proj.items.length<tier.limits.items;
+    if(type==='swimlanes')return this.proj.swimlanes.length<=tier.limits.swimlanes;
+    if(type==='items')return this.proj.items.length<=tier.limits.items;
     return true;
   },
   _gateToast(label){this.toast(label+' requires a Boardroom license','info',4000,'Upgrade',()=>this._openUpgradeSettings())},
@@ -889,7 +884,7 @@ const App={
     const lic=this._readLicenseCache();
     if(lic){this._applyLicenseCache(lic);return}
     /* localStorage empty — try IndexedDB recovery (async) */
-    this._resolvedTier=this._tier||'free';
+    this._resolvedTier='free';
     this._recoverLicenseAsync();
   },
   _readLicenseCache(){
@@ -898,7 +893,7 @@ const App={
   },
   _applyLicenseCache(lic){
     if(lic.expiresAt&&new Date(lic.expiresAt)<new Date()){
-      this._resolvedTier=this._tier||'free';
+      this._resolvedTier='free';
       this._clearLicenseStorage();return;
     }
     this._resolvedTier=lic.tier;
@@ -939,14 +934,21 @@ const App={
           key,tier,valid:true,
           variant:variantName,
           expiresAt:lk.expires_at||null,
+          createdAt:lk.created_at||null,
           lastChecked:new Date().toISOString(),
           customerEmail:meta.customer_email||lk.customer_email||'',
-          customerName:meta.customer_name||''
+          customerName:meta.customer_name||'',
+          productName:meta.product_name||'',
+          orderId:meta.order_id||null,
+          status:lk.status||'active'
         };
         this._storeLicense(lic);
         this._resolvedTier=tier;
         this.toast('License activated! — '+this._tierLabel(),'success',3000);
-        this._populateLicenseSection();
+        /* Re-open Settings to refresh all gate visuals */
+        const modal=document.getElementById('settings-modal');
+        if(modal&&!modal.classList.contains('hidden')){modal.classList.add('hidden');this.showSettings();setTimeout(()=>{const s=document.getElementById('sect-license');if(s)s.scrollIntoView({behavior:'smooth',block:'start'})},100)}
+        else{this._populateLicenseSection()}
       }else{
         const msg=data.error||data.message||(data.license_key&&data.license_key.status_formatted)||'Invalid license key';
         this.toast(msg,'error',4000);
@@ -965,11 +967,11 @@ const App={
       const data=await res.json();
       if(data.valid){
         const raw=localStorage.getItem('tls3_license');
-        if(raw){const lic=JSON.parse(raw);lic.lastChecked=new Date().toISOString();if(data.license_key)lic.expiresAt=data.license_key.expires_at||lic.expiresAt;this._storeLicense(lic)}
+        if(raw){const lic=JSON.parse(raw);const lk=data.license_key||{};const meta=data.meta||{};lic.lastChecked=new Date().toISOString();if(lk.expires_at)lic.expiresAt=lk.expires_at;if(lk.created_at)lic.createdAt=lk.created_at;if(lk.status)lic.status=lk.status;if(meta.product_name)lic.productName=meta.product_name;if(meta.order_id)lic.orderId=meta.order_id;this._storeLicense(lic)}
       }else{
         /* License revoked or expired server-side */
         this._clearLicenseStorage();
-        this._resolvedTier=this._tier||'free';
+        this._resolvedTier='free';
         this.toast('License is no longer valid — reverted to '+this._tierLabel(),'error',5000);
         if(document.getElementById('settings-modal')&&!document.getElementById('settings-modal').classList.contains('hidden'))this._populateLicenseSection();
       }
@@ -978,14 +980,17 @@ const App={
 
   async _deactivateLicense(){
     this._clearLicenseStorage();
-    this._resolvedTier=this._tier||'free';
+    this._resolvedTier='free';
     this.toast('License deactivated','info',3000);
-    this._populateLicenseSection();
+    /* Re-open Settings to re-render all gate visuals (theme cards, sched cards, badges) */
+    const modal=document.getElementById('settings-modal');
+    if(modal&&!modal.classList.contains('hidden')){modal.classList.add('hidden');this.showSettings();setTimeout(()=>{const s=document.getElementById('sect-license');if(s)s.scrollIntoView({behavior:'smooth',block:'start'})},100)}
+    else{this._populateLicenseSection()}
   },
 
   /* ── License storage: localStorage + IndexedDB redundancy ── */
   _storeLicense(lic){
-    try{localStorage.setItem('tls3_license',JSON.stringify(lic));localStorage.setItem('tls3_tier',lic.tier)}catch(e){}
+    try{localStorage.setItem('tls3_license',JSON.stringify(lic))}catch(e){}
     /* IndexedDB backup (async, fire-and-forget) */
     this._storeLicenseIDB(lic);
     /* Request persistent storage to reduce browser eviction */
@@ -1006,40 +1011,66 @@ const App={
   },
 
   _populateLicenseSection(){
-    const tierName=this._tierLabel();
-    const tierKey=this._resolvedTier||'free';
-    const cfg=this._tierConfig;const tierDef=cfg.tiers[tierKey]||cfg.tiers.free;
+    const cfg=this._tierConfig;
     let lic=null;try{const raw=localStorage.getItem('tls3_license');if(raw)lic=JSON.parse(raw)}catch(e){}
-    const isBeta=tierKey==='beta_boardroom';
     const isLicensed=lic&&lic.valid&&lic.tier;
     const isExpired=lic&&lic.expiresAt&&new Date(lic.expiresAt)<new Date();
-    /* Tier name */
-    if(this.$.lic_tier_name)this.$.lic_tier_name.textContent=isLicensed?(tierName):isBeta?'Beta Access':'Free Plan';
+    /* Sync _resolvedTier from license if it drifted — but respect dev override */
+    const devOverride=localStorage.getItem('tls3_devTier');
+    if(!devOverride&&isLicensed&&!isExpired&&this._resolvedTier!==lic.tier){this._resolvedTier=lic.tier}
+    const tierKey=this._resolvedTier||'free';
+    /* For display name: use license tier when licensed (even if expired) so user sees "Boardroom — Expired" not "Free — Expired" */
+    const displayTierKey=isLicensed&&lic?lic.tier:tierKey;
+    const tierName=(cfg.tiers[displayTierKey]||cfg.tiers.free).label;
+    if(this.$.lic_tier_name)this.$.lic_tier_name.textContent=isLicensed?tierName:'Free Plan';
     /* Badge */
     if(this.$.lic_badge){
       this.$.lic_badge.className='license-badge';
       if(isExpired){this.$.lic_badge.textContent='Expired';this.$.lic_badge.classList.add('license-badge-expired')}
       else if(isLicensed){this.$.lic_badge.textContent='Active';this.$.lic_badge.classList.add('license-badge-active')}
-      else if(isBeta){this.$.lic_badge.textContent='Beta';this.$.lic_badge.classList.add('license-badge-beta')}
       else{this.$.lic_badge.textContent='Free';this.$.lic_badge.classList.add('license-badge-free')}
     }
-    /* Details */
+    /* Inline details line (below tier name) */
     if(this.$.lic_details){
       let html='';
       if(isLicensed&&lic){
-        if(lic.customerEmail)html+='Licensed to: '+U.esc(lic.customerEmail)+'<br>';
-        else if(lic.customerName)html+='Licensed to: '+U.esc(lic.customerName)+'<br>';
-        if(lic.expiresAt){const exp=new Date(lic.expiresAt);html+='Expires: '+exp.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})+'<br>'}
-        if(lic.key){const masked=lic.key.length>4?'····'+lic.key.slice(-4):lic.key;html+='Key: '+U.esc(masked)}
-      }else if(isBeta){
-        html='Full feature access during beta period';
+        const who=lic.customerEmail||lic.customerName||'';
+        html=who?'Licensed to: '+U.esc(who):'Licensed';
+        html+=' <span class="lic-details-toggle" id="lic-details-toggle">Show Details &#9656;</span>';
       }
       this.$.lic_details.innerHTML=html;
+      /* Bind details toggle */
+      const tog=document.getElementById('lic-details-toggle');
+      if(tog)tog.onclick=()=>{const exp=this.$.lic_details_expand;if(!exp)return;const wasHidden=exp.classList.toggle('hidden');tog.innerHTML=wasHidden?'Show Details &#9656;':'Hide Details &#9662;'};
     }
-    /* Toggle visibility */
-    if(this.$.lic_deactivate_wrap)this.$.lic_deactivate_wrap.classList.toggle('hidden',!isLicensed);
-    if(this.$.lic_free_info)this.$.lic_free_info.classList.toggle('hidden',isLicensed||isBeta);
-    if(this.$.s_lic_key){this.$.s_lic_key.value='';this.$.s_lic_key.closest('.form-group').classList.toggle('hidden',isBeta)}
+    /* Expandable details (key, expiry, deactivate) */
+    if(this.$.lic_details_full){
+      let html='';
+      if(isLicensed&&lic){
+        const dfmt={year:'numeric',month:'short',day:'numeric'};
+        if(lic.productName)html+='<div class="lic-detail-row">Product: '+U.esc(lic.productName)+'</div>';
+        if(lic.key){
+          const masked=lic.key.length>4?'\u00b7\u00b7\u00b7\u00b7'+lic.key.slice(-4):lic.key;
+          const full=U.esc(lic.key);
+          html+='<div class="lic-detail-row">Key: <span id="lic-key-masked">'+U.esc(masked)+'</span><span id="lic-key-full" class="hidden">'+full+'</span>';
+          html+=' <span class="lic-key-toggle" id="lic-key-toggle">show</span></div>';
+        }
+        if(lic.createdAt){const d=new Date(lic.createdAt);html+='<div class="lic-detail-row">Purchased: '+d.toLocaleDateString(undefined,dfmt)+'</div>'}
+        if(lic.expiresAt){const d=new Date(lic.expiresAt);const daysLeft=Math.ceil((d-new Date())/(1000*60*60*24));const daysStr=daysLeft>0?'('+daysLeft+' days)':daysLeft===0?'(today)':'(expired)';html+='<div class="lic-detail-row">Expires: '+d.toLocaleDateString(undefined,dfmt)+' <span style="opacity:.6">'+daysStr+'</span></div>'}
+        else{html+='<div class="lic-detail-row">Expires: Never</div>'}
+        if(lic.orderId)html+='<div class="lic-detail-row">Order: #'+U.esc(String(lic.orderId))+'</div>';
+        if(lic.lastChecked){const d=new Date(lic.lastChecked);html+='<div class="lic-detail-row" style="margin-top:4px;font-size:10px;opacity:.7">Last verified: '+d.toLocaleDateString(undefined,dfmt)+'</div>'}
+      }
+      this.$.lic_details_full.innerHTML=html;
+      /* Bind key show/hide toggle */
+      const kt=document.getElementById('lic-key-toggle');
+      if(kt)kt.onclick=()=>{const m=document.getElementById('lic-key-masked');const f=document.getElementById('lic-key-full');if(!m||!f)return;const showing=!f.classList.contains('hidden');m.classList.toggle('hidden',!showing);f.classList.toggle('hidden',showing);kt.textContent=showing?'show':'hide'};
+    }
+    /* Toggle visibility of sections */
+    if(this.$.lic_key_row)this.$.lic_key_row.classList.toggle('hidden',!!isLicensed);
+    if(this.$.lic_details_expand)this.$.lic_details_expand.classList.add('hidden'); /* always start collapsed */
+    if(this.$.lic_free_info)this.$.lic_free_info.classList.toggle('hidden',!!isLicensed);
+    if(this.$.s_lic_key)this.$.s_lic_key.value='';
     this._applyMenuGating();
   },
 
@@ -1106,8 +1137,6 @@ const App={
       {k:'Kill Switch',v:this._LICENSING_ENABLED?'ON (gating active)':'OFF (all features open)',h:'Whether _checkTier() and _checkLimit() actually enforce gates'},
       {k:'License Cached',v:lic?'Yes \u2014 '+U.esc(lic.tier)+(ago!==null?' (last validated '+ago+'h ago)':''):'No license stored',h:'Whether a Lemon Squeezy license is saved in localStorage'},
       {k:'Dev Override',v:devOverride||'None',h:'If set, bypasses the license and forces this tier (from Simulate Tier above)'},
-      {k:'Legacy Tier',v:this._tier,h:'The beta tier from URL params (?tier=beta_boardroom) — used as fallback when no license is cached'},
-      {k:'Tier Ref',v:this._tierRef||'(none)',h:'Referral code from URL params (?ref=gm) — for tracking beta user source'},
     ];
     el.innerHTML=lines.map(l=>'<div class="dev-state-row"><span class="dev-state-key" title="'+U.esc(l.h)+'">'+U.esc(l.k)+'</span> <b>'+U.esc(l.v)+'</b></div>').join('');
   },
@@ -2178,6 +2207,7 @@ const App={
     on('btn-s-apply',()=>this.applySettings());on('btn-save-sw',()=>this.saveSwM());on('btn-del-sw',()=>this.delSwM());
     on('btn-lic-activate',()=>{const k=this.$.s_lic_key?this.$.s_lic_key.value.trim():'';if(!k){this.toast('Enter a license key','error');return}this._activateLicense(k)});
     on('btn-lic-deactivate',()=>{if(!confirm('Deactivate your license on this device?'))return;this._deactivateLicense()});
+    on('btn-lic-refresh',()=>{const lic=this._readLicenseCache();if(!lic||!lic.key)return;this.toast('Refreshing license…','info',2000);this._activateLicense(lic.key)});
     on('dev-apply',()=>this._applyDevPanel());on('dev-reset',()=>this._resetDevPanel());on('dev-copy-config',()=>this._copyDevConfig());
     on('dev-add-variant',()=>{const wrap=document.getElementById('dev-variants');if(!wrap)return;const cfg=this._tierConfig;const tierKeys=Object.keys(cfg.tiers);const row=document.createElement('div');row.className='dev-var-row';const inp=document.createElement('input');inp.type='text';inp.className='form-input';inp.placeholder='variant_name';const arrow=document.createElement('span');arrow.textContent=' \u2192 ';arrow.style.cssText='color:var(--tx3);flex-shrink:0';const sel=document.createElement('select');sel.className='form-input';tierKeys.forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=cfg.tiers[k].label;sel.appendChild(o)});const del=document.createElement('span');del.className='dev-var-del';del.textContent='\u00d7';del.title='Remove this mapping';del.onclick=()=>row.remove();row.appendChild(inp);row.appendChild(arrow);row.appendChild(sel);row.appendChild(del);wrap.appendChild(row)});
     on('btn-sched-apply',()=>this.applyScheduleTransition());

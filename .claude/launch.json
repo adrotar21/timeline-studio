@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "timeline-studio",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/Program Files/nodejs/node_modules/npm/bin/npx-cli.js", "serve", "-l", "3000", "."],
+      "port": 3000
+    },
+    {
+      "name": "landing-page",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/Program Files/nodejs/node_modules/npm/bin/npx-cli.js", "serve", "-l", "3456", "C:/Users/thedr/OneDrive/Desktop/timeline-studio-landing"],
+      "port": 3456
+    }
+  ]
+}

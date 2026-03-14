@@ -691,18 +691,19 @@ body.theme-light .toggle-slider::after{background:#fff;box-shadow:0 1px 3px rgba
 .theme-card.theme-locked:hover{opacity:.7}
 .save-dd-item.dd-gated{opacity:.5}
 .save-dd-item.dd-gated:hover{opacity:.65}
-/* Upgrade info box */
-.lic-upgrade-box{background:var(--bg2);border:1px solid var(--brd);border-radius:8px;padding:14px 16px}
-.lic-upgrade-title{font-size:13px;font-weight:700;color:var(--tx1)}
-.lic-upgrade-list{list-style:none;padding:0;margin:0 0 12px}
-.lic-upgrade-list li{font-size:11px;color:var(--tx2);line-height:1.8;padding-left:18px;position:relative}
-.lic-upgrade-list li::before{content:'\2713';position:absolute;left:0;color:var(--success);font-weight:700}
-.lic-upgrade-steps{border-top:1px solid var(--brd);padding-top:10px;margin-top:4px}
-.lic-upgrade-steps-title{font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:4px}
-.lic-upgrade-steps ol{margin:0;padding-left:18px}
-.lic-upgrade-steps li{font-size:11px;color:var(--tx3);line-height:1.8}
-.lic-upgrade-link{display:inline-block;margin-top:10px;color:var(--acc);text-decoration:underline;font-size:12px;font-weight:500}
-.lic-upgrade-link:hover{color:var(--acc2)}
+/* Compact license card elements */
+.lic-key-row{display:flex;gap:6px;align-items:center}
+.lic-upgrade-summary{font-size:11px;color:var(--tx2);line-height:1.5}
+.lic-purchase-btn{display:inline-block;margin-top:8px;padding:5px 14px;font-size:11px;font-weight:600;color:var(--bg1);background:var(--acc);border-radius:5px;text-decoration:none;transition:opacity .15s}
+.lic-purchase-btn:hover{opacity:.85;color:var(--bg1)}
+.lic-details-toggle{display:inline-block;font-size:10px;color:var(--acc);cursor:pointer;margin-left:8px;user-select:none;padding:1px 8px;border:1px solid var(--acc);border-radius:10px;font-weight:500;transition:all .15s}
+.lic-details-toggle:hover{background:var(--acc);color:var(--bg1)}
+.lic-details-expand{margin-top:10px;padding-top:10px;border-top:1px solid var(--brd);font-size:11px;color:var(--tx3);line-height:1.4}
+.lic-detail-row{padding:2px 0}
+.lic-refresh-btn{position:absolute;top:10px;right:0;font-size:16px;color:var(--tx3);cursor:pointer;user-select:none;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:4px;transition:all .15s}
+.lic-refresh-btn:hover{color:var(--acc);background:var(--bg3)}
+.lic-key-toggle{font-size:10px;color:var(--acc);cursor:pointer;text-decoration:underline;margin-left:4px;user-select:none}
+.lic-key-toggle:hover{color:var(--acc2)}
 /* Dev Panel */
 .dev-section{margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--brd)}
 .dev-section:last-child{border-bottom:none}

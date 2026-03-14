@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.44.11` — B55 dropdown emoji icon color fix for Mac Safari. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.46.0` — Licensing simplification (free-unlock + beta removal). Live at `https://adrotar21.github.io/timeline-studio/`.
 - **Beta feedback (Feb 2026):** Two PgM beta testers validated the core product. Discoverability is the #1 gap — see BACKLOG.md for F48 (P1) and related items.
 - Version history tracked in `docs/BACKLOG.md` (recent) and `docs/VERSION_HISTORY.md` (archive), plus **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
@@ -331,11 +331,13 @@ See `docs/BACKLOG.md` for the prioritized and sized bug/feature backlog with ver
 ## Licensing & Tier System
 
 ### Architecture Overview
-- **Kill switch**: `App._LICENSING_ENABLED` (default `false`) — when OFF, all gates and visual indicators are no-ops
+- **Kill switch**: `App._LICENSING_ENABLED` (default `true`) — when OFF, all gates and visual indicators are no-ops
 - **Tier config**: `_TIER_CONFIG_DEFAULTS` constant merged with `localStorage['tls3_tierConfig']` at runtime into `App._tierConfig`
-- **Tiers**: `free` (rank 0), `beta_boardroom` (rank 1), `boardroom` (rank 1), `execution` (rank 2)
-- **`_resolvedTier`**: authoritative runtime tier; resolved from: (1) dev override `tls3_devTier`, (2) cached license `tls3_license`, (3) legacy `tls3_tier` from URL params
-- **Free limits**: 5 swimlanes, 25 items; Boardroom/Execution: unlimited
+- **Tiers**: `free` (rank 0), `boardroom` (rank 1), `execution` (rank 2)
+- **`_resolvedTier`**: authoritative runtime tier; resolved from: (1) dev override `tls3_devTier`, (2) cached license `tls3_license`, (3) fallback `'free'`
+- **Free limits**: 5 swimlanes, 25 items (inclusive — `<=`); Boardroom/Execution: unlimited
+- **All features unlocked**: all 9 feature ranks set to `0` — free tier passes all `_checkTier()` gates. Hooks preserved at all 18 enforcement points; bump ranks to `1` to re-gate
+- **All themes free**: `freeThemes` includes warm, cool, light, midnight
 
 ### License API & Storage
 - **Lemon Squeezy validate-only flow**: `_activateLicense(key)` calls POST `/validate` (never `/activate`, no instance slots burned)
@@ -348,27 +350,27 @@ See `docs/BACKLOG.md` for the prioritized and sized bug/feature backlog with ver
 
 ### GitHub Pages Bypass
 - `App._isGitHubPages` = `true` when `location.origin === 'https://adrotar21.github.io'`
-- Sets `_resolvedTier = 'beta_boardroom'` (rank 1) — all features unlocked
+- Sets `_resolvedTier = 'boardroom'` (rank 1) — unlimited swimlanes/items
 - Hides License & Upgrades section in Settings nav + content
 - Settings nav reset logic skips hidden links for first-visible active state
 
-### Feature Gates (9 features, all require rank >= 1)
-`_checkTier(feature)` returns `true` when kill switch is OFF or tier rank >= required rank.
+### Feature Gates (9 features, currently all at rank 0 = free)
+`_checkTier(feature)` returns `true` when kill switch is OFF, or tier rank >= required rank. With all features at rank 0, free tier passes all gates. To re-gate a feature, bump its rank to `1` in `_TIER_CONFIG_DEFAULTS.features`.
 
 | Feature | Gate Location(s) | Notes |
 |---------|-----------------|-------|
-| `themes_all` | Theme card click + `applySettings()` | Free themes: warm, cool |
-| `export_clean` | `exportSVG()`, `exportPNG()` | Forces watermark temporarily for export |
+| `themes_all` | Theme card click + `applySettings()` | Currently all themes free |
+| `export_clean` | `exportSVG()`, `exportPNG()` | Would force watermark temporarily for export when gated |
 | `csv_export` | `exportDataCSV()`, `doDataExport()` | |
-| `csv_import` | `toggleAdvImport()`, `handleImportFile()` | JSON import stays free |
+| `csv_import` | `toggleAdvImport()`, `handleImportFile()` | JSON import always free |
 | `critical_path` | `toggleCritPath()` | |
-| `auto_scheduling` | `toggleSchedulingMode()`, `applySettings()` | Manual mode stays free |
-| `dependencies` | `linkDepFromSel()`, panel dep add | Existing deps render read-only |
+| `auto_scheduling` | `toggleSchedulingMode()`, `applySettings()` | |
+| `dependencies` | `linkDepFromSel()`, panel dep add | When gated, existing deps render read-only |
 | `presenter_mode` | `togglePresMode()` | Exit is always allowed |
 | `show_float` | `_scDispatch.showFloat.call(this)` | Note `.call(this)` for proper binding |
 
 ### Limit Gates (2 limits)
-`_checkLimit(type)` returns `true` when kill switch is OFF or count < tier limit.
+`_checkLimit(type)` returns `true` when kill switch is OFF or count <= tier limit (inclusive).
 
 | Limit | Gate Location(s) |
 |-------|-----------------|
@@ -399,9 +401,9 @@ See `docs/BACKLOG.md` for the prioritized and sized bug/feature backlog with ver
 #### "License & Upgrades" Section (Settings)
 - Nav link text: "License & Upgrades" (renamed from "License")
 - Section title: "LICENSE & UPGRADES"
-- `#lic-free-info` contains upgrade info box (`.lic-upgrade-box`) with feature checklist, 4-step upgrade process, and purchase link
-- Auto-hidden when licensed or beta via `_populateLicenseSection()`: `lic_free_info.classList.toggle('hidden', isLicensed||isBeta)`
-- **Future**: Lemon Squeezy embedded checkout will replace/augment the purchase link in this box
+- `#lic-free-info` contains upgrade info box (`.lic-upgrade-box`) with upgrade summary (unlimited swimlanes/items + priority support), 4-step upgrade process, and purchase link
+- Auto-hidden when licensed via `_populateLicenseSection()`: `lic_free_info.classList.toggle('hidden', isLicensed)`
+- **Future**: Lemon Squeezy embedded checkout will replace/augment the purchase link; 30-day trial via LS replaces beta link concept
 
 #### CSS Classes Reference
 | Class | Purpose |
@@ -429,9 +431,7 @@ See `docs/BACKLOG.md` for the prioritized and sized bug/feature backlog with ver
 |-----|----------|
 | `tls3_license` | Cached license JSON (key, tier, valid, variant, expiresAt, customerEmail, etc.) |
 | `tls3_tierConfig` | Dev config override (merged with defaults) |
-| `tls3_devTier` | Dev tier simulation string (e.g. 'free', 'boardroom') |
-| `tls3_tier` | Legacy tier from URL params |
-| `tls3_ref` | Referral source from URL params |
+| `tls3_devTier` | Dev tier simulation string (e.g. 'free', 'boardroom') — persists across reloads |
 
 ### Gotchas
 - `_scDispatch.showFloat()` must use `.call(this)` — `_scDispatch` is a plain object, `this` defaults to `_scDispatch` not `App`
