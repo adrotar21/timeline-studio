@@ -51,8 +51,8 @@ function makeFakeLS(){
 }
 
 /* ── Mock App factory ────────────────────────────────────────────── */
-function makeApp(overrides={}){
-  const ls=makeFakeLS();
+function makeApp(overrides={},extLS=null){
+  const ls=extLS||makeFakeLS();
   const app={
     _LICENSING_ENABLED:true,
     _resolvedTier:'free',
@@ -64,16 +64,21 @@ function makeApp(overrides={}){
     _ls:ls, /* exposed for test assertions */
 
     _initTierConfig(){
+      const _fixLimits=(tier,defTier)=>{if(!tier||!tier.limits)return;if(!defTier||!defTier.limits)return;for(const k in defTier.limits){if(tier.limits[k]===null||tier.limits[k]===undefined)tier.limits[k]=defTier.limits[k]}};
       try{
         const raw=ls.getItem('tls3_tierConfig');
         if(raw){
           const parsed=JSON.parse(raw);
-          const base=deepClone(_TIER_CONFIG_DEFAULTS);
+          /* Deep-merge each tier so limits survive */
+          const mergedTiers={};
+          for(const k in _TIER_CONFIG_DEFAULTS.tiers)mergedTiers[k]={..._TIER_CONFIG_DEFAULTS.tiers[k],limits:{..._TIER_CONFIG_DEFAULTS.tiers[k].limits,...(parsed.tiers&&parsed.tiers[k]?parsed.tiers[k].limits:{})},...(parsed.tiers&&parsed.tiers[k]?parsed.tiers[k]:{})};
+          if(parsed.tiers)for(const k in parsed.tiers){if(!mergedTiers[k])mergedTiers[k]=parsed.tiers[k]}
+          for(const k in mergedTiers)_fixLimits(mergedTiers[k],_TIER_CONFIG_DEFAULTS.tiers[k]);
           this._tierConfig={
-            tiers:{...base.tiers,...parsed.tiers},
-            features:{...base.features,...parsed.features},
-            freeThemes:parsed.freeThemes||base.freeThemes,
-            variantMap:{...base.variantMap,...parsed.variantMap},
+            tiers:mergedTiers,
+            features:{..._TIER_CONFIG_DEFAULTS.features,...(parsed.features||{})},
+            freeThemes:parsed.freeThemes||_TIER_CONFIG_DEFAULTS.freeThemes,
+            variantMap:{..._TIER_CONFIG_DEFAULTS.variantMap,...(parsed.variantMap||{})},
           };return;
         }
       }catch(e){}
@@ -91,8 +96,9 @@ function makeApp(overrides={}){
       if(!this._LICENSING_ENABLED)return true;
       const cfg=this._tierConfig;const tierKey=this._resolvedTier||'free';
       const tier=cfg.tiers[tierKey]||cfg.tiers.free;
-      if(type==='swimlanes')return this.proj.swimlanes.length<=tier.limits.swimlanes;
-      if(type==='items')return this.proj.items.length<=tier.limits.items;
+      const lim=tier.limits||{};
+      if(type==='swimlanes'){const max=lim.swimlanes;return max===null||max===undefined||max===Infinity||this.proj.swimlanes.length<=max}
+      if(type==='items'){const max=lim.items;return max===null||max===undefined||max===Infinity||this.proj.items.length<=max}
       return true;
     },
     _tierLabel(){
@@ -826,17 +832,31 @@ function makeItems(n){return Array.from({length:n},(_,i)=>({id:'it'+i}))}
 }
 
 /* ═════════════════════════════════════════════════════════════════ */
-/* 18. Tier Config Missing Limits                                   */
+/* 18. Tier Config Missing/Null Limits (JSON round-trip safety)     */
 /* ═════════════════════════════════════════════════════════════════ */
 {
-  section('18. Tier Config Missing Limits');
+  section('18. Tier Config Missing/Null Limits');
 
+  /* Missing limits property entirely — treated as unlimited */
   const app=makeApp({_resolvedTier:'custom'});
   app._tierConfig.tiers.custom={rank:1,label:'Custom'};/* no limits prop */
-  let threw=false;
-  try{app.proj={swimlanes:makeSwimlanes(3),items:[]};app._checkLimit('swimlanes')}
-  catch(e){threw=true}
-  assertT('missing limits throws (known fragile path)',threw);
+  app.proj={swimlanes:makeSwimlanes(3),items:[]};
+  assertT('missing limits: swimlanes allowed (treated as unlimited)',app._checkLimit('swimlanes'));
+  assertT('missing limits: items allowed (treated as unlimited)',app._checkLimit('items'));
+
+  /* Null limits (Infinity lost in JSON.stringify round-trip) — treated as unlimited */
+  const app2=makeApp({_resolvedTier:'boardroom'});
+  app2._tierConfig.tiers.boardroom.limits={swimlanes:null,items:null};
+  app2.proj={swimlanes:makeSwimlanes(100),items:makeItems(500)};
+  assertT('null swimlane limit: 100 swimlanes allowed',app2._checkLimit('swimlanes'));
+  assertT('null item limit: 500 items allowed',app2._checkLimit('items'));
+
+  /* Undefined limits in object */
+  const app3=makeApp({_resolvedTier:'boardroom'});
+  app3._tierConfig.tiers.boardroom.limits={swimlanes:undefined,items:undefined};
+  app3.proj={swimlanes:makeSwimlanes(50),items:makeItems(200)};
+  assertT('undefined swimlane limit: allowed',app3._checkLimit('swimlanes'));
+  assertT('undefined item limit: allowed',app3._checkLimit('items'));
 }
 
 /* ═════════════════════════════════════════════════════════════════ */
@@ -925,6 +945,54 @@ function makeItems(n){return Array.from({length:n},(_,i)=>({id:'it'+i}))}
   app._resolvedTier='boardroom';
   const g2=app._computeMenuGating();
   assert('rank 1: 0 gated on boardroom',0,g2.gated.length);
+}
+
+/* ═════════════════════════════════════════════════════════════════ */
+/* 22. _initTierConfig JSON Round-Trip: Infinity Restoration        */
+/* ═════════════════════════════════════════════════════════════════ */
+{
+  section('22. _initTierConfig JSON Round-Trip');
+
+  /* Simulate Dev Panel saving config with Infinity values → JSON → null */
+  const ls=makeFakeLS();
+  const cfg=deepClone(_TIER_CONFIG_DEFAULTS);
+  /* JSON.stringify converts Infinity → null */
+  const serialized=JSON.stringify(cfg);
+  assertIncludes('JSON.stringify loses Infinity',serialized,'null');
+  ls.setItem('tls3_tierConfig',serialized);
+
+  const app=makeApp({},ls);
+  app._initTierConfig();
+  /* After deep merge + null restoration, Infinity should be back */
+  assert('boardroom swimlanes restored to Infinity',Infinity,app._tierConfig.tiers.boardroom.limits.swimlanes);
+  assert('boardroom items restored to Infinity',Infinity,app._tierConfig.tiers.boardroom.limits.items);
+  assert('execution swimlanes restored to Infinity',Infinity,app._tierConfig.tiers.execution.limits.swimlanes);
+  assert('execution items restored to Infinity',Infinity,app._tierConfig.tiers.execution.limits.items);
+  /* Free tier limits preserved correctly (not Infinity, no restoration needed) */
+  assert('free swimlanes preserved',5,app._tierConfig.tiers.free.limits.swimlanes);
+  assert('free items preserved',25,app._tierConfig.tiers.free.limits.items);
+
+  /* Verify limit checks work with restored config */
+  app._resolvedTier='boardroom';
+  app.proj={swimlanes:makeSwimlanes(100),items:makeItems(500)};
+  assertT('restored boardroom: 100 swimlanes OK',app._checkLimit('swimlanes'));
+  assertT('restored boardroom: 500 items OK',app._checkLimit('items'));
+
+  /* Free tier still enforces limits correctly */
+  app._resolvedTier='free';
+  app.proj={swimlanes:makeSwimlanes(5),items:makeItems(25)};
+  assertT('restored free: 5 swimlanes OK (inclusive)',app._checkLimit('swimlanes'));
+  app.proj.swimlanes.push({id:'s6'});
+  assertF('restored free: 6 swimlanes blocked',app._checkLimit('swimlanes'));
+
+  /* Custom overrides in stored config are preserved */
+  const ls2=makeFakeLS();
+  const cfg2=deepClone(_TIER_CONFIG_DEFAULTS);
+  cfg2.tiers.free.limits.swimlanes=10;/* custom override */
+  ls2.setItem('tls3_tierConfig',JSON.stringify(cfg2));
+  const app2=makeApp({},ls2);
+  app2._initTierConfig();
+  assert('custom free limit preserved',10,app2._tierConfig.tiers.free.limits.swimlanes);
 }
 
 /* ═════════════════════════════════════════════════════════════════ */

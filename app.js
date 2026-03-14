@@ -829,7 +829,18 @@ const App={
 
   /* ── Licensing & Tier Gating ─────────────────────────────────────── */
   _initTierConfig(){
-    try{const raw=localStorage.getItem('tls3_tierConfig');if(raw){const parsed=JSON.parse(raw);this._tierConfig={tiers:{..._TIER_CONFIG_DEFAULTS.tiers,...parsed.tiers},features:{..._TIER_CONFIG_DEFAULTS.features,...parsed.features},freeThemes:parsed.freeThemes||_TIER_CONFIG_DEFAULTS.freeThemes,variantMap:{..._TIER_CONFIG_DEFAULTS.variantMap,...parsed.variantMap}};return}}catch(e){}
+    /* Deep-merge stored overrides with defaults.  JSON.stringify converts Infinity→null,
+       so any null limit value is restored to the default (which may be Infinity). */
+    const _fixLimits=(tier,defTier)=>{if(!tier||!tier.limits)return;if(!defTier||!defTier.limits)return;for(const k in defTier.limits){if(tier.limits[k]===null||tier.limits[k]===undefined)tier.limits[k]=defTier.limits[k]}};
+    try{const raw=localStorage.getItem('tls3_tierConfig');if(raw){const parsed=JSON.parse(raw);
+      /* Deep-merge each tier: spread default tier then overlay parsed tier so limits/rank/label survive */
+      const mergedTiers={};
+      for(const k in _TIER_CONFIG_DEFAULTS.tiers)mergedTiers[k]={..._TIER_CONFIG_DEFAULTS.tiers[k],limits:{..._TIER_CONFIG_DEFAULTS.tiers[k].limits,...(parsed.tiers&&parsed.tiers[k]?parsed.tiers[k].limits:{})},...(parsed.tiers&&parsed.tiers[k]?parsed.tiers[k]:{})};
+      /* Include any extra tiers from parsed that aren't in defaults */
+      if(parsed.tiers)for(const k in parsed.tiers){if(!mergedTiers[k])mergedTiers[k]=parsed.tiers[k]}
+      /* Restore null limits (Infinity lost in JSON round-trip) */
+      for(const k in mergedTiers)_fixLimits(mergedTiers[k],_TIER_CONFIG_DEFAULTS.tiers[k]);
+      this._tierConfig={tiers:mergedTiers,features:{..._TIER_CONFIG_DEFAULTS.features,...(parsed.features||{})},freeThemes:parsed.freeThemes||_TIER_CONFIG_DEFAULTS.freeThemes,variantMap:{..._TIER_CONFIG_DEFAULTS.variantMap,...(parsed.variantMap||{})}};return}}catch(e){}
     this._tierConfig={tiers:{..._TIER_CONFIG_DEFAULTS.tiers},features:{..._TIER_CONFIG_DEFAULTS.features},freeThemes:[..._TIER_CONFIG_DEFAULTS.freeThemes],variantMap:{..._TIER_CONFIG_DEFAULTS.variantMap}};
   },
   _checkTier(feature){
@@ -844,14 +855,17 @@ const App={
     if(!this._LICENSING_ENABLED)return true;
     const cfg=this._tierConfig;const tierKey=this._resolvedTier||'free';
     const tier=cfg.tiers[tierKey]||cfg.tiers.free;
-    if(type==='swimlanes')return this.proj.swimlanes.length<=tier.limits.swimlanes;
-    if(type==='items')return this.proj.items.length<=tier.limits.items;
+    const lim=tier.limits||{};
+    /* null/undefined limits = unlimited (Infinity lost in JSON round-trip) */
+    if(type==='swimlanes'){const max=lim.swimlanes;return max===null||max===undefined||max===Infinity||this.proj.swimlanes.length<=max}
+    if(type==='items'){const max=lim.items;return max===null||max===undefined||max===Infinity||this.proj.items.length<=max}
     return true;
   },
   _gateToast(label){this.toast(label+' requires a Boardroom license','info',4000,'Upgrade',()=>this._openUpgradeSettings())},
   _limitToast(type){
-    const lim=this._tierLimits();
-    const msg=type==='swimlanes'?'Free plan limited to '+lim.swimlanes+' swimlanes':'Free plan limited to '+lim.items+' items';
+    const lim=this._tierLimits()||{};
+    const sw=lim.swimlanes??5;const it=lim.items??25;
+    const msg=type==='swimlanes'?'Free plan limited to '+sw+' swimlanes':'Free plan limited to '+it+' items';
     this.toast(msg,'info',4000,'Upgrade',()=>this._openUpgradeSettings());
   },
   _openUpgradeSettings(){
