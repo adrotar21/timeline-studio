@@ -1190,7 +1190,7 @@ const App={
   },
   _resetDevPanel(){
     localStorage.removeItem('tls3_tierConfig');localStorage.removeItem('tls3_devTier');
-    this._LICENSING_ENABLED=false;
+    this._LICENSING_ENABLED=true;
     this._initTierConfig();this._loadLicense();
     this._showDevPanel();
     this.toast('Reset to defaults','info',2000);
