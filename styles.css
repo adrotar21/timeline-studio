@@ -721,6 +721,35 @@ body.theme-light .toggle-slider::after{background:#fff;box-shadow:0 1px 3px rgba
 .dev-state-row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--brd)}
 .dev-state-row:last-child{border-bottom:none}
 .dev-state-key{color:var(--tx3);cursor:help}
+/* Storage Inspector */
+.dev-storage-toggle{cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
+.dev-storage-toggle .arrow{font-size:10px;transition:transform .15s;display:inline-block}
+.dev-storage-toggle .arrow.open{transform:rotate(90deg)}
+.dev-storage-body{display:none}
+.dev-storage-body.open{display:block}
+.dev-cat-hdr{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--acc);margin:10px 0 2px;padding-top:6px;border-top:1px solid var(--brd)}
+.dev-cat-hdr:first-child{margin-top:4px;border-top:none;padding-top:0}
+.dev-cat-help{font-size:10px;color:var(--tx3);line-height:1.4;margin-bottom:6px}
+.dev-cat-help code{background:var(--bg2);padding:1px 3px;border-radius:3px;font-size:9px}
+.dev-storage-row{display:flex;align-items:center;padding:3px 0;border-bottom:1px solid color-mix(in srgb,var(--brd) 50%,transparent);gap:6px;font-size:11px;font-family:var(--mono,'Consolas',monospace)}
+.dev-storage-row:last-child{border-bottom:none}
+.dev-storage-key{min-width:115px;flex-shrink:0;white-space:nowrap}
+.dev-storage-key.present{color:var(--tx2)}
+.dev-storage-key.absent{color:var(--tx3);opacity:.5;font-style:italic}
+.dev-storage-val{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx3);font-size:10px;max-width:200px}
+.dev-storage-size{font-size:9px;color:var(--tx3);min-width:44px;text-align:right;flex-shrink:0}
+.dev-storage-actions{display:flex;gap:3px;flex-shrink:0}
+.dev-storage-btn{font-size:9px;padding:1px 6px;border-radius:3px;cursor:pointer;border:1px solid var(--brd);background:var(--bg2);color:var(--tx2);font-family:inherit}
+.dev-storage-btn:hover{background:var(--bg3);color:var(--tx1)}
+.dev-storage-btn.danger:hover{background:#ef4444;color:#fff;border-color:#ef4444}
+.dev-scenario-bar{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 10px}
+.dev-scenario-btn{font-size:10px;padding:3px 9px;border-radius:4px;cursor:pointer;border:1px solid var(--brd);background:var(--bg2);color:var(--tx2);font-family:inherit}
+.dev-scenario-btn:hover{background:var(--acc);color:var(--bg1);border-color:var(--acc)}
+.dev-scenario-btn.danger:hover{background:#ef4444;border-color:#ef4444}
+.dev-val-panel{margin:4px 0 8px;padding:6px;background:var(--bg2);border-radius:4px;border:1px solid var(--brd)}
+.dev-val-panel textarea{width:100%;font-size:10px;font-family:var(--mono,'Consolas',monospace);background:var(--bg1);color:var(--tx1);border:1px solid var(--brd);border-radius:3px;padding:6px;resize:vertical;box-sizing:border-box}
+.dev-val-panel .dev-val-bar{display:flex;gap:4px;margin-top:4px;justify-content:flex-end}
+.dev-idb-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:11px;font-family:var(--mono,'Consolas',monospace)}
 /* Settings TOC sidebar */
 .settings-nav{width:130px;flex-shrink:0;border-right:1px solid var(--brd);padding:14px 0;position:sticky;top:0;align-self:flex-start}
 .settings-nav a{display:block;padding:6px 12px;font-size:10px;color:var(--tx2);text-decoration:none;border-left:2px solid transparent;cursor:pointer;transition:all .1s}

@@ -187,7 +187,7 @@ const _TIER_CONFIG_DEFAULTS={
 };
 
 const App={
-  _version:'0.46.0',
+  _version:'0.46.2',
   _LICENSING_ENABLED:true, /* Kill switch: set false to bypass all tier gating — flip to true when ready to enforce */
   _tierConfig:null,_resolvedTier:'free',
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
@@ -1126,6 +1126,8 @@ const App={
     this._renderDevVariants();
     /* Current state */
     this._updateDevState();
+    /* Storage inspector (re-render if expanded) */
+    if(this._devStorageExpanded)this._renderDevStorage();
     modal.classList.remove('hidden');
   },
   _renderDevVariants(){
@@ -1183,6 +1185,7 @@ const App={
     /* Save config override */
     try{localStorage.setItem('tls3_tierConfig',JSON.stringify(cfg))}catch(e){}
     this._updateDevState();
+    if(this._devStorageExpanded)this._renderDevStorage();
     this.toast('Dev config applied','success',2000);
   },
   _resetDevPanel(){
@@ -1207,6 +1210,185 @@ const App={
       this.toast('Config copied to clipboard','success',2000);
     });
   },
+
+  /* ── Storage Inspector (Dev Panel) ── */
+  _DEV_STORAGE_KEYS:[
+    {key:'tls3',label:'Project Auto-Save',cat:'project',large:true},
+    {key:'tls3_saveTime',label:'Last Save Timestamp',cat:'project'},
+    {key:'tls3_fileName',label:'Last File Name',cat:'project'},
+    {key:'tls3_recentNames',label:'MRU Files Cache',cat:'project'},
+    {key:'tls3_fpProps',label:'Floating Panel Props',cat:'ui'},
+    {key:'tls3_panelCollapsed',label:'Panel Collapsed',cat:'ui'},
+    {key:'tls3_panelLocked',label:'Panel Locked',cat:'ui'},
+    {key:'tls3_shortcuts',label:'Shortcut Overrides',cat:'ui'},
+    {key:'tls3_license',label:'Cached License',cat:'licensing'},
+    {key:'tls3_devTier',label:'Dev Tier Override',cat:'licensing'},
+    {key:'tls3_tierConfig',label:'Tier Config Override',cat:'licensing'},
+  ],
+  _DEV_CAT_INFO:{
+    project:{
+      label:'Project Data',
+      help:'Auto-saved project state. The app saves your timeline to localStorage on every change so work survives browser crashes. <code>tls3</code> holds the full project JSON, <code>tls3_saveTime</code> tracks when, and <code>tls3_fileName</code> remembers the last file name. <code>tls3_recentNames</code> is the MRU (most recently used) file list cache.'
+    },
+    ui:{
+      label:'UI State',
+      help:'Persisted UI preferences. These remember panel positions, collapse states, and custom keyboard shortcuts across sessions. Clearing these resets the UI to defaults \u2014 your project data and license are unaffected.'
+    },
+    licensing:{
+      label:'Licensing',
+      help:'License state and tier configuration. <code>tls3_license</code> caches your Lemon Squeezy license (validated via API, re-checked every 3 days, grace period of 30 days offline). <code>tls3_devTier</code> is the Dev Panel tier override \u2014 when set, it bypasses the real license and forces a tier. <code>tls3_tierConfig</code> stores custom gate/limit config from the Dev Panel. Clearing licensing keys reverts to the free tier.'
+    }
+  },
+  _devStorageExpanded:false,
+  _devOpenKey:null,
+  _toggleDevStorage(){
+    this._devStorageExpanded=!this._devStorageExpanded;
+    const body=document.getElementById('dev-storage-body');
+    const arrow=document.querySelector('#dev-storage-toggle .arrow');
+    if(body)body.classList.toggle('open',this._devStorageExpanded);
+    if(arrow)arrow.classList.toggle('open',this._devStorageExpanded);
+    if(this._devStorageExpanded)this._renderDevStorage();
+  },
+  _renderDevStorage(){
+    const table=document.getElementById('dev-storage-table');
+    const scenarios=document.getElementById('dev-scenarios');
+    const idbEl=document.getElementById('dev-idb-status');
+    if(!table)return;
+    /* Scenario buttons */
+    const scenarioDefs=[
+      {label:'Clear License + IDB',tip:'Removes cached license from localStorage and IndexedDB backup. Clears dev tier override. App reverts to free tier.',action:()=>{this._clearLicenseStorage();localStorage.removeItem('tls3_devTier');this._loadLicense();this._updateDevState();this._renderDevStorage();this.toast('License data cleared','info',2000)}},
+      {label:'Simulate Expired',tip:'Sets the cached license expiry date to the past and marks status as expired. Tests how the app handles an expired license on next load.',action:()=>{try{const raw=localStorage.getItem('tls3_license');if(!raw){this.toast('No license cached','error');return}const lic=JSON.parse(raw);lic.expiresAt='2020-01-01T00:00:00Z';lic.status='expired';localStorage.setItem('tls3_license',JSON.stringify(lic));this._renderDevStorage();this.toast('License marked expired (reload to test)','info',3000)}catch(e){this.toast('Failed: '+e.message,'error')}}},
+      {label:'Simulate Stale',tip:'Backdates the last validation timestamp so the app triggers a background revalidation on next load (threshold: 3 days).',action:()=>{try{const raw=localStorage.getItem('tls3_license');if(!raw){this.toast('No license cached','error');return}const lic=JSON.parse(raw);lic.lastChecked=new Date(Date.now()-5*86400000).toISOString();localStorage.setItem('tls3_license',JSON.stringify(lic));this._renderDevStorage();this.toast('License backdated 5 days (reload to trigger revalidation)','info',3000)}catch(e){this.toast('Failed: '+e.message,'error')}}},
+      {label:'Clear All tls3_*',cls:'danger',tip:'Nuclear reset: removes ALL Timeline Studio data from this browser \u2014 project, UI state, license, shortcuts. Simulates a brand-new user.',action:()=>{if(!confirm('Remove ALL tls3_* keys from localStorage and clear IndexedDB backups? This cannot be undone.'))return;this._DEV_STORAGE_KEYS.forEach(k=>{try{localStorage.removeItem(k.key)}catch(e){}});this._clearLicenseIDB();this._loadLicense();this._initTierConfig();this._updateDevState();this._renderDevStorage();this.toast('All storage cleared','info',2000)}},
+      {label:'Clear UI State',tip:'Resets panel positions, collapse states, and custom shortcuts to defaults. Project data and license are preserved.',action:()=>{['tls3_fpProps','tls3_panelCollapsed','tls3_panelLocked','tls3_shortcuts'].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});this._renderDevStorage();this.toast('UI state cleared','info',2000)}},
+      {label:'Corrupt tierConfig',tip:'Writes a config with null limits to test the app\'s resilience to corrupted tier configuration (e.g., after Infinity\u2192null JSON bug).',action:()=>{localStorage.setItem('tls3_tierConfig','{"tiers":{"free":{"rank":0,"label":"Free","limits":{"swimlanes":null,"items":null}}}}');this._renderDevStorage();this.toast('tierConfig corrupted (reload to test)','info',3000)}},
+    ];
+    if(scenarios){
+      scenarios.innerHTML='<div class="dev-scenario-bar">'+scenarioDefs.map((s,i)=>'<button class="dev-scenario-btn'+(s.cls?' '+s.cls:'')+'" data-sc="'+i+'" title="'+U.esc(s.tip)+'">'+U.esc(s.label)+'</button>').join('')+'</div>';
+      scenarios.querySelectorAll('.dev-scenario-btn').forEach(btn=>{btn.onclick=()=>scenarioDefs[parseInt(btn.dataset.sc)].action()});
+    }
+    /* Build rows grouped by category */
+    const cats=['project','ui','licensing'];
+    const knownSet=new Set(this._DEV_STORAGE_KEYS.map(k=>k.key));
+    let html='';
+    cats.forEach(cat=>{
+      const info=this._DEV_CAT_INFO[cat];
+      html+='<div class="dev-cat-hdr">'+U.esc(info.label)+'</div>';
+      html+='<div class="dev-cat-help">'+info.help+'</div>';
+      this._DEV_STORAGE_KEYS.filter(k=>k.cat===cat).forEach(k=>{
+        const val=localStorage.getItem(k.key);
+        const exists=val!==null;
+        const preview=exists?(k.large?val.substring(0,50)+'…':val.length>80?val.substring(0,80)+'…':val):'(not set)';
+        const size=exists?this._fmtBytes(new Blob([val]).size):'—';
+        html+='<div class="dev-storage-row" data-skey="'+U.esc(k.key)+'">';
+        html+='<span class="dev-storage-key '+(exists?'present':'absent')+'" title="'+U.esc(k.label)+'">'+U.esc(k.key)+'</span>';
+        html+='<span class="dev-storage-val" title="'+U.esc(exists?val:'')+'">'+U.esc(preview)+'</span>';
+        html+='<span class="dev-storage-size">'+size+'</span>';
+        html+='<span class="dev-storage-actions">';
+        if(exists){
+          html+='<button class="dev-storage-btn" data-act="view" data-k="'+U.esc(k.key)+'">View</button>';
+          html+='<button class="dev-storage-btn" data-act="edit" data-k="'+U.esc(k.key)+'">Edit</button>';
+        }
+        html+='<button class="dev-storage-btn danger" data-act="del" data-k="'+U.esc(k.key)+'"'+(exists?'':' disabled')+'>Del</button>';
+        html+='</span></div>';
+        if(this._devOpenKey===k.key)html+=this._devValPanelHTML(k.key,this._devOpenMode);
+      });
+    });
+    /* Scan for unknown tls3_* keys */
+    const unknown=[];
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('tls3')&&!knownSet.has(k))unknown.push(k)}
+    if(unknown.length){
+      html+='<div class="dev-cat-hdr" style="color:#f59e0b">Unknown Keys</div>';
+      html+='<div class="dev-cat-help">Keys with the <code>tls3</code> prefix not in the known registry. May be leftover from older versions.</div>';
+      unknown.forEach(uk=>{
+        const val=localStorage.getItem(uk);
+        const preview=val&&val.length>80?val.substring(0,80)+'…':(val||'');
+        const size=val?this._fmtBytes(new Blob([val]).size):'—';
+        html+='<div class="dev-storage-row" data-skey="'+U.esc(uk)+'">';
+        html+='<span class="dev-storage-key present" style="color:#f59e0b" title="Unknown key">'+U.esc(uk)+'</span>';
+        html+='<span class="dev-storage-val">'+U.esc(preview)+'</span>';
+        html+='<span class="dev-storage-size">'+size+'</span>';
+        html+='<span class="dev-storage-actions">';
+        html+='<button class="dev-storage-btn" data-act="view" data-k="'+U.esc(uk)+'">View</button>';
+        html+='<button class="dev-storage-btn danger" data-act="del" data-k="'+U.esc(uk)+'">Del</button>';
+        html+='</span></div>';
+      });
+    }
+    table.innerHTML=html;
+    /* Bind row action buttons */
+    table.querySelectorAll('.dev-storage-btn').forEach(btn=>{
+      btn.onclick=()=>{
+        const k=btn.dataset.k;const act=btn.dataset.act;
+        if(act==='del'){localStorage.removeItem(k);this._devOpenKey=null;this._renderDevStorage();this._updateDevState();this.toast(k+' removed','info',2000)}
+        else if(act==='view'){this._devOpenKey=this._devOpenKey===k&&this._devOpenMode==='view'?null:k;this._devOpenMode='view';this._renderDevStorage()}
+        else if(act==='edit'){this._devOpenKey=this._devOpenKey===k&&this._devOpenMode==='edit'?null:k;this._devOpenMode='edit';this._renderDevStorage()}
+      };
+    });
+    /* Bind save buttons in val panels */
+    table.querySelectorAll('.dev-val-save').forEach(btn=>{
+      btn.onclick=()=>{
+        const k=btn.dataset.k;
+        const ta=btn.closest('.dev-val-panel').querySelector('textarea');
+        if(!ta)return;
+        try{JSON.parse(ta.value)}catch(e){if(!confirm('Value is not valid JSON. Save anyway?'))return}
+        localStorage.setItem(k,ta.value);
+        this._devOpenKey=null;this._renderDevStorage();this._updateDevState();
+        this.toast(k+' updated','success',2000);
+      };
+    });
+    table.querySelectorAll('.dev-val-copy').forEach(btn=>{
+      btn.onclick=()=>{
+        const ta=btn.closest('.dev-val-panel').querySelector('textarea');
+        if(ta)navigator.clipboard.writeText(ta.value).then(()=>this.toast('Copied','success',1500)).catch(()=>{});
+      };
+    });
+    /* IDB status (async) */
+    if(idbEl)this._renderDevIDB(idbEl);
+  },
+  _devValPanelHTML(key,mode){
+    const val=localStorage.getItem(key)||'';
+    let pretty=val;
+    try{pretty=JSON.stringify(JSON.parse(val),null,2)}catch(e){}
+    const rows=Math.min(12,Math.max(4,(pretty.match(/\n/g)||[]).length+2));
+    let h='<div class="dev-val-panel">';
+    h+='<textarea rows="'+rows+'"'+(mode==='view'?' readonly':'')+'>'+U.esc(pretty)+'</textarea>';
+    h+='<div class="dev-val-bar">';
+    h+='<button class="dev-storage-btn dev-val-copy">Copy</button>';
+    if(mode==='edit')h+='<button class="dev-storage-btn dev-val-save" data-k="'+U.esc(key)+'">Save</button>';
+    h+='</div></div>';
+    return h;
+  },
+  async _renderDevIDB(el){
+    el.innerHTML='<div class="dev-cat-hdr">IndexedDB Backup</div><div class="dev-cat-help">Redundant license storage in IndexedDB (<code>tls3_handles</code> database). Provides 3-layer recovery: if localStorage is cleared (e.g., browser cleanup), the app checks IndexedDB, then the project file\'s embedded <code>_licenseKey</code>. The <code>recentFiles</code> store holds file handles for the MRU list.</div><div style="font-size:11px;color:var(--tx3);font-family:var(--mono)">Loading…</div>';
+    try{
+      const db=await this._openHandleDB();
+      /* License backup */
+      const tx1=db.transaction('handles','readonly');
+      const licReq=tx1.objectStore('handles').get('tls3_license');
+      const lic=await new Promise((r,j)=>{licReq.onsuccess=()=>r(licReq.result);licReq.onerror=j});
+      /* Recent files count */
+      const tx2=db.transaction('recentFiles','readonly');
+      const countReq=tx2.objectStore('recentFiles').count();
+      const count=await new Promise((r,j)=>{countReq.onsuccess=()=>r(countReq.result);countReq.onerror=j});
+      db.close();
+      let rows='<div class="dev-cat-hdr">IndexedDB Backup</div>';
+      rows+='<div class="dev-cat-help">Redundant license storage in IndexedDB (<code>tls3_handles</code> database). Provides 3-layer recovery: if localStorage is cleared (e.g., browser cleanup), the app checks IndexedDB, then the project file\'s embedded <code>_licenseKey</code>. The <code>recentFiles</code> store holds file handles for the MRU list.</div>';
+      rows+='<div class="dev-idb-row"><span>License Backup: <b>'+(lic?'Present ('+U.esc(lic.tier||'?')+')':'Absent')+'</b></span>';
+      if(lic)rows+='<button class="dev-storage-btn danger" id="dev-idb-clear-lic">Clear</button>';
+      rows+='</div>';
+      rows+='<div class="dev-idb-row"><span>Recent Files: <b>'+count+' entries</b></span>';
+      if(count>0)rows+='<button class="dev-storage-btn danger" id="dev-idb-clear-mru">Clear</button>';
+      rows+='</div>';
+      el.innerHTML=rows;
+      const clrLic=document.getElementById('dev-idb-clear-lic');
+      if(clrLic)clrLic.onclick=async()=>{await this._clearLicenseIDB();this._renderDevIDB(el);this.toast('IDB license backup cleared','info',2000)};
+      const clrMru=document.getElementById('dev-idb-clear-mru');
+      if(clrMru)clrMru.onclick=async()=>{try{const db2=await this._openHandleDB();const tx=db2.transaction('recentFiles','readwrite');tx.objectStore('recentFiles').clear();await new Promise(r=>{tx.oncomplete=r});db2.close()}catch(e){}this._renderDevIDB(el);this.toast('IDB recent files cleared','info',2000)};
+    }catch(e){
+      el.innerHTML='<div class="dev-cat-hdr">IndexedDB Backup</div><div style="font-size:11px;color:var(--tx3)">Could not open IndexedDB</div>';
+    }
+  },
+  _fmtBytes(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB'},
 
   async saveFile(saveAs=false){
     /* Embed license key in local project file for cache-clear recovery */
@@ -2223,6 +2405,7 @@ const App={
     on('btn-lic-deactivate',()=>{if(!confirm('Deactivate your license on this device?'))return;this._deactivateLicense()});
     on('btn-lic-refresh',()=>{const lic=this._readLicenseCache();if(!lic||!lic.key)return;this.toast('Refreshing license…','info',2000);this._activateLicense(lic.key)});
     on('dev-apply',()=>this._applyDevPanel());on('dev-reset',()=>this._resetDevPanel());on('dev-copy-config',()=>this._copyDevConfig());
+    on('dev-storage-toggle',()=>this._toggleDevStorage());
     on('dev-add-variant',()=>{const wrap=document.getElementById('dev-variants');if(!wrap)return;const cfg=this._tierConfig;const tierKeys=Object.keys(cfg.tiers);const row=document.createElement('div');row.className='dev-var-row';const inp=document.createElement('input');inp.type='text';inp.className='form-input';inp.placeholder='variant_name';const arrow=document.createElement('span');arrow.textContent=' \u2192 ';arrow.style.cssText='color:var(--tx3);flex-shrink:0';const sel=document.createElement('select');sel.className='form-input';tierKeys.forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=cfg.tiers[k].label;sel.appendChild(o)});const del=document.createElement('span');del.className='dev-var-del';del.textContent='\u00d7';del.title='Remove this mapping';del.onclick=()=>row.remove();row.appendChild(inp);row.appendChild(arrow);row.appendChild(sel);row.appendChild(del);wrap.appendChild(row)});
     on('btn-sched-apply',()=>this.applyScheduleTransition());
     on('btn-sched-pin-all',()=>this.pinAllAndStayManual());

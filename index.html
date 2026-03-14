@@ -705,10 +705,23 @@
           <div id="dev-state" style="font-size:11px;font-family:monospace;color:var(--tx2);line-height:2;margin-top:8px"></div>
         </div>
 
-        <div class="dev-section" style="border-bottom:none">
+        <div class="dev-section">
           <div class="dev-section-title">Export Config</div>
           <div class="dev-help">Copies the full current tier configuration as JSON. Paste this into a Claude Code session to set your production defaults in <code>_TIER_CONFIG_DEFAULTS</code>.</div>
           <button class="btn btn-secondary btn-sm" id="dev-copy-config" style="margin-top:8px;font-size:11px;padding:4px 12px">Copy Config to Clipboard</button>
+        </div>
+
+        <div class="dev-section" style="border-bottom:none">
+          <div class="dev-storage-toggle" id="dev-storage-toggle">
+            <span class="arrow">&#9656;</span>
+            <span class="dev-section-title" style="margin-bottom:0">Storage Inspector</span>
+          </div>
+          <div class="dev-storage-body" id="dev-storage-body">
+            <div class="dev-help" style="margin-top:6px">View, edit, and clear all localStorage keys and IndexedDB backups used by Timeline Studio. Use scenario buttons for common testing workflows.</div>
+            <div id="dev-scenarios"></div>
+            <div id="dev-storage-table"></div>
+            <div id="dev-idb-status"></div>
+          </div>
         </div>
 
       </div>
