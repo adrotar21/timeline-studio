@@ -187,7 +187,7 @@ const _TIER_CONFIG_DEFAULTS={
 };
 
 const App={
-  _version:'0.46.4',
+  _version:'0.46.5',
   _LICENSING_ENABLED:true, /* Kill switch: set false to bypass all tier gating — flip to true when ready to enforce */
   _tierConfig:null,_resolvedTier:'free',
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
@@ -4576,7 +4576,7 @@ const App={
           it.duration=this._impDefDur;it.endDate=isWork?this._addWorkingDays(it.startDate,it.duration):U.iso(U.addDays(it.startDate,this._impDefDur-1));
         }
       }else{
-        it.date=startD?U.iso(startD):U.iso(new Date());
+        it.date=startD?U.iso(startD):endD?U.iso(endD):U.iso(new Date());
         if(this._impSnapWork)it.date=this._skipNonWorking(it.date);
       }
       /* Default label positions for import (unless CSV explicitly mapped LabelPos) */
