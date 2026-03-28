@@ -2217,7 +2217,7 @@ const App={
       /* Chrome recommendation hint */
       const _ch=document.createElement('div');
       _ch.className='dd-chrome-hint';
-      _ch.innerHTML='<svg width="14" height="14" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="24" r="8" fill="none" stroke="currentColor" stroke-width="3"/><path d="M24 4a20 20 0 0117.3 10H24" fill="none" stroke="currentColor" stroke-width="3"/><path d="M6.7 14a20 20 0 008.6 27.3L24 24" fill="none" stroke="currentColor" stroke-width="3"/><path d="M32.7 41.3A20 20 0 0044.7 14L24 24" fill="none" stroke="currentColor" stroke-width="3"/></svg>'
+      _ch.innerHTML='<img width="14" height="14" style="vertical-align:middle" src="chrome_icon.png"/>'
         +'<span>Best experience on Chrome. <a href="#" id="chrome-why-link" style="color:var(--acc)">Why?</a></span>';
       this.$.file_dropdown.appendChild(_ch);
       const _cw=document.getElementById('chrome-why-link');
