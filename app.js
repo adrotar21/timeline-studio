@@ -187,7 +187,7 @@ const _TIER_CONFIG_DEFAULTS={
 };
 
 const App={
-  _version:'0.46.2',
+  _version:'0.46.4',
   _LICENSING_ENABLED:true, /* Kill switch: set false to bypass all tier gating — flip to true when ready to enforce */
   _tierConfig:null,_resolvedTier:'free',
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
@@ -6252,13 +6252,13 @@ const App={
     yO=0;for(const{sl,h,subMeta:subs,collapsed,hidden}of sm){if(hidden){yO+=h;continue}const rowTop=yO-vpY+totalHdrH;if(!(viewportOnly&&(rowTop+h<totalHdrH||rowTop>H))){
       const clampT=Math.max(totalHdrH,rowTop),clampH=Math.min(h,rowTop+h-clampT);
       svg+=`<rect x="0" y="${clampT}" width="${lw}" height="${clampH}" fill="${sl.color}"/>`;
-      const hasSubs=!collapsed&&sl.subSwimlanes?.length>0&&subs.length>1;
+      const hasSubs=!collapsed&&sl.subSwimlanes?.length>0&&subs.length>0;
       if(hasSubs){const mainW=60;svg+=`<line x1="${mainW}" y1="${clampT}" x2="${mainW}" y2="${clampT+clampH}" stroke="rgba(255,255,255,0.15)"/>`;
         let subY=0;for(let si=0;si<subs.length;si++){if(si>0)svg+=`<line x1="${mainW}" y1="${rowTop+subY}" x2="${lw}" y2="${rowTop+subY}" stroke="rgba(255,255,255,0.15)"/>`;subY+=subs[si].h}}
     }yO+=h}
     /* Swimlane label text — drawn AFTER all rects so overflow shows on top of all backgrounds */
     yO=0;for(const{sl,h,subMeta:subs,collapsed,hidden}of sm){if(hidden){yO+=h;continue}const rowTop=yO-vpY+totalHdrH;if(!(viewportOnly&&(rowTop+h<totalHdrH||rowTop>H))){
-      const hasSubs=!collapsed&&sl.subSwimlanes?.length>0&&subs.length>1;
+      const hasSubs=!collapsed&&sl.subSwimlanes?.length>0&&subs.length>0;
       if(hasSubs){
         const mainW=60,subW=lw-mainW;
         const availH=h-12;const expMainFs=sl.fontSize||11;const wrapLines=this._wrapText(sl.name,availH>0?availH:h,expMainFs,'600');const nLines=wrapLines.length||1;let mfs=expMainFs;if(nLines===1){const tw=this._mt(sl.name,expMainFs,'600');if(tw>availH&&availH>0)mfs=Math.max(8,Math.round(expMainFs*availH/tw))}
