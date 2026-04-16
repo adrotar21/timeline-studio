@@ -664,6 +664,10 @@
     <div class="modal-content modal-lg" style="max-width:620px"><div class="modal-header"><h2>Dev Panel: Licensing</h2><button class="modal-close" data-close-modal>&times;</button></div>
       <div class="modal-body" style="max-height:calc(80vh - 100px);overflow-y:auto;padding:14px 18px">
 
+        <div style="background:rgba(210,82,82,.12);border:1px solid rgba(210,82,82,.35);border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:11.5px;line-height:1.5;color:var(--tx1)">
+          <b style="color:#d25252">&#9888; Developer panel</b> &mdash; changes here override the real license system and affect every feature gate. Close without clicking <b>Apply</b> to revert. Use <b>Reset to Defaults</b> if you're unsure.
+        </div>
+
         <div class="dev-section">
           <div class="dev-section-title">Kill Switch</div>
           <div class="dev-help">Master on/off for the entire licensing system. When OFF, <code>_checkTier()</code> and <code>_checkLimit()</code> always return <code>true</code> &mdash; every feature is unlocked for every user regardless of their tier. Use this as an emergency fallback if the licensing system has a bug in production. When ON, features are gated based on the user&rsquo;s resolved tier below.</div>

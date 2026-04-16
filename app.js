@@ -187,7 +187,7 @@ const _TIER_CONFIG_DEFAULTS={
 };
 
 const App={
-  _version:'0.46.5',
+  _version:'0.46.6',
   _LICENSING_ENABLED:true, /* Kill switch: set false to bypass all tier gating — flip to true when ready to enforce */
   _tierConfig:null,_resolvedTier:'free',
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
@@ -1844,7 +1844,7 @@ const App={
      In auto-scheduled mode also re-runs the scheduling engine. */
   _recalcNonWorkingDays(){
     for(const it of this.proj.items){
-      if(it.type==='task'&&it.startDate&&it.duration){
+      if(it.type==='task'&&it.startDate&&it.duration!=null){
         it.endDate=this._calcEndDate(it);
       }
     }
@@ -1895,7 +1895,7 @@ const App={
   calculateFloat(){
     const items=this.proj.items;
     // Freshen endDates so stale values never cause wrong float
-    for(const it of items){if(it.type==='task'&&it.startDate&&it.duration)it.endDate=this._calcEndDate(it)}
+    for(const it of items){if(it.type==='task'&&it.startDate&&it.duration!=null)it.endDate=this._calcEndDate(it)}
     const es=new Map(),ef=new Map(),ls=new Map(),lf=new Map();
     // Forward pass
     const order=this.topoSort();
@@ -2043,7 +2043,7 @@ const App={
   runSchedule(){
     if(this.proj.schedulingMode!=='scheduled')return;
     // Freshen root item endDates so _depEnd reads correct values
-    for(const it of this.proj.items){if(it.type==='task'&&it.startDate&&it.duration)it.endDate=this._calcEndDate(it)}
+    for(const it of this.proj.items){if(it.type==='task'&&it.startDate&&it.duration!=null)it.endDate=this._calcEndDate(it)}
     for(let pass=0;pass<5;pass++){
       const n=this._runSchedulePass(false);
       if(n===0)break; // stable
@@ -3170,7 +3170,7 @@ const App={
     this.proj.items.push(it);this.sel=[it.id];this.openPanel(it);
     if(this.proj.autoRange)this.autoRange();this.sched();this.autoSave()
   },
-  deleteSel(){if(!this.sel.length)return;this.snap();const s=new Set(this.sel);this.proj.items.forEach(i=>i.deps=(i.deps||[]).filter(d=>!s.has(this.depId(d))));this.proj.items=this.proj.items.filter(i=>!s.has(i.id));this.sel=[];this.closePanel();this.sched();this.autoSave()},
+  deleteSel(){if(!this.sel.length)return;const s=new Set(this.sel);const selItems=this.proj.items.filter(i=>s.has(i.id));const pinnedCount=selItems.filter(i=>i.pinned).length;const n=this.sel.length;if(n>1||pinnedCount){const pinNote=pinnedCount?` (${pinnedCount} pinned)`:'';if(!confirm(`Delete ${n} item${n===1?'':'s'}${pinNote}?`))return}this.snap();this.proj.items.forEach(i=>i.deps=(i.deps||[]).filter(d=>!s.has(this.depId(d))));this.proj.items=this.proj.items.filter(i=>!s.has(i.id));this.sel=[];this.closePanel();this.sched();this.autoSave()},
   dupSel(){if(!this.sel.length)return;if(!this._checkLimit('items')){this._limitToast('items');return}this.snap();const ns=[];this.sel.forEach(id=>{const o=this.gi(id);if(!o)return;const c=U.deep(o);c.id=U.id();c.name+=' (copy)';c.subRow=(o.subRow||0)+1;c.deps=[];if(c.status)c.statusDate=U.iso(new Date());ns.push(c)});this.proj.items.push(...ns);this.sel=ns.map(i=>i.id);this.sched();this.autoSave()},
   clearSelDeps(){if(!this.sel.length)return;this.snap();this.sel.forEach(id=>{const it=this.gi(id);if(it)it.deps=[]});this.sched();this.autoSave();this.toast('Selected deps cleared')},
 
@@ -5950,7 +5950,7 @@ const App={
     const mv=ev=>{const dx=ev.clientX-sx,dayD=Math.round((dx/tl.tw)*U.days(tl.start,tl.end));
       if(side==='left'){it.startDate=U.addDays(oS,dayD);if(U.days(it.startDate,it.endDate)<0)it.startDate=it.endDate}
       else{it.endDate=U.addDays(oE,dayD);if(U.days(it.startDate,it.endDate)<0)it.endDate=it.startDate}
-      it.duration=isWork?this._countWorkingDays(it.startDate,U.addDays(it.endDate,1)):(U.days(it.startDate,it.endDate)+1);
+      it.duration=Math.max(1,isWork?this._countWorkingDays(it.startDate,U.addDays(it.endDate,1)):(U.days(it.startDate,it.endDate)+1));
       // --- Resize date feedback (mirrors startDrag pattern) ---
       // Delta badge at cursor
       if(!tipEl){tipEl=document.createElement('div');tipEl.className='drag-delta-tip';document.body.appendChild(tipEl)}
@@ -5974,7 +5974,7 @@ const App={
 
   bindRH(){document.querySelectorAll('.sl-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();const sl=this.gs(h.dataset.slId);if(!sl)return;const slEl=h.closest('.sw-row'),lblEl=this.$.tl_sl_labels.querySelector(`[data-sl-id="${sl.id}"]`);const sY=e.clientY,sH=slEl.offsetHeight;const hasSubs=sl.subSwimlanes?.length>0&&sl.collapsed==='expanded';const lastSs=hasSubs?sl.subSwimlanes[sl.subSwimlanes.length-1]:null;const startLastH=lastSs?(lastSs.height||50):0;const mv=ev=>{const nh=Math.max(50,sH+ev.clientY-sY);if(hasSubs&&lastSs){lastSs.height=Math.max(50,startLastH+ev.clientY-sY)}else{sl.height=nh}slEl.style.height=nh+'px';if(lblEl)lblEl.style.height=nh+'px';this.sched(true,false)};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}});document.querySelectorAll('.sub-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();e.stopPropagation();const sl=this.gs(h.dataset.slId);if(!sl)return;const ss=sl.subSwimlanes.find(s=>s.id===h.dataset.ssId);if(!ss)return;const sY=e.clientY,startH=ss.height||50;const mv=ev=>{ss.height=Math.max(50,startH+ev.clientY-sY);this.sched(true,false)};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}})},
 
-  async copyScreenshot(viewportOnly=false){try{const typeLabel=viewportOnly?'Viewport':'Full timeline';this.toast('Generating '+typeLabel+'…');const svg=this.buildExportSVG(viewportOnly);const img=new Image();const blob=new Blob([svg],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);let dpr=Math.max(2,window.devicePixelRatio||2);img.onload=async()=>{if(!img.naturalWidth||!img.naturalHeight){this.toast('Image failed to render','error');URL.revokeObjectURL(url);return}const maxDim=16384;if(img.naturalWidth*dpr>maxDim||img.naturalHeight*dpr>maxDim)dpr=Math.floor(maxDim/Math.max(img.naturalWidth,img.naturalHeight))||1;const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*dpr);c.height=Math.round(img.naturalHeight*dpr);const ctx=c.getContext('2d');if(!ctx){this.toast('Canvas too large to render','error');URL.revokeObjectURL(url);return}ctx.scale(dpr,dpr);ctx.drawImage(img,0,0);try{const b=await new Promise(r=>c.toBlob(r,'image/png'));if(!b){this.toast('Render failed','error');URL.revokeObjectURL(url);return}await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);this.toast(typeLabel+' copied to clipboard!')}catch(err){this.toast('Copy failed','error')}URL.revokeObjectURL(url)};img.onerror=()=>{this.toast('Failed','error');URL.revokeObjectURL(url)};img.src=url}catch(err){this.toast('Not supported','error')}},
+  async copyScreenshot(viewportOnly=false){try{const typeLabel=viewportOnly?'Viewport':'Full timeline';this.toast('Generating '+typeLabel+'…');const svg=this.buildExportSVG(viewportOnly);const img=new Image();const blob=new Blob([svg],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);let dpr=Math.max(2,window.devicePixelRatio||2);const origDpr=dpr;img.onload=async()=>{if(!img.naturalWidth||!img.naturalHeight){this.toast('Image failed to render','error');URL.revokeObjectURL(url);return}const maxDim=16384;if(img.naturalWidth*dpr>maxDim||img.naturalHeight*dpr>maxDim){dpr=Math.floor(maxDim/Math.max(img.naturalWidth,img.naturalHeight))||1;if(dpr<origDpr)this.toast('Large timeline — reduced export resolution ('+origDpr+'× → '+dpr+'×)','info',3500)}const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*dpr);c.height=Math.round(img.naturalHeight*dpr);const ctx=c.getContext('2d');if(!ctx){this.toast('Canvas too large to render','error');URL.revokeObjectURL(url);return}ctx.scale(dpr,dpr);ctx.drawImage(img,0,0);try{const b=await new Promise(r=>c.toBlob(r,'image/png'));if(!b){this.toast('Render failed','error');URL.revokeObjectURL(url);return}await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);this.toast(typeLabel+' copied to clipboard!')}catch(err){this.toast('Copy failed','error')}URL.revokeObjectURL(url)};img.onerror=()=>{this.toast('Failed','error');URL.revokeObjectURL(url)};img.src=url}catch(err){this.toast('Not supported','error')}},
 
   buildExportSVG(viewportOnly=false){
     const tl=this.met(),p=this.proj,th=this.getTheme(),rH=38;
@@ -6762,7 +6762,7 @@ const App={
 
   exportSVG(){const forceWm=!this.proj.watermark&&!this._checkTier('export_clean');if(forceWm){this.proj.watermark=true}const svg=this.buildExportSVG();if(forceWm){this.proj.watermark=false}const b=new Blob([svg],{type:'image/svg+xml'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.svg';a.click();URL.revokeObjectURL(a.href);this.toast(forceWm?'SVG exported (watermark required on Free plan)':'SVG exported!')},
 
-  async exportPNG(){try{const forceWm=!this.proj.watermark&&!this._checkTier('export_clean');if(forceWm)this.proj.watermark=true;this.toast('Generating PNG…');const svg=this.buildExportSVG();if(forceWm)this.proj.watermark=false;const img=new Image();const blob=new Blob([svg],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);let dpr=Math.max(3,window.devicePixelRatio||3);img.onload=()=>{if(!img.naturalWidth||!img.naturalHeight){this.toast('Image failed to render','error');URL.revokeObjectURL(url);return}const maxDim=16384;if(img.naturalWidth*dpr>maxDim||img.naturalHeight*dpr>maxDim)dpr=Math.floor(maxDim/Math.max(img.naturalWidth,img.naturalHeight))||1;const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*dpr);c.height=Math.round(img.naturalHeight*dpr);const ctx=c.getContext('2d');if(!ctx){this.toast('Canvas too large to export','error');URL.revokeObjectURL(url);return}ctx.scale(dpr,dpr);ctx.drawImage(img,0,0);c.toBlob(b=>{if(!b){this.toast('Render failed','error');URL.revokeObjectURL(url);return}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.png';a.click();URL.revokeObjectURL(a.href);this.toast('PNG exported!')},'image/png')};img.onerror=()=>{this.toast('PNG generation failed','error');URL.revokeObjectURL(url)};img.src=url}catch(err){this.toast('PNG export not supported','error')}},
+  async exportPNG(){try{const forceWm=!this.proj.watermark&&!this._checkTier('export_clean');if(forceWm)this.proj.watermark=true;this.toast('Generating PNG…');const svg=this.buildExportSVG();if(forceWm)this.proj.watermark=false;const img=new Image();const blob=new Blob([svg],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);let dpr=Math.max(3,window.devicePixelRatio||3);const origDpr=dpr;img.onload=()=>{if(!img.naturalWidth||!img.naturalHeight){this.toast('Image failed to render','error');URL.revokeObjectURL(url);return}const maxDim=16384;if(img.naturalWidth*dpr>maxDim||img.naturalHeight*dpr>maxDim){dpr=Math.floor(maxDim/Math.max(img.naturalWidth,img.naturalHeight))||1;if(dpr<origDpr)this.toast('Large timeline — reduced export resolution ('+origDpr+'× → '+dpr+'×)','info',3500)}const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*dpr);c.height=Math.round(img.naturalHeight*dpr);const ctx=c.getContext('2d');if(!ctx){this.toast('Canvas too large to export','error');URL.revokeObjectURL(url);return}ctx.scale(dpr,dpr);ctx.drawImage(img,0,0);c.toBlob(b=>{if(!b){this.toast('Render failed','error');URL.revokeObjectURL(url);return}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(this.proj.name||'timeline')+'.png';a.click();URL.revokeObjectURL(a.href);this.toast('PNG exported!')},'image/png')};img.onerror=()=>{this.toast('PNG generation failed','error');URL.revokeObjectURL(url)};img.src=url}catch(err){this.toast('PNG export not supported','error')}},
 
   exportDataCSV(){
     if(!this._checkTier('csv_export')){this._gateToast('CSV Export');return}
