@@ -65,6 +65,10 @@ const SHORTCUT_ACTIONS=[
   {id:'cycleDayFmt',cat:'View',label:'Cycle Day Label Format',defaults:[],ctx:'tl'},
   {id:'cycleScale',cat:'View',label:'Cycle Timescale',defaults:[],ctx:'tl'},
   {id:'cycleHdrRows',cat:'View',label:'Cycle Header Rows',defaults:[],ctx:'tl'},
+  {id:'returnToPrevView',cat:'View',label:'Return to Previous View',defaults:[],ctx:'tl'},
+  {id:'saveCurrentView',cat:'View',label:'Save Current View',defaults:[],ctx:'tl'},
+  {id:'updateLastAppliedView',cat:'View',label:'Update Last Applied View',defaults:[],ctx:'tl'},
+  {id:'openManageViews',cat:'View',label:'Open Manage Views',defaults:[],global:true},
   // Tier 2 — Customizable: Tools
   {id:'propagate',cat:'Tools',label:'Propagate to Successors',defaults:['Ctrl+Shift+p'],ctx:'sel-manual'},
   {id:'toggleLock',cat:'Tools',label:'Toggle Lock',defaults:[],global:true},
@@ -168,7 +172,7 @@ function _skDec(o){
   return o;
 }
 
-function newProj(){const n=new Date();return{version:2,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,depFilter:'all',locked:false,lockH:false,lockV:false,hideMode:false,theme:'warm',bgColor:'#FAF7F2',headerColor:'#292524',zoom:100,fontSize:11,monthFormat:'short',quarterFormat:'withYear',headerFontSize:10.5,dayLabelFormat:'letter',dayColumnWidth:'normal',watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[]}}
+function newProj(){const n=new Date();return{version:3,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,depFilter:'all',locked:false,lockH:false,lockV:false,hideMode:false,theme:'warm',bgColor:'#FAF7F2',headerColor:'#292524',zoom:100,fontSize:11,monthFormat:'short',quarterFormat:'withYear',headerFontSize:10.5,dayLabelFormat:'letter',dayColumnWidth:'normal',watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[],views:[]}}
 
 /* ── Tier & Licensing Config ────────────────────────────────────────── */
 const _TIER_CONFIG_DEFAULTS={
@@ -187,7 +191,7 @@ const _TIER_CONFIG_DEFAULTS={
 };
 
 const App={
-  _version:'0.46.6',
+  _version:'0.47.0',
   _LICENSING_ENABLED:true, /* Kill switch: set false to bypass all tier gating — flip to true when ready to enforce */
   _tierConfig:null,_resolvedTier:'free',
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
@@ -486,8 +490,8 @@ const App={
     zoomOut(){this.doZoom(-5)},
     zoom100(){this.doZoomTo(100)},
     fullscreen(){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>this.toast('Fullscreen not supported','error'))},
-    expandAll(){this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')},
-    collapseAll(){this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')},
+    expandAll(){this._prevView=this._captureSlSnapshot({dense:true});this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')},
+    collapseAll(){this._prevView=this._captureSlSnapshot({dense:true});this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')},
     showFloat(){if(!this.proj.showFloat&&!this._checkTier('show_float')){this._gateToast('Float Labels');return}this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')},
     cycleDeps(){const p=this.proj;if(!p.showDeps){p.showDeps=true;p.depFilter='all';this.toast('Dependencies: All')}else if((p.depFilter||'all')==='all'){p.depFilter='swimlane';this.toast('Dependencies: Within swimlane')}else{p.showDeps=false;this.toast('Dependencies: Off')}this.sched();this.autoSave();const vdf=document.getElementById('view-dep-filter');if(vdf)vdf.value=p.showDeps?(p.depFilter||'all'):'off'},
     autoFitHeights(){this.autoFitHeights()},
@@ -511,6 +515,10 @@ const App={
     cycleDayFmt(){if(this.proj.timescale!=='days'){this.toast('Switch to Days scale first','info');return}this.snap();const order=['letter','number','hybrid'];const cur=this.proj.dayLabelFormat||'letter';const ni=(order.indexOf(cur)+1)%order.length;this.proj.dayLabelFormat=order[ni];this._syncHdrFmtUI();this.sched();this.autoSave();const labels={letter:'Letter (M T W)',number:'Number (1 2 3)',hybrid:'Hybrid (3 W)'};this.toast('Day format: '+labels[order[ni]])},
     cycleScale(){this.snap();const order=['days','weeks','months','quarters','years'];const cur=this.proj.timescale||'months';const ni=(order.indexOf(cur)+1)%order.length;const prev=this.proj.timescale;this.proj.timescale=order[ni];this.$.ts_sel.value=order[ni];if(order[ni]==='days'){const days=U.days(this.proj.timelineStart,this.proj.timelineEnd);if(days>365)this.toast('Days scale works best for timelines under 6 months','info');if(prev!=='days')this._pendingFit=true}this._syncHdrFmtUI();this.sched();this.autoSave();this.toast('Scale: '+order[ni].charAt(0).toUpperCase()+order[ni].slice(1))},
     cycleHdrRows(){this.snap();const ts=this.proj.timescale||'months';const max=ts==='years'?1:ts==='quarters'?2:3;const cur=this.proj.headerLayers||2;let next=cur+1;if(next>max)next=1;this.proj.headerLayers=next;this.$.hl_sel.value=String(next);this.sched();this.autoSave();this.toast('Header rows: '+next)},
+    returnToPrevView(){this.returnToPrevView()},
+    saveCurrentView(){this.showSaveViewPrompt()},
+    updateLastAppliedView(){this.updateLastAppliedView()},
+    openManageViews(){this.showManageViewsModal()},
   },
   _handleEscape(){
     /* Lasso mode: first Escape exits lasso only (preserves selection), second clears selection */
@@ -567,6 +575,8 @@ const App={
      's-lic-key','btn-lic-activate','btn-lic-deactivate',
      'lic-card','lic-tier-name','lic-badge','lic-details',
      'lic-key-row','lic-details-expand','lic-details-full','lic-free-info',
+     'save-view-modal','manage-views-modal','sv-name','sv-dup-warn','sv-dup-name','btn-sv-save','btn-sv-overwrite',
+     'mv-list','mv-count','mv-max','myviews-panel','myviews-count-badge','btn-return-prev-view','btn-myviews-toggle',
     ].forEach(id=>{const el=document.getElementById(id);if(el)this.$[id.replace(/-/g,'_')]=el});
     /* Tier config & license initialization */
     this._initTierConfig();
@@ -701,6 +711,15 @@ const App={
       });
       p.version=2
     }
+    // v2→v3: add My Views (saved swimlane collapse configs)
+    if(!Array.isArray(p.views))p.views=[];
+    p.views.forEach(v=>{
+      if(!v.id)v.id=U.id();
+      if(typeof v.name!=='string'||!v.name)v.name='Untitled view';
+      if(typeof v.created!=='number')v.created=Date.now();
+      if(!v.slStates||typeof v.slStates!=='object')v.slStates={};
+    });
+    if(!p.version||p.version<3)p.version=3;
   },
 
   _getStatusDef(statusId){
@@ -1475,6 +1494,8 @@ const App={
         }
       }
     }
+    /* views — strip when empty; per-view sparse encoding is already sparse-by-construction */
+    if(Array.isArray(p.views)&&!p.views.length)delete p.views;
     return p;
   },
   async _compress(str){
@@ -2258,16 +2279,33 @@ const App={
     on('btn-add-import',()=>{this.$.add_dropdown.classList.add('hidden');this.showPaste()});
     on('btn-undo',()=>this.undo());on('btn-redo',()=>this.redo());
     // View dropdown
-    on('btn-view-menu',()=>{this.closeAllDD();this.$.view_dropdown.classList.toggle('hidden');this.posDD(this.$.view_dropdown);const vdf0=document.getElementById('view-dep-filter');if(vdf0)vdf0.value=this.proj.showDeps?(this.proj.depFilter||'all'):'off'});
+    on('btn-view-menu',()=>{this.closeAllDD();this.$.view_dropdown.classList.toggle('hidden');this.posDD(this.$.view_dropdown);const vdf0=document.getElementById('view-dep-filter');if(vdf0)vdf0.value=this.proj.showDeps?(this.proj.depFilter||'all'):'off';this._renderMyViewsUI();/* always start with flyout collapsed */ this._hideMyViewsPanel()});
     on('btn-today',()=>{this.$.view_dropdown.classList.add('hidden');this.goToday()});
     on('btn-fullscreen',()=>{this.$.view_dropdown.classList.add('hidden');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>this.toast('Fullscreen not supported','error'))});
     on('btn-show-float',()=>{this.$.view_dropdown.classList.add('hidden');this._scDispatch.showFloat.call(this)});
     const vdf=document.getElementById('view-dep-filter');if(vdf)vdf.onchange=()=>{this.$.view_dropdown.classList.add('hidden');const val=vdf.value;if(val==='off'){this.proj.showDeps=false}else{this.proj.showDeps=true;this.proj.depFilter=val}this.sched();this.autoSave();this.toast('Dependencies: '+(val==='off'?'Off':val==='all'?'All':'Within swimlane'))};
     on('btn-zoom100',()=>this.doZoomTo(100));
     on('btn-fit',()=>this.sel.length?this.fitToSelection():this.fitToContent());
-    on('btn-expand-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded')});
-    on('btn-collapse-all',()=>{this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed')});
+    on('btn-expand-all',()=>{this._prevView=this._captureSlSnapshot({dense:true});this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded');this._renderMyViewsUI()});
+    on('btn-collapse-all',()=>{this._prevView=this._captureSlSnapshot({dense:true});this.snap();this.proj.swimlanes.forEach(sl=>sl.collapsed='collapsed');this.sched();this.autoSave();this.toast('All swimlanes collapsed');this._renderMyViewsUI()});
     on('btn-autofit-heights',()=>{this.$.view_dropdown.classList.add('hidden');this.autoFitHeights()});
+    /* My Views wiring */
+    on('btn-return-prev-view',()=>{const el=document.getElementById('btn-return-prev-view');if(el&&el.classList.contains('dd-disabled'))return;this.returnToPrevView();this._renderMyViewsUI()});
+    on('btn-myviews-toggle',()=>{this._toggleMyViewsPanel()});
+    /* Close flyout when user clicks a different row in the View dropdown */
+    const vd=document.getElementById('view-dropdown');
+    if(vd)vd.addEventListener('click',e=>{if(e.target.closest('#btn-myviews-toggle'))return;this._hideMyViewsPanel()});
+    /* Keep flyout anchored when view-dropdown scrolls internally (dropdown scrolls at short viewports) */
+    if(vd)vd.addEventListener('scroll',()=>{const p=document.getElementById('myviews-panel');if(p&&!p.classList.contains('hidden'))this._positionMyViewsFlyout()});
+    /* Reposition on window resize too */
+    window.addEventListener('resize',()=>{const p=document.getElementById('myviews-panel');if(p&&!p.classList.contains('hidden'))this._positionMyViewsFlyout()});
+    on('btn-mv-save-new',()=>{this.$.manage_views_modal&&this.$.manage_views_modal.classList.add('hidden');document.getElementById('manage-views-modal').classList.add('hidden');this.showSaveViewPrompt()});
+    on('btn-mv-clear',()=>{if(!this.proj.views||!this.proj.views.length){this.toast('No views to clear','info');return}if(confirm('Delete all saved views? This cannot be undone except via Ctrl+Z.')){this.clearAllViews();this._renderManageViewsList();this._renderMyViewsUI()}});
+    on('btn-sv-save',()=>this._handleSaveViewSubmit(false));
+    on('btn-sv-overwrite',()=>this._handleSaveViewSubmit(true));
+    const svName=document.getElementById('sv-name');
+    if(svName)svName.addEventListener('input',()=>this._updateSaveViewDupWarn());
+    if(svName)svName.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();this._handleSaveViewSubmit(false)}});
     on('btn-zi',()=>this.doZoom(5));on('btn-zo',()=>this.doZoom(-5));
     this.$.zoom_lbl.addEventListener('wheel',e=>{e.preventDefault();this.doZoom(e.deltaY<0?5:-5)},{passive:false});
     /* Ctrl+Scroll zoom on timeline body: Ctrl=±5%, Ctrl+Shift=±1% */
@@ -2662,7 +2700,9 @@ const App={
     this._mruExpanded=false;const sec=document.getElementById('mru-section');const arrow=document.getElementById('mru-arrow');
     if(sec)sec.classList.add('hidden');if(arrow)arrow.classList.remove('open');
     this._exportExpanded=false;const expSec=document.getElementById('exp-section');const expArr=document.getElementById('exp-arrow');
-    if(expSec)expSec.classList.add('hidden');if(expArr)expArr.classList.remove('open')},
+    if(expSec)expSec.classList.add('hidden');if(expArr)expArr.classList.remove('open');
+    /* Close My Views side-flyout — lives outside view-dropdown so hide explicitly */
+    if(this._hideMyViewsPanel)this._hideMyViewsPanel();},
   posDD(dd){
     if(!dd)return;
     dd.style.left='';dd.style.right='';
@@ -2949,6 +2989,394 @@ const App={
   gi(id){return this.proj.items.find(i=>i.id===id)},
   gs(id){return this.proj.swimlanes.find(s=>s.id===id)},
   _findSubSwim(ssId){for(const sl of this.proj.swimlanes)for(const ss of sl.subSwimlanes||[])if(ss.id===ssId)return ss;return null},
+
+  /* ── My Views (saved swimlane collapse configs) ──────────────────────
+   * Snapshot semantics: slStates keys = set of swimlane IDs known at capture time.
+   * Entry may be empty (implicit 'expanded') or contain c/subs overrides.
+   * On apply: known IDs are restored (empty entry → expanded), truly-new IDs untouched.
+   * opts.dense=true stores explicit 'expanded' values (used for _prevView so the
+   *   dataset is self-describing even after in-memory mutations).
+   */
+  _MAX_VIEWS:20,
+  _prevView:null,              /* transient: pre-action snapshot for Return-to-previous */
+  _lastAppliedViewId:null,     /* transient: powers ● indicator + updateLastApplied */
+
+  _captureSlSnapshot(opts){
+    const dense=!!(opts&&opts.dense);
+    const slStates={};
+    for(const sl of this.proj.swimlanes){
+      const entry={};
+      if(sl.collapsed&&sl.collapsed!=='expanded')entry.c=sl.collapsed;
+      else if(dense)entry.c='expanded';
+      const subs={};
+      for(const ss of (sl.subSwimlanes||[])){
+        if(ss.collapsed&&ss.collapsed!=='expanded')subs[ss.id]=ss.collapsed;
+        else if(dense)subs[ss.id]='expanded';
+      }
+      if(Object.keys(subs).length||dense)entry.subs=subs;
+      /* Always record the key so apply() can distinguish "known-expanded"
+         from "new-since-save" (only truly-new IDs have no key). */
+      slStates[sl.id]=entry;
+    }
+    return {slStates};
+  },
+
+  _applySnapshot(snap){
+    /* snap = {slStates:{slId:{c?, subs?:{ssId:state}}}} — apply to current proj, sparse semantics */
+    if(!snap||!snap.slStates)return{added:0,missing:0};
+    const seenSl=new Set();
+    for(const sl of this.proj.swimlanes){
+      const e=snap.slStates[sl.id];
+      if(e){
+        seenSl.add(sl.id);
+        sl.collapsed=e.c||'expanded';
+        const subEntries=e.subs||{};
+        for(const ss of (sl.subSwimlanes||[])){
+          const st=subEntries[ss.id];
+          if(st)ss.collapsed=st;
+          else ss.collapsed='expanded';
+        }
+      }else{
+        /* Swimlane not in saved view — leave current state untouched */
+      }
+    }
+    const savedIds=Object.keys(snap.slStates);
+    const currentIds=new Set(this.proj.swimlanes.map(s=>s.id));
+    const added=this.proj.swimlanes.filter(s=>!snap.slStates[s.id]).length;
+    const missing=savedIds.filter(id=>!currentIds.has(id)).length;
+    return {added,missing};
+  },
+
+  _findView(id){return(this.proj.views||[]).find(v=>v.id===id)||null},
+
+  _sanitizeViewName(name){return(name||'').trim().slice(0,40)},
+
+  captureCurrentView(name){
+    name=this._sanitizeViewName(name);
+    if(!name){this.toast('Please enter a name','error');return null}
+    if(!Array.isArray(this.proj.views))this.proj.views=[];
+    if(this.proj.views.length>=this._MAX_VIEWS){
+      this.toast(`Maximum ${this._MAX_VIEWS} views reached — delete some first`,'error');
+      return null;
+    }
+    this.snap();
+    const snap=this._captureSlSnapshot();
+    const view={id:U.id(),name,created:Date.now(),slStates:snap.slStates};
+    this.proj.views.push(view);
+    this.autoSave();
+    this.toast(`Saved view "${name}"`);
+    return view.id;
+  },
+
+  overwriteView(viewId,newName){
+    /* Used by the save-view "Overwrite existing" path — replaces slStates of named match */
+    const v=this._findView(viewId);
+    if(!v)return false;
+    this.snap();
+    const snap=this._captureSlSnapshot();
+    v.slStates=snap.slStates;
+    v.modified=Date.now();
+    if(newName)v.name=this._sanitizeViewName(newName)||v.name;
+    this.autoSave();
+    this.toast(`Updated view "${v.name}"`);
+    return true;
+  },
+
+  updateView(viewId){
+    return this.overwriteView(viewId,null);
+  },
+
+  updateLastAppliedView(){
+    const id=this._lastAppliedViewId;
+    const v=id?this._findView(id):null;
+    if(!v){this.toast('No view to update — apply a view first','info');return false}
+    return this.overwriteView(id,null);
+  },
+
+  applyView(viewId){
+    const v=this._findView(viewId);
+    if(!v){this.toast('View not found','error');return false}
+    this.snap();
+    this._prevView=this._captureSlSnapshot({dense:true});
+    const {added,missing}=this._applySnapshot({slStates:v.slStates||{}});
+    this._lastAppliedViewId=viewId;
+    this.sched();
+    this.autoSave();
+    let msg=`Applied "${v.name}"`;
+    if(added||missing){
+      const bits=[];
+      if(added)bits.push(`${added} new swimlane${added===1?'':'s'} unchanged`);
+      if(missing)bits.push(`${missing} missing`);
+      msg+=` — ${bits.join(', ')}`;
+    }
+    this.toast(msg);
+    return true;
+  },
+
+  returnToPrevView(){
+    if(!this._prevView){this.toast('No previous view to return to','info');return false}
+    this.snap();
+    const cur=this._captureSlSnapshot({dense:true});
+    this._applySnapshot(this._prevView);
+    this._prevView=cur; /* swap — enables toggle */
+    this.sched();
+    this.autoSave();
+    this.toast('Returned to previous view');
+    return true;
+  },
+
+  deleteView(viewId){
+    const v=this._findView(viewId);
+    if(!v)return false;
+    this.snap();
+    this.proj.views=this.proj.views.filter(x=>x.id!==viewId);
+    if(this._lastAppliedViewId===viewId)this._lastAppliedViewId=null;
+    this.autoSave();
+    this.toast(`Deleted view "${v.name}"`);
+    return true;
+  },
+
+  renameView(viewId,newName){
+    const v=this._findView(viewId);
+    if(!v)return false;
+    const name=this._sanitizeViewName(newName);
+    if(!name){this.toast('Name cannot be empty','error');return false}
+    if(name===v.name)return true;
+    this.snap();
+    v.name=name;
+    this.autoSave();
+    this.toast(`Renamed to "${name}"`);
+    return true;
+  },
+
+  clearAllViews(){
+    if(!Array.isArray(this.proj.views)||!this.proj.views.length)return false;
+    this.snap();
+    this.proj.views=[];
+    this._lastAppliedViewId=null;
+    this.autoSave();
+    this.toast('All views cleared');
+    return true;
+  },
+
+  /* ── My Views UI rendering ─────────────────────────────────────────── */
+
+  _fmtViewDate(ts){
+    if(!ts)return '';
+    const d=new Date(ts);
+    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[d.getMonth()]+' '+d.getDate();
+  },
+
+  _escHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))},
+
+  _renderMyViewsUI(){
+    /* Update "Return to prev view" enabled state + count badge, (re-)render panel if open */
+    const ret=document.getElementById('btn-return-prev-view');
+    if(ret){if(this._prevView)ret.classList.remove('dd-disabled');else ret.classList.add('dd-disabled')}
+    const badge=document.getElementById('myviews-count-badge');
+    const n=(this.proj.views||[]).length;
+    if(badge)badge.textContent=n?String(n):'';
+    const panel=document.getElementById('myviews-panel');
+    if(panel&&!panel.classList.contains('hidden'))this._renderMyViewsPanel();
+  },
+
+  _toggleMyViewsPanel(){
+    const panel=document.getElementById('myviews-panel');
+    const row=document.getElementById('btn-myviews-toggle');
+    if(!panel)return;
+    const willOpen=panel.classList.contains('hidden');
+    if(willOpen){this._renderMyViewsPanel();panel.classList.remove('hidden');if(row)row.classList.add('open');this._positionMyViewsFlyout()}
+    else{this._hideMyViewsPanel()}
+  },
+
+  _hideMyViewsPanel(){
+    const panel=document.getElementById('myviews-panel');
+    const row=document.getElementById('btn-myviews-toggle');
+    if(panel)panel.classList.add('hidden');
+    if(row)row.classList.remove('open');
+  },
+
+  _positionMyViewsFlyout(){
+    /* Anchor to the right edge of the View dropdown, aligned vertically with the toggle row.
+       Fall back to the left side when the right side would overflow. Clamp to viewport. */
+    const panel=document.getElementById('myviews-panel');
+    const dd=document.getElementById('view-dropdown');
+    const row=document.getElementById('btn-myviews-toggle');
+    if(!panel||!dd||!row)return;
+    /* Reset any prior positioning so offsetWidth/offsetHeight measure correctly */
+    panel.style.left='0px';panel.style.top='0px';
+    const ddRect=dd.getBoundingClientRect();
+    const rowRect=row.getBoundingClientRect();
+    const pw=panel.offsetWidth;
+    const ph=panel.offsetHeight;
+    const vpW=window.innerWidth;
+    const vpH=window.innerHeight;
+    const GAP=4, MARGIN=8;
+    /* Horizontal: prefer right cascade, fall back to left */
+    let left=ddRect.right+GAP;
+    if(left+pw>vpW-MARGIN){
+      const leftSide=ddRect.left-pw-GAP;
+      if(leftSide>=MARGIN)left=leftSide;
+      else left=Math.max(MARGIN,vpW-pw-MARGIN); /* overlap fallback */
+    }
+    /* Vertical: align with toggle row, clamp to viewport */
+    let top=rowRect.top;
+    if(top+ph>vpH-MARGIN)top=Math.max(MARGIN,vpH-ph-MARGIN);
+    if(top<MARGIN)top=MARGIN;
+    panel.style.left=left+'px';
+    panel.style.top=top+'px';
+  },
+
+  _renderMyViewsPanel(){
+    const panel=document.getElementById('myviews-panel');
+    if(!panel)return;
+    const views=this.proj.views||[];
+    if(!views.length){
+      panel.innerHTML='<div class="myviews-empty">No saved views yet. Capture the current swimlane layout to return to it later.<span class="myviews-empty-cta" id="mv-empty-save">+ Save current view</span></div>';
+      const saveBtn=panel.querySelector('#mv-empty-save');
+      if(saveBtn)saveBtn.onclick=e=>{e.stopPropagation();this.showSaveViewPrompt()};
+      return;
+    }
+    let html='';
+    for(const v of views){
+      const isLast=v.id===this._lastAppliedViewId;
+      const dateTs=v.modified||v.created;
+      html+=`<div class="myviews-item${isLast?' mv-last-applied':''}" data-vid="${v.id}"><span class="mv-dot">&#9679;</span><span class="mv-name" title="${this._escHtml(v.name)}">${this._escHtml(v.name)}</span><span class="mv-date">${this._fmtViewDate(dateTs)}</span><span class="mv-act mv-upd" title="Overwrite with current state">&#8635;</span><span class="mv-act mv-ren" title="Rename">&#9998;</span><span class="mv-act mv-del" title="Delete">&times;</span></div>`;
+    }
+    html+='<div class="myviews-footer"><div class="save-dd-item" id="mv-footer-save"><span>+</span> Save current view&hellip;</div><div class="save-dd-item" id="mv-footer-manage"><span>&#9881;</span> Manage views&hellip;</div></div>';
+    panel.innerHTML=html;
+    /* Wire row clicks */
+    panel.querySelectorAll('.myviews-item').forEach(row=>{
+      const vid=row.getAttribute('data-vid');
+      const nameEl=row.querySelector('.mv-name');
+      const upd=row.querySelector('.mv-upd');
+      const ren=row.querySelector('.mv-ren');
+      const del=row.querySelector('.mv-del');
+      if(nameEl)nameEl.onclick=e=>{e.stopPropagation();this.closeAllDD();this.applyView(vid);this._renderMyViewsUI()};
+      if(upd)upd.onclick=e=>{e.stopPropagation();this._showInlineConfirm(row,'Overwrite "'+this._findView(vid).name+'" with current state?',()=>{this.overwriteView(vid);this._renderMyViewsPanel()})};
+      if(ren)ren.onclick=e=>{e.stopPropagation();this._showInlineRename(row,vid)};
+      if(del)del.onclick=e=>{e.stopPropagation();this._showInlineConfirm(row,'Delete "'+this._findView(vid).name+'"?',()=>{this.deleteView(vid);this._renderMyViewsUI()})};
+    });
+    const footSave=panel.querySelector('#mv-footer-save');
+    if(footSave)footSave.onclick=e=>{e.stopPropagation();this.showSaveViewPrompt()};
+    const footMgr=panel.querySelector('#mv-footer-manage');
+    if(footMgr)footMgr.onclick=e=>{e.stopPropagation();this.closeAllDD();this.showManageViewsModal()};
+  },
+
+  _showInlineConfirm(row,msg,onYes){
+    const confirm=document.createElement('div');
+    confirm.className='mv-confirm-row';
+    confirm.innerHTML='<span class="mv-confirm-msg">&#9888; '+this._escHtml(msg)+'</span><button class="mv-confirm-cancel">Cancel</button><button class="mv-confirm-yes">Confirm</button>';
+    row.style.display='none';
+    row.parentNode.insertBefore(confirm,row.nextSibling);
+    confirm.querySelector('.mv-confirm-cancel').onclick=e=>{e.stopPropagation();confirm.remove();row.style.display=''};
+    confirm.querySelector('.mv-confirm-yes').onclick=e=>{e.stopPropagation();confirm.remove();onYes()};
+  },
+
+  _showInlineRename(row,vid){
+    const v=this._findView(vid);
+    if(!v)return;
+    const nameEl=row.querySelector('.mv-name');
+    if(!nameEl)return;
+    const input=document.createElement('input');
+    input.type='text';input.className='mv-rename-input';input.value=v.name;input.maxLength=40;
+    nameEl.replaceWith(input);
+    input.focus();input.select();
+    const commit=()=>{const nm=input.value.trim();if(nm&&nm!==v.name)this.renameView(vid,nm);this._renderMyViewsPanel()};
+    const cancel=()=>this._renderMyViewsPanel();
+    input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit()}else if(e.key==='Escape'){e.preventDefault();cancel()}};
+    input.onblur=()=>commit();
+    input.onclick=e=>e.stopPropagation();
+  },
+
+  showSaveViewPrompt(){
+    this.closeAllDD();
+    const modal=document.getElementById('save-view-modal');
+    const nameIn=document.getElementById('sv-name');
+    const warn=document.getElementById('sv-dup-warn');
+    const ow=document.getElementById('btn-sv-overwrite');
+    if(!modal)return;
+    if(nameIn)nameIn.value='';
+    if(warn)warn.classList.add('hidden');
+    if(ow)ow.classList.add('hidden');
+    modal.classList.remove('hidden');
+    if(nameIn)setTimeout(()=>nameIn.focus(),50);
+  },
+
+  _findViewByName(name){
+    const n=(name||'').trim().toLowerCase();
+    if(!n)return null;
+    return(this.proj.views||[]).find(v=>(v.name||'').trim().toLowerCase()===n)||null;
+  },
+
+  _updateSaveViewDupWarn(){
+    const nameIn=document.getElementById('sv-name');
+    const warn=document.getElementById('sv-dup-warn');
+    const ow=document.getElementById('btn-sv-overwrite');
+    const nm=document.getElementById('sv-dup-name');
+    if(!nameIn||!warn||!ow)return;
+    const dup=this._findViewByName(nameIn.value);
+    if(dup){warn.classList.remove('hidden');ow.classList.remove('hidden');if(nm)nm.textContent=dup.name}
+    else{warn.classList.add('hidden');ow.classList.add('hidden')}
+  },
+
+  _handleSaveViewSubmit(overwriteMode){
+    const nameIn=document.getElementById('sv-name');
+    const modal=document.getElementById('save-view-modal');
+    if(!nameIn)return;
+    const name=nameIn.value.trim();
+    if(!name){this.toast('Please enter a name','error');nameIn.focus();return}
+    const dup=this._findViewByName(name);
+    if(dup&&!overwriteMode){
+      /* Surface overwrite option rather than creating a name collision */
+      this._updateSaveViewDupWarn();
+      this.toast('Name already used — choose Overwrite or a different name','info');
+      return;
+    }
+    if(dup&&overwriteMode){
+      this.overwriteView(dup.id,name);
+    }else{
+      this.captureCurrentView(name);
+    }
+    if(modal)modal.classList.add('hidden');
+    this._renderMyViewsUI();
+  },
+
+  showManageViewsModal(){
+    this.closeAllDD();
+    const modal=document.getElementById('manage-views-modal');
+    if(!modal)return;
+    this._renderManageViewsList();
+    modal.classList.remove('hidden');
+  },
+
+  _renderManageViewsList(){
+    const list=document.getElementById('mv-list');
+    const countEl=document.getElementById('mv-count');
+    const maxEl=document.getElementById('mv-max');
+    if(!list)return;
+    const views=this.proj.views||[];
+    if(countEl)countEl.textContent=String(views.length);
+    if(maxEl)maxEl.textContent=String(this._MAX_VIEWS);
+    if(!views.length){list.innerHTML='<div class="mv-empty">No saved views yet.</div>';return}
+    let html='';
+    for(const v of views){
+      const isMod=!!v.modified;
+      const dateLabel=isMod?('Updated '+this._fmtViewDate(v.modified)):('Created '+this._fmtViewDate(v.created));
+      const slCount=Object.keys(v.slStates||{}).length;
+      html+=`<div class="mv-row" data-vid="${v.id}"><div class="mv-row-info"><div class="mv-row-name">${this._escHtml(v.name)}</div><div class="mv-row-meta">${dateLabel} &middot; ${slCount} swimlane${slCount===1?'':'s'} customized</div></div><div class="mv-row-btns"><button class="mv-row-apply">Apply</button><button class="mv-row-upd" title="Overwrite with current state">Update</button><button class="mv-row-ren">Rename</button><button class="mv-row-del" title="Delete">&times;</button></div></div>`;
+    }
+    list.innerHTML=html;
+    list.querySelectorAll('.mv-row').forEach(row=>{
+      const vid=row.getAttribute('data-vid');
+      row.querySelector('.mv-row-apply').onclick=()=>{this.applyView(vid);this._renderManageViewsList();this._renderMyViewsUI()};
+      row.querySelector('.mv-row-upd').onclick=()=>{if(confirm('Overwrite "'+this._findView(vid).name+'" with current swimlane state?'))this.overwriteView(vid);this._renderManageViewsList();this._renderMyViewsUI()};
+      row.querySelector('.mv-row-ren').onclick=()=>{const v=this._findView(vid);if(!v)return;const nm=prompt('Rename view:',v.name);if(nm!=null){this.renameView(vid,nm);this._renderManageViewsList();this._renderMyViewsUI()}};
+      row.querySelector('.mv-row-del').onclick=()=>{if(confirm('Delete "'+this._findView(vid).name+'"?')){this.deleteView(vid);this._renderManageViewsList();this._renderMyViewsUI()}};
+    });
+  },
+
   _isSlSel(slId,ssId){ssId=ssId||'';return this.slSel.some(s=>s.slId===slId&&s.ssId===ssId)},
   _clearSlSel(){if(this.slSel.length){this.slSel=[];this._hideSlFmtPopover();this.sched()}},
   _hideSlFmtPopover(){const p=document.getElementById('sl-fmt-popover');if(!p)return;const wasVisible=!p.classList.contains('hidden');p.classList.add('hidden');if(wasVisible&&this._slSelManual.length){this.slSel=this._slSelManual.map(s=>({...s}));this._slSelManual=[];this.sched()}},

@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.46.6` — Tier A audit bundle: zero-duration falsy-0 fix (3 sites), resize duration clamp, export DPR downscale toast, multi-delete confirm, Dev Panel warning banner. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.47.0` — F61 My Views: saved per-timeline swimlane-collapse configurations. Users save named views (e.g. "Working Timeline", "Executive Summary"), swap between them from View → Swimlanes → My Views ▸, and use "Return to previous view" to toggle back after Expand/Collapse All. Side-cascade flyout keeps the View dropdown compact regardless of view count. 4 new customizable shortcuts. Schema bumped v2→v3. Live at `https://adrotar21.github.io/timeline-studio/`.
 - **Beta feedback (Feb 2026):** Two PgM beta testers validated the core product. Discoverability is the #1 gap — see BACKLOG.md for F48 (P1) and related items.
 - Version history tracked in `docs/BACKLOG.md` (recent) and `docs/VERSION_HISTORY.md` (archive), plus **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
@@ -134,6 +134,21 @@ TimelineProject/
 - **UI**: Collapsible "Open & Recent ▸" row in File dropdown. `_mruExpanded` state persists within session. Per-entry × remove buttons. Browse link always at top of expansion.
 - **Hooks**: `_updateMRU()` called from `openFile()`, `handleOpen()`, and all 3 `saveFile()` paths.
 - **Fallback**: Firefox/Safari get NAME_ONLY entries (filename + projectName from localStorage, no handle). Clicking opens standard file picker.
+
+### My Views — Saved Swimlane Configs (F61, v0.47.0)
+- **Data**: `proj.views[]` — array of `{id, name, created, modified?, slStates:{<slId>:{c?, subs?:{<ssId>:state}}}}`. Schema bumped v2→v3. Max 20 views (`_MAX_VIEWS`).
+- **Key-tracking semantics**: Every swimlane ID that existed at save time gets a key in `slStates` (even when expanded — value is `{}`). On apply: known IDs restored (empty entry → expanded default), truly-new IDs untouched. Distinguishes "known-expanded" vs "added-since-save" without requiring a separate ID list.
+- **Dense vs sparse capture**: `_captureSlSnapshot({dense:true})` stores explicit `'expanded'` values — used for `_prevView` so Return-to-previous fully restores after mutation. Default sparse capture drops expanded defaults (compact on disk) but still records all known IDs.
+- **Transient state** (not persisted, session-only): `_prevView` (pre-action snapshot for Return-to-previous, dense), `_lastAppliedViewId` (powers ● last-applied indicator + `updateLastAppliedView` shortcut). Cleared if the referenced view is deleted.
+- **Instrumentation**: `expandAll()` and `collapseAll()` at both dispatch ([app.js:489–490](app.js)) and inline click-handler paths capture dense `_prevView` before mutation. `applyView()` captures dense `_prevView` then applies saved state.
+- **Drift toast**: apply surfaces `added` (new swimlanes unchanged) and `missing` (saved IDs not in current proj) counts in the success toast — low-ceremony, no blocking dialog.
+- **UI architecture — side-cascade flyout**: `#myviews-panel` lives as a sibling of `#view-dropdown` (not inside), styled `position:fixed`. `_positionMyViewsFlyout()` anchors to the right of the parent dropdown, falls back to left when viewport-constrained. Reposition on dropdown-internal scroll + window resize. Keeps the View dropdown compact regardless of view count (0–20).
+- **View dropdown safety cap**: `#view-dropdown` has `max-height: calc(100vh - 80px); overflow-y: auto` so the dropdown itself never extends off-screen on short viewports.
+- **Close paths**: Flyout closes when (1) toggle row clicked again, (2) any non-toggle row in View dropdown clicked, (3) outside-save-btn-group click via `closeAllDD()`, (4) apply-view / save / manage actions. Single-cascade OS-menu behavior.
+- **Shortcuts**: 4 new customizable actions in `SHORTCUT_ACTIONS` (cat:View, defaults:[]): `returnToPrevView`, `saveCurrentView`, `updateLastAppliedView`, `openManageViews`. Auto-surface in Settings → Shortcuts + help modal.
+- **`_packProj`**: strips empty `views:[]` for share-links; sparse encoding keeps saved views tiny. Full-fidelity preserved in `saveFile()`.
+- **Migration**: idempotent — normalizes missing `id`/`name`/`created`/`slStates`, bumps `proj.version` to 3 only after v1→v2 endDate block (avoids reordering with existing migrations).
+- **Undo coverage**: `captureCurrentView`, `overwriteView`, `applyView`, `deleteView`, `renameView`, `clearAllViews` all `snap()` before mutating. Ctrl+Z recovers from accidental delete/overwrite.
 
 ### Browser Compatibility — File System Access (v0.44.8)
 - **Feature flag**: `_hasFS: !!window.showSaveFilePicker` — evaluated once at parse time, used for all conditional logic
@@ -315,6 +330,7 @@ Output is color-coded (green pass / red fail) with summary stats. Tests mock eng
 - Project templates (Product Launch, Software Development)
 - Format Painter: two-step popover wizard (select properties → Apply Once / Apply to Many) with F4 keyboard shortcut (double-tap for multi mode)
 - Customizable keyboard shortcuts with 3-tier manager (Reserved / Customizable / Mouse Reference) in Settings → Shortcuts (Ctrl+Shift+K). Per-user overrides stored in localStorage.
+- **My Views (v0.47.0):** per-timeline saved swimlane-collapse configurations. Save named views, swap between them from View → Swimlanes → My Views ▸, and use "Return to previous view" to toggle back after any Expand/Collapse All. Side-cascade flyout keeps the dropdown compact.
 
 ## Known Issues & Backlog
 See `docs/BACKLOG.md` for the prioritized and sized bug/feature backlog with version history. Completed items are archived in `docs/COMPLETED.md`. Older version history is in `docs/VERSION_HISTORY.md`.
