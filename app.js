@@ -173,7 +173,7 @@ function _skDec(o){
   return o;
 }
 
-function newProj(){const n=new Date();return{version:3,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,depFilter:'all',locked:false,lockH:false,lockV:false,hideMode:false,theme:'warm',bgColor:'#FAF7F2',headerColor:'#292524',zoom:100,fontSize:11,monthFormat:'short',quarterFormat:'withYear',headerFontSize:10.5,dayLabelFormat:'letter',dayColumnWidth:'normal',rowDensity:'normal',watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[],views:[]}}
+function newProj(){const n=new Date();return{version:3,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,depFilter:'all',depLineStyle:'curved',locked:false,lockH:false,lockV:false,hideMode:false,theme:'warm',bgColor:'#FAF7F2',headerColor:'#292524',zoom:100,fontSize:11,monthFormat:'short',quarterFormat:'withYear',headerFontSize:10.5,dayLabelFormat:'letter',dayColumnWidth:'normal',rowDensity:'normal',watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[],views:[]}}
 
 /* ── Row Density Presets (F52) ──────────────────────────────────────
    Vertical geometry per density level. Extensible: to add a level (e.g.
@@ -212,7 +212,7 @@ const _TIER_CONFIG_DEFAULTS={
 };
 
 const App={
-  _version:'0.48.0',
+  _version:'0.49.0',
   _LICENSING_ENABLED:true, /* Kill switch: set false to bypass all tier gating — flip to true when ready to enforce */
   _tierConfig:null,_resolvedTier:'free',
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
@@ -672,6 +672,7 @@ const App={
     if(!p.rowDensity||!DENSITY_PRESETS[p.rowDensity])p.rowDensity='normal';
     if(!p.watermark)p.watermark=false;if(!p.wmDate)p.wmDate='';if(!p.wmPos)p.wmPos='bottom-center';
     if(p.showDeps==null)p.showDeps=true;if(p.depFilter==null)p.depFilter='all';if(p.showToday==null)p.showToday=true;
+    if(!p.depLineStyle||!['curved','stepped'].includes(p.depLineStyle))p.depLineStyle='curved';
     if(p.owner==null)p.owner='';if(p.wmShowOwner==null)p.wmShowOwner=false;
     if(p.lockH==null)p.lockH=false;if(p.lockV==null)p.lockV=false;
     if(p.showWeekends==null)p.showWeekends=false;if(p.weekendOpacity==null)p.weekendOpacity=8;
@@ -1454,7 +1455,7 @@ const App={
     delete p._licenseKey;
     const def=newProj();
     /* project-level: strip fields matching defaults */
-    const projStrip=['owner','dateFormat','timescale','headerLayers','autoRange','showToday','showDeps','depFilter',
+    const projStrip=['owner','dateFormat','timescale','headerLayers','autoRange','showToday','showDeps','depFilter','depLineStyle',
       'locked','lockH','lockV','hideMode','theme','bgColor','headerColor','zoom','fontSize','monthFormat','quarterFormat','headerFontSize','dayLabelFormat','dayColumnWidth','rowDensity',
       'watermark','wmDate','wmPos','wmShowOwner','showWeekends','weekendOpacity','weekendAutoHide',
       'showHolidays','holidayOpacity','holidayColor','holidayLabels','scheduleAroundNonWorking',
@@ -2305,11 +2306,12 @@ const App={
     on('btn-add-import',()=>{this.$.add_dropdown.classList.add('hidden');this.showPaste()});
     on('btn-undo',()=>this.undo());on('btn-redo',()=>this.redo());
     // View dropdown
-    on('btn-view-menu',()=>{this.closeAllDD();this.$.view_dropdown.classList.toggle('hidden');this.posDD(this.$.view_dropdown);const vdf0=document.getElementById('view-dep-filter');if(vdf0)vdf0.value=this.proj.showDeps?(this.proj.depFilter||'all'):'off';this._renderMyViewsUI();/* always start with flyout collapsed */ this._hideMyViewsPanel()});
+    on('btn-view-menu',()=>{this.closeAllDD();this.$.view_dropdown.classList.toggle('hidden');this.posDD(this.$.view_dropdown);const vdf0=document.getElementById('view-dep-filter');if(vdf0)vdf0.value=this.proj.showDeps?(this.proj.depFilter||'all'):'off';const vds0=document.getElementById('view-dep-style');if(vds0)vds0.value=this.proj.depLineStyle||'curved';this._renderMyViewsUI();/* always start with flyout collapsed */ this._hideMyViewsPanel()});
     on('btn-today',()=>{this.$.view_dropdown.classList.add('hidden');this.goToday()});
     on('btn-fullscreen',()=>{this.$.view_dropdown.classList.add('hidden');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>this.toast('Fullscreen not supported','error'))});
     on('btn-show-float',()=>{this.$.view_dropdown.classList.add('hidden');this._scDispatch.showFloat.call(this)});
     const vdf=document.getElementById('view-dep-filter');if(vdf)vdf.onchange=()=>{this.$.view_dropdown.classList.add('hidden');const val=vdf.value;if(val==='off'){this.proj.showDeps=false}else{this.proj.showDeps=true;this.proj.depFilter=val}this.sched();this.autoSave();this.toast('Dependencies: '+(val==='off'?'Off':val==='all'?'All':'Within swimlane'))};
+    const vds=document.getElementById('view-dep-style');if(vds)vds.onchange=()=>{this.$.view_dropdown.classList.add('hidden');this.proj.depLineStyle=vds.value==='stepped'?'stepped':'curved';const sr=document.querySelector(`input[name="s-dep-style"][value="${this.proj.depLineStyle}"]`);if(sr)sr.checked=true;this.sched();this.autoSave();this.toast('Dependency lines: '+(this.proj.depLineStyle==='stepped'?'Stepped':'Curved'))};
     on('btn-zoom100',()=>this.doZoomTo(100));
     on('btn-fit',()=>this.sel.length?this.fitToSelection():this.fitToContent());
     on('btn-expand-all',()=>{this._prevView=this._captureSlSnapshot({dense:true});this.snap();this.proj.swimlanes.forEach(sl=>{sl.collapsed='expanded';if(sl.subSwimlanes)sl.subSwimlanes.forEach(ss=>ss.collapsed='expanded')});this.sched();this.autoSave();this.toast('All swimlanes expanded');this._renderMyViewsUI()});
@@ -4150,6 +4152,7 @@ const App={
     this.$.s_auto_range.checked=p.autoRange;this.$.s_today.checked=p.showToday;this.$.s_deps.checked=p.showDeps;
     document.getElementById('deps-opts').classList.toggle('hidden',!p.showDeps);
     const dfVal=p.depFilter||'all';document.querySelectorAll('input[name="s-dep-filter"]').forEach(r=>r.checked=(r.value===dfVal));
+    const dsVal=p.depLineStyle||'curved';document.querySelectorAll('input[name="s-dep-style"]').forEach(r=>r.checked=(r.value===dsVal));
     this.$.s_fontsize.value=p.fontSize||11;
     // Date format
     const dfSel=document.getElementById('s-date-fmt');
@@ -4362,6 +4365,7 @@ const App={
     p.timelineStart=this.$.s_start.value;p.timelineEnd=this.$.s_end.value;
     p.autoRange=this.$.s_auto_range.checked;p.showToday=this.$.s_today.checked;p.showDeps=this.$.s_deps.checked;
     const depFR=document.querySelector('input[name="s-dep-filter"]:checked');p.depFilter=depFR?depFR.value:'all';
+    const depSR=document.querySelector('input[name="s-dep-style"]:checked');p.depLineStyle=depSR&&depSR.value==='stepped'?'stepped':'curved';
     p.fontSize=+this.$.s_fontsize.value||11;
     // Date format
     const dfSel=document.getElementById('s-date-fmt');
@@ -6081,6 +6085,78 @@ const App={
     h+=`</div></div>`;return h
   },
 
+  /* ── Dependency line routing (F67) ──────────────────────────────────
+     proj.depLineStyle: 'curved' (default, classic bezier — untouched) or
+     'stepped' (Office-Timeline-style orthogonal elbows). Stepped lines leave
+     the predecessor with a short horizontal stub, run vertically, travel
+     through the whitespace channel between rows (±rH/2 from the bar center,
+     density-aware) when they must double back, and enter the successor
+     horizontally so the arrowhead always points along the row. Shared by
+     rDeps() (on-screen) and buildExportSVG() so exports match the view. */
+  _depRoute(sx,sy,tx,ty,dtype,o){
+    const g=this._rGeom(),STUB=10,rH=g.rH,bar=g.bar;o=o||{};
+    const sameRow=Math.abs(ty-sy)<1,down=ty>=sy;
+    let pts,a=null;
+    if(dtype==='SS'){const xv=Math.min(sx,tx)-STUB;pts=[[sx,sy],[xv,sy],[xv,ty],[tx,ty]]}
+    else if(dtype==='FF'){const xv=Math.max(sx,tx)+STUB;pts=[[sx,sy],[xv,sy],[xv,ty],[tx,ty]]}
+    else if(dtype==='SF'){
+      if(sameRow&&tx<sx)pts=[[sx,sy],[tx,ty]];
+      else if(tx<=sx-2&&!sameRow){const xr=Math.max(sx-STUB,(sx+tx)/2);pts=[[sx,sy],[xr,sy],[xr,ty],[tx,ty]]}
+      else{const ych=sameRow?ty+rH/2:(down?ty-rH/2:ty+rH/2);pts=[[sx,sy],[sx-STUB,sy],[sx-STUB,ych],[tx+STUB,ych],[tx+STUB,ty],[tx,ty]]}
+    }else{/* FS */
+      if(sameRow&&tx>sx)pts=[[sx,sy],[tx,ty]];
+      /* forward gap of any size: clean Z — rail at the midpoint when narrow */
+      else if(tx>=sx+2&&!sameRow){const xr=Math.min(sx+STUB,(sx+tx)/2);pts=[[sx,sy],[xr,sy],[xr,ty],[tx,ty]]}
+      /* milestone target overlapping the source end: drop into its top/bottom
+         tip instead of looping back around to its left side. Needs ≥12px of
+         vertical travel — a near-level star would make the tip entry
+         degenerate (drop direction and arrowhead would contradict). */
+      else if(o.tgtMs&&Math.abs(ty-sy)>=12&&tx+8>=sx-2){const mx=tx+8,ey=down?ty-8:ty+8;pts=[[sx,sy],[mx,sy],[mx,ey]];a=down?Math.PI/2:-Math.PI/2}
+      /* milestone source with an overlapping successor: leave through the
+         star's bottom/top instead of stubbing out past it and curling back */
+      else if(o.srcMs&&Math.abs(ty-sy)>=12){const mx=sx-8,ey=down?sy+8:sy-8;
+        if(tx>=mx+4)pts=[[mx,ey],[mx,ty],[tx,ty]];
+        else{const ych=down?ty-rH/2:ty+rH/2;pts=[[mx,ey],[mx,ych],[tx-STUB,ych],[tx-STUB,ty],[tx,ty]]}}
+      /* doubling-back runs through the channel ADJACENT TO THE TARGET row, so
+         the long vertical travels just past the source bar's end (open space)
+         and the entry rail only ever spans half a row — it can't slice
+         through bars in the rows between */
+      else{const ych=sameRow?ty+rH/2:(down?ty-rH/2:ty+rH/2);pts=[[sx,sy],[sx+STUB,sy],[sx+STUB,ych],[tx-STUB,ych],[tx-STUB,ty],[tx,ty]]}
+    }
+    /* drop zero-length segments (same-row SS/FF collapse onto one rail) */
+    pts=pts.filter((p,i)=>i===0||p[0]!==pts[i-1][0]||p[1]!==pts[i-1][1]);
+    if(a===null){const pen=pts.length>1?pts[pts.length-2]:pts[0];a=Math.atan2(ty-pen[1],tx-pen[0])}
+    /* lag label: prefer a channel run (clear whitespace); on a row-center run
+       lift the label above the bar so it never sits inside one */
+    let lx=(sx+tx)/2,ly=(sy+ty)/2-6,cand=null;
+    for(let i=1;i<pts.length;i++){
+      if(pts[i][1]!==pts[i-1][1])continue;
+      const dx=Math.abs(pts[i][0]-pts[i-1][0]);
+      const row=Math.abs(pts[i][1]-sy)<1||Math.abs(pts[i][1]-ty)<1;
+      if(!cand||(cand.row&&!row)||(cand.row===row&&dx>cand.dx))cand={dx,row,x:(pts[i][0]+pts[i-1][0])/2,y:pts[i][1]};
+    }
+    if(cand){lx=cand.x;ly=cand.y-(cand.row?bar/2+5:6)}
+    return{d:this._orthoPath(pts,5),a,lx,ly};
+  },
+  /* Emit an SVG path through orthogonal waypoints with rounded corners.
+     Radius clamps to half the shorter adjacent segment; collinear joints
+     and sub-pixel corners fall back to square L-joins. Coords rounded to
+     0.1px to keep export SVG strings compact. */
+  _orthoPath(pts,r){
+    const f=n=>Math.round(n*10)/10;
+    let d='M'+f(pts[0][0])+','+f(pts[0][1]);
+    for(let i=1;i<pts.length-1;i++){
+      const[x0,y0]=pts[i-1],[x1,y1]=pts[i],[x2,y2]=pts[i+1];
+      const l1=Math.abs(x1-x0)+Math.abs(y1-y0),l2=Math.abs(x2-x1)+Math.abs(y2-y1);
+      const rr=Math.min(r,l1/2,l2/2);
+      const ux1=Math.sign(x1-x0),uy1=Math.sign(y1-y0),ux2=Math.sign(x2-x1),uy2=Math.sign(y2-y1);
+      if(rr<0.75||(ux1===ux2&&uy1===uy2)){d+=' L'+f(x1)+','+f(y1);continue}
+      d+=' L'+f(x1-ux1*rr)+','+f(y1-uy1*rr)+' Q'+f(x1)+','+f(y1)+' '+f(x1+ux2*rr)+','+f(y1+uy2*rr);
+    }
+    const last=pts[pts.length-1];d+=' L'+f(last[0])+','+f(last[1]);
+    return d;
+  },
+
   rDeps(tl){const svg=document.getElementById('dep-svg');if(!svg)return;const body=this.$.tl_body,bR=body.getBoundingClientRect();const L=[];
     const filter=this.proj.depFilter||'all';
     for(const it of this.proj.items){if(!it.deps?.length)continue;
@@ -6106,12 +6182,14 @@ const App={
           else if(dtype==='SF'){const pStart=pred.type==='task'?pred.startDate:pred.date;const iEnd=this._depEnd(it);if(pStart&&iEnd&&iEnd<this._addLagWorkingDays(pStart,lag,idm))violated=true}
           if(req&&iStart&&iStart<req)violated=true}
         const clr=violated?'#d4726a':it.color;const dash=violated?' stroke-dasharray="4,3"':'';const opa=violated?'0.7':'0.4';
-        const mx=(sx+tx)/2;
-        L.push(`<path d="M${sx},${sy} C${mx},${sy} ${mx},${ty} ${tx},${ty}" stroke="${clr}" stroke-opacity="${opa}" stroke-width="1.5" fill="none"${dash}/>`);
-        const a=Math.atan2(ty-sy,tx-mx),s=6;
+        let pd,a,lgx,lgy;
+        if((this.proj.depLineStyle||'curved')==='stepped'){const rt=this._depRoute(sx,sy,tx,ty,dtype,{srcMs:pred.type==='milestone',tgtMs:it.type==='milestone'});pd=rt.d;a=rt.a;lgx=rt.lx;lgy=rt.ly}
+        else{const mx=(sx+tx)/2;pd=`M${sx},${sy} C${mx},${sy} ${mx},${ty} ${tx},${ty}`;a=Math.atan2(ty-sy,tx-mx);lgx=(sx+tx)/2;lgy=(sy+ty)/2-6}
+        L.push(`<path d="${pd}" stroke="${clr}" stroke-opacity="${opa}" stroke-width="1.5" fill="none"${dash}/>`);
+        const s=6;
         L.push(`<polygon fill="${clr}" fill-opacity="${opa}" points="${tx},${ty} ${tx-s*Math.cos(a-.4)},${ty-s*Math.sin(a-.4)} ${tx-s*Math.cos(a+.4)},${ty-s*Math.sin(a+.4)}"/>`);
         // Lag label
-        if(lag!==0){const lx=(sx+tx)/2,ly=(sy+ty)/2-6;
+        if(lag!==0){const lx=lgx,ly=lgy;
           const lagUnit=(this.proj.scheduleAroundNonWorking&&idm==='work')?'wd':'d';
           L.push(`<text x="${lx}" y="${ly}" fill="${clr}" font-size="8" font-family="monospace" text-anchor="middle" opacity="0.7">${lag>0?'+':''}${lag}${lagUnit}</text>`)}
     }}svg.innerHTML=L.join('')},
@@ -6669,12 +6747,14 @@ const App={
             else if(dtype==='SF'){const pStart=pred.type==='task'?pred.startDate:pred.date;const iEnd=this._depEnd(it);if(pStart&&iEnd&&iEnd<this._addLagWorkingDays(pStart,lag,idm))violated=true}
             if(req&&iStart&&iStart<req)violated=true}
           const clr=violated?'#d4726a':it.color;const dash=violated?' stroke-dasharray="4,3"':'';const opa=violated?'0.7':'0.4';
-          const mx=(sx+tx)/2;
-          svg+=`<path d="M${sx},${sy} C${mx},${sy} ${mx},${ty} ${tx},${ty}" stroke="${clr}" stroke-opacity="${opa}" stroke-width="1.5" fill="none"${dash}/>`;
-          const a=Math.atan2(ty-sy,tx-mx),s=6;
+          let pd,a,lgx,lgy;
+          if((p.depLineStyle||'curved')==='stepped'){const rt=this._depRoute(sx,sy,tx,ty,dtype,{srcMs:pred&&pred.type==='milestone',tgtMs:it.type==='milestone'});pd=rt.d;a=rt.a;lgx=rt.lx;lgy=rt.ly}
+          else{const mx=(sx+tx)/2;pd=`M${sx},${sy} C${mx},${sy} ${mx},${ty} ${tx},${ty}`;a=Math.atan2(ty-sy,tx-mx);lgx=(sx+tx)/2;lgy=(sy+ty)/2-6}
+          svg+=`<path d="${pd}" stroke="${clr}" stroke-opacity="${opa}" stroke-width="1.5" fill="none"${dash}/>`;
+          const s=6;
           svg+=`<polygon fill="${clr}" fill-opacity="${opa}" points="${tx},${ty} ${tx-s*Math.cos(a-.4)},${ty-s*Math.sin(a-.4)} ${tx-s*Math.cos(a+.4)},${ty-s*Math.sin(a+.4)}"/>`;
           /* Lag label */
-          if(lag!==0){const lx=(sx+tx)/2,ly=(sy+ty)/2-6;
+          if(lag!==0){const lx=lgx,ly=lgy;
             const lagUnit=(p.scheduleAroundNonWorking&&idm==='work')?'wd':'d';
             svg+=`<text x="${lx}" y="${ly}" fill="${clr}" font-size="8" font-family="monospace" text-anchor="middle" opacity="0.7">${lag>0?'+':''}${lag}${lagUnit}</text>`}
       }}}

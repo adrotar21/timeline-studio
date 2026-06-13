@@ -130,6 +130,7 @@
           <div class="dd-section" id="view-dep-section">
             <div class="dd-section-label">Dependencies</div>
             <div class="dd-inline hdr-fmt-row"><label class="hdr-fmt-lbl">Show</label><select id="view-dep-filter" class="toolbar-select hdr-fmt-sel"><option value="off">Off</option><option value="all" selected>All</option><option value="swimlane">Within Swimlane</option></select></div>
+            <div class="dd-inline hdr-fmt-row"><label class="hdr-fmt-lbl">Lines</label><select id="view-dep-style" class="toolbar-select hdr-fmt-sel" data-tooltip="How dependency arrows are drawn<br><b>Curved</b> — flowing bezier curves (classic)<br><b>Stepped</b> — right-angle elbows with rounded<br>corners that route through the gaps between rows"><option value="curved" selected>Curved</option><option value="stepped">Stepped</option></select></div>
           </div>
           <div class="dd-sep"></div>
           <div class="dd-section">
@@ -437,6 +438,10 @@
               <div class="shading-sub-opts hidden" id="deps-opts">
                 <label><input type="radio" name="s-dep-filter" value="all" checked> All dependencies</label>
                 <label><input type="radio" name="s-dep-filter" value="swimlane"> Within swimlane only</label>
+                <div style="border-top:1px solid var(--brd);margin-top:6px;padding-top:6px">
+                  <label><input type="radio" name="s-dep-style" value="curved" checked> Curved lines</label>
+                  <label><input type="radio" name="s-dep-style" value="stepped"> Stepped lines</label>
+                </div>
               </div>
             </div>
             <div class="settings-group-divider"></div>

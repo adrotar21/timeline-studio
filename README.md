@@ -3,7 +3,7 @@
 **A cross-platform, zero-dependency Gantt chart tool for project managers.**
 Download three files. Open `index.html`. Done.
 
-![Version](https://img.shields.io/badge/version-0.48.0-blue)
+![Version](https://img.shields.io/badge/version-0.49.0-blue)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Files](https://img.shields.io/badge/architecture-3_files-orange)
 
@@ -76,6 +76,7 @@ A spreadsheet-style table for fast editing, filtering, and bulk operations. Swit
 A full dependency engine with four link types, lag support, and two scheduling modes.
 
 - **Link types:** Finish-Start (FS), Start-Start (SS), Finish-Finish (FF), Start-Finish (SF) with positive or negative lag
+- **Two line styles** -- classic curved beziers or stepped right-angle elbows that route through the gaps between rows (View > Dependencies > Lines)
 - **Manual mode** -- you control all dates; propagate changes on demand with Ctrl+Shift+P
 - **Auto-Scheduled mode** -- dates auto-calculate from dependencies and durations
 - **Critical path** highlighting shows zero-float items in your dependency chain

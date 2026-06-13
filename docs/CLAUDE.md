@@ -14,7 +14,8 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.48.0` — F52 Compact timeline view: "Row Density" selector (Normal/Compact) in the View dropdown under Scale. Compact tightens row pitch 38→26px and bars 22→15px and shrink-wraps every lane to content on entry, while lanes stay fully resizable: each density stores its own lane heights (`height` vs `heightC` via the preset's `hKey`), so resizes in one mode never disturb the other and switching always restores that mode's exact layout. Flows through right-click/drag row math and export SVG (WYSIWYG). Geometry lives in the extensible `DENSITY_PRESETS` table read via `_rGeom()`; bar height flows through the `--bar-h` CSS var. `toggleDensity` customizable shortcut. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.49.0` — F67 Stepped dependency lines: opt-in Office-Timeline-style orthogonal elbow routing for dependency arrows (View → Dependencies → Lines: Curved/Stepped). Shared `_depRoute()`/`_orthoPath()` builders drive both on-screen `rDeps()` and `buildExportSVG()`; tight/backward links double back through the inter-row channel at ±rH/2 (density-aware). Curved remains the default and renders byte-identically.
+- **Previous:** `v0.48.0` — F52 Compact timeline view: "Row Density" selector (Normal/Compact) in the View dropdown under Scale. Compact tightens row pitch 38→26px and bars 22→15px and shrink-wraps every lane to content on entry, while lanes stay fully resizable: each density stores its own lane heights (`height` vs `heightC` via the preset's `hKey`), so resizes in one mode never disturb the other and switching always restores that mode's exact layout. Flows through right-click/drag row math and export SVG (WYSIWYG). Geometry lives in the extensible `DENSITY_PRESETS` table read via `_rGeom()`; bar height flows through the `--bar-h` CSS var. `toggleDensity` customizable shortcut. Live at `https://adrotar21.github.io/timeline-studio/`.
 - **Beta feedback (Feb 2026):** Two PgM beta testers validated the core product. Discoverability is the #1 gap — see BACKLOG.md for F48 (P1) and related items.
 - Version history tracked in `docs/BACKLOG.md` (recent) and `docs/VERSION_HISTORY.md` (archive), plus **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
@@ -48,7 +49,7 @@ TimelineProject/
 │   ├── autofit-analysis.md         # Auto-fit analysis document
 │   └── timeline-studio-layout-engine-analysis.md  # Layout engine analysis
 ├── screenshots/                    # README screenshots (5 PNGs)
-└── tests/                         # 4,065 tests across 31 files
+└── tests/                         # 4,153 tests across 32 files
     ├── helpers/                    # Shared assert lib, mock engine, builder factories
     ├── core/                       # Scheduling engine, dependency type tests
     ├── features/                   # Per-feature: status, shortcuts, swimlane, fit, data table, CSV, SVG
@@ -168,6 +169,7 @@ User action → snap() [undo] → modify App.proj → sched(tl, dt) [dirty flags
 
 ### Dependency Engine
 - Supports FS (Finish-Start), SS (Start-Start), FF (Finish-Finish), SF (Start-Finish) link types
+- **Two line styles (F67):** `proj.depLineStyle` — 'curved' (default bezier) or 'stepped' (orthogonal elbows). Stepped paths come from `_depRoute()` (waypoints per link type, 10px stubs, channel doubling-back at ±`_rGeom().rH/2`) + `_orthoPath()` (rounded corners, 0.1px coords). Any change to dep rendering must touch BOTH `rDeps()` and the `buildExportSVG()` dep section, and preserve the curved template byte-for-byte (tests assert it)
 - Lag support (positive/negative, calendar or working days)
 - Topological sort for scheduling order
 - Cycle detection and violation highlighting
