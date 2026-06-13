@@ -62,6 +62,7 @@ const SHORTCUT_ACTIONS=[
   {id:'showFloat',cat:'View',label:'Toggle Float Labels',defaults:[],ctx:'tl'},
   {id:'cycleDeps',cat:'View',label:'Cycle Dependency Filter',defaults:[],ctx:'tl'},
   {id:'autoFitHeights',cat:'View',label:'Auto Fit Heights',defaults:[],ctx:'tl'},
+  {id:'toggleDensity',cat:'View',label:'Toggle Row Density',defaults:[],ctx:'tl'},
   {id:'cycleDayFmt',cat:'View',label:'Cycle Day Label Format',defaults:[],ctx:'tl'},
   {id:'cycleScale',cat:'View',label:'Cycle Timescale',defaults:[],ctx:'tl'},
   {id:'cycleHdrRows',cat:'View',label:'Cycle Header Rows',defaults:[],ctx:'tl'},
@@ -172,7 +173,27 @@ function _skDec(o){
   return o;
 }
 
-function newProj(){const n=new Date();return{version:3,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,depFilter:'all',locked:false,lockH:false,lockV:false,hideMode:false,theme:'warm',bgColor:'#FAF7F2',headerColor:'#292524',zoom:100,fontSize:11,monthFormat:'short',quarterFormat:'withYear',headerFontSize:10.5,dayLabelFormat:'letter',dayColumnWidth:'normal',watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[],views:[]}}
+function newProj(){const n=new Date();return{version:3,name:'New Timeline',owner:'',dateFormat:'MMM D, YYYY',timescale:'months',headerLayers:2,timelineStart:U.iso(new Date(n.getFullYear(),0,1)),timelineEnd:U.iso(new Date(n.getFullYear(),11,31)),autoRange:true,showToday:true,showDeps:true,depFilter:'all',locked:false,lockH:false,lockV:false,hideMode:false,theme:'warm',bgColor:'#FAF7F2',headerColor:'#292524',zoom:100,fontSize:11,monthFormat:'short',quarterFormat:'withYear',headerFontSize:10.5,dayLabelFormat:'letter',dayColumnWidth:'normal',rowDensity:'normal',watermark:false,wmDate:'',wmPos:'bottom-center',wmShowOwner:false,showWeekends:false,weekendOpacity:8,weekendAutoHide:true,holidays:[],showHolidays:false,holidayOpacity:12,holidayColor:'#e5534b',holidayLabels:true,scheduleAroundNonWorking:true,defaultFolder:'',tttEnabled:false,tttMilestoneId:'',showFloat:false,schedulingMode:'manual',labelWidth:160,autoSortSwimlanes:false,arrangeSimple:50,arrangeSpread:50,arrangePadding:50,arrangeDateWeight:20,arrangeLabels:false,statusDefs:[{id:'blank',name:'',desc:'',color:'',shortName:'',emoji:''},{id:'tbd',name:'TBD',desc:'Not yet determined',color:'#6b7280',shortName:'?',emoji:'❓'},{id:'on-track',name:'On Track',desc:'Progressing as planned',color:'#22c55e',shortName:'G',emoji:'🟢'},{id:'at-risk',name:'At Risk',desc:'May miss target',color:'#eab308',shortName:'Y',emoji:'🟡'},{id:'off-track',name:'Off Track',desc:'Behind schedule',color:'#ef4444',shortName:'R',emoji:'🔴'},{id:'complete',name:'Complete',desc:'Finished',color:'#3b82f6',shortName:'B',emoji:'🔵'},{id:'not-started',name:'Not Started',desc:'Has not begun',color:'#9ca3af',shortName:'N',emoji:'⚪'}],statusDisplay:{show:true,mode:'emoji',badgePos:'inline',colorOverride:false,blankColor:''},swimlanes:[{id:U.id(),name:'Swimlane 1',color:'#2C5F7C',height:120,subSwimlanes:[],collapsed:'expanded'}],items:[],views:[]}}
+
+/* ── Row Density Presets (F52) ──────────────────────────────────────
+   Vertical geometry per density level. Extensible: to add a level (e.g.
+   'tight'), add an entry here plus an <option> in #density-sel — all
+   row math, drag geometry, export SVG, and the toggle shortcut read
+   from this table.
+   rH      = row pitch (px between stacked sub-rows)
+   bar     = task bar height (also drives --bar-h CSS var)
+   subMin  = minimum sub-swimlane height / resize clamp / auto-fit floor
+   slDef   = default lane height when this density's stored height is unset
+             (normal: roomy 120; compact: 40 so untouched lanes shrink-wrap)
+   hKey    = which lane/sub field stores manual resizes for this density.
+             Each density keeps its own heights: resizing in Compact writes
+             heightC and never disturbs the Normal-mode height (and vice
+             versa), so switching densities always restores that mode's
+             exact layout. Unset → lane packs to content. */
+const DENSITY_PRESETS={
+  normal:{rH:38,bar:22,subMin:50,slDef:120,hKey:'height'},
+  compact:{rH:26,bar:15,subMin:36,slDef:40,hKey:'heightC'}
+};
 
 /* ── Tier & Licensing Config ────────────────────────────────────────── */
 const _TIER_CONFIG_DEFAULTS={
@@ -191,7 +212,7 @@ const _TIER_CONFIG_DEFAULTS={
 };
 
 const App={
-  _version:'0.47.0',
+  _version:'0.48.0',
   _LICENSING_ENABLED:true, /* Kill switch: set false to bypass all tier gating — flip to true when ready to enforce */
   _tierConfig:null,_resolvedTier:'free',
   proj:newProj(),sel:[],slSel:[],_slSelManual:[],undoStack:[],redoStack:[],
@@ -495,6 +516,7 @@ const App={
     showFloat(){if(!this.proj.showFloat&&!this._checkTier('show_float')){this._gateToast('Float Labels');return}this.proj.showFloat=!this.proj.showFloat;document.getElementById('btn-show-float')?.classList.toggle('active',this.proj.showFloat);this.sched();this.autoSave();this.toast(this.proj.showFloat?'Float labels ON':'Float labels OFF')},
     cycleDeps(){const p=this.proj;if(!p.showDeps){p.showDeps=true;p.depFilter='all';this.toast('Dependencies: All')}else if((p.depFilter||'all')==='all'){p.depFilter='swimlane';this.toast('Dependencies: Within swimlane')}else{p.showDeps=false;this.toast('Dependencies: Off')}this.sched();this.autoSave();const vdf=document.getElementById('view-dep-filter');if(vdf)vdf.value=p.showDeps?(p.depFilter||'all'):'off'},
     autoFitHeights(){this.autoFitHeights()},
+    toggleDensity(){this.snap();const keys=Object.keys(DENSITY_PRESETS);const cur=DENSITY_PRESETS[this.proj.rowDensity]?this.proj.rowDensity:'normal';const next=keys[(keys.indexOf(cur)+1)%keys.length];this.proj.rowDensity=next;this.sched();this.autoSave();this.toast('Row density: '+next.charAt(0).toUpperCase()+next.slice(1))},
     propagate(){if(this.sel.length&&this.proj.schedulingMode!=='scheduled')this.propagateFrom(this.sel)},
     toggleLock(){this.proj.locked=!this.proj.locked;this.proj.lockH=this.proj.locked;this.proj.lockV=this.proj.locked;this.sched();this.autoSave();this.toast(this.proj.locked?'Locked':'Unlocked')},
     toggleHide(){this.proj.hideMode=!this.proj.hideMode;this.sched();this.toast(this.proj.hideMode?'Hiding hidden':'Showing all')},
@@ -647,6 +669,7 @@ const App={
     if(p.headerFontSize==null)p.headerFontSize=10.5;p.headerFontSize=Math.max(7,Math.min(16,p.headerFontSize));
     if(!p.dayLabelFormat||!['letter','number','hybrid'].includes(p.dayLabelFormat))p.dayLabelFormat='letter';
     if(!p.dayColumnWidth||!['compact','normal','wide'].includes(p.dayColumnWidth))p.dayColumnWidth='normal';
+    if(!p.rowDensity||!DENSITY_PRESETS[p.rowDensity])p.rowDensity='normal';
     if(!p.watermark)p.watermark=false;if(!p.wmDate)p.wmDate='';if(!p.wmPos)p.wmPos='bottom-center';
     if(p.showDeps==null)p.showDeps=true;if(p.depFilter==null)p.depFilter='all';if(p.showToday==null)p.showToday=true;
     if(p.owner==null)p.owner='';if(p.wmShowOwner==null)p.wmShowOwner=false;
@@ -740,6 +763,7 @@ const App={
       this.$.zoom_lbl.textContent=(this.proj.zoom||100)+'%';
       this.$.ts_sel.value=this.proj.timescale;
       this.$.hl_sel.value=String(this.proj.headerLayers);
+      {const _ds=document.getElementById('density-sel');if(_ds)_ds.value=DENSITY_PRESETS[this.proj.rowDensity]?this.proj.rowDensity:'normal'}
       this._syncHdrFmtUI();
       this.$.project_name_text.textContent=this.proj.name||'Untitled';
       this._docTitle(this._unsaved);
@@ -1431,7 +1455,7 @@ const App={
     const def=newProj();
     /* project-level: strip fields matching defaults */
     const projStrip=['owner','dateFormat','timescale','headerLayers','autoRange','showToday','showDeps','depFilter',
-      'locked','lockH','lockV','hideMode','theme','bgColor','headerColor','zoom','fontSize','monthFormat','quarterFormat','headerFontSize','dayLabelFormat','dayColumnWidth',
+      'locked','lockH','lockV','hideMode','theme','bgColor','headerColor','zoom','fontSize','monthFormat','quarterFormat','headerFontSize','dayLabelFormat','dayColumnWidth','rowDensity',
       'watermark','wmDate','wmPos','wmShowOwner','showWeekends','weekendOpacity','weekendAutoHide',
       'showHolidays','holidayOpacity','holidayColor','holidayLabels','scheduleAroundNonWorking',
       'defaultFolder','tttEnabled','tttMilestoneId','showFloat','schedulingMode','labelWidth',
@@ -1482,6 +1506,7 @@ const App={
     if(p.swimlanes)for(const sl of p.swimlanes){
       if(sl.collapsed==='expanded')delete sl.collapsed;
       if(sl.height===120)delete sl.height;
+      if(!sl.heightC)delete sl.heightC;
       if(!sl.fontSize)delete sl.fontSize;
       if(!sl.links||!sl.links.length)delete sl.links;
       if(Array.isArray(sl.subSwimlanes)){
@@ -1489,6 +1514,7 @@ const App={
         else for(const ss of sl.subSwimlanes){
           if(ss.collapsed==='expanded')delete ss.collapsed;
           if(ss.height===0||ss.height==null)delete ss.height;
+          if(!ss.heightC)delete ss.heightC;
           if(!ss.fontSize)delete ss.fontSize;
           if(!ss.links||!ss.links.length)delete ss.links;
         }
@@ -2437,6 +2463,8 @@ const App={
     const dwSel=document.getElementById('day-width-sel');
     if(dfSel)dfSel.onchange=e=>{this.snap();this.proj.dayLabelFormat=e.target.value;const hp=document.getElementById('hdr-pop-day-fmt');if(hp)hp.value=e.target.value;this.sched();this.autoSave()};
     if(dwSel)dwSel.onchange=e=>{this.snap();this.proj.dayColumnWidth=e.target.value;const hp=document.getElementById('hdr-pop-dayw-fmt');if(hp)hp.value=e.target.value;this.sched();this.autoSave()};
+    const denSel=document.getElementById('density-sel');
+    if(denSel)denSel.onchange=e=>{this.snap();this.proj.rowDensity=DENSITY_PRESETS[e.target.value]?e.target.value:'normal';this.sched();this.autoSave()};
     this.$.file_input.onchange=e=>this.handleOpen(e);
     on('btn-s-apply',()=>this.applySettings());on('btn-save-sw',()=>this.saveSwM());on('btn-del-sw',()=>this.delSwM());
     on('btn-lic-activate',()=>{const k=this.$.s_lic_key?this.$.s_lic_key.value.trim():'';if(!k){this.toast('Enter a license key','error');return}this._activateLicense(k)});
@@ -3616,7 +3644,7 @@ const App={
         const sl=this.gs(clickSl);
         if(sl&&sl.collapsed==='expanded'){
           const yInSw=e.clientY-rect.top;
-          const rH=38;
+          const rH=this._rGeom().rH;
           const subs=sl.subSwimlanes||[];
           if(subs.length>0){
             // Collect sub-swimlane divider positions from DOM
@@ -5790,9 +5818,15 @@ const App={
     rows.push(tl.cols.map((c,i)=>{const cell={label:c.label,span:1};if(c.dayLetter)cell.dayLetter=c.dayLetter;if(i>0){const prev=tl.cols[i-1];if((ts==='days'||ts==='weeks')&&c.month!==prev.month)cell.boundary=true;else if(ts==='months'&&c.quarter!==prev.quarter)cell.boundary=true;else if(ts==='quarters'&&c.year!==prev.year)cell.boundary=true}return cell}));return rows
   },
 
+  /* Row-density geometry for the current project (F52). All vertical row
+     math — render, click/drag row mapping, export SVG, auto-fit — must read
+     from this instead of hardcoding the 38px-pitch normal-mode constants. */
+  _rGeom(){return DENSITY_PRESETS[this.proj.rowDensity]||DENSITY_PRESETS.normal},
+
   renderTL(){
-    const tl=this.met(),p=this.proj,th=this.getTheme(),rH=38;
+    const tl=this.met(),p=this.proj,th=this.getTheme(),g=this._rGeom(),rH=g.rH;
     document.documentElement.style.setProperty('--sl-w',(p.labelWidth||160)+'px');
+    document.documentElement.style.setProperty('--bar-h',g.bar+'px');
     this.$.tl_container.style.background=th.bg;
     if(!this._presMode){if(this._panMode)this.$.tl_body.style.cursor='grab';else if(this._lassoMode)this.$.tl_body.style.cursor='crosshair';else if(this._fpMode)this.$.tl_body.style.cursor='copy';else this.$.tl_body.style.cursor=''}
     /* Compute _fitLeftPad: prevent left-side label clipping at any zoom */
@@ -5834,8 +5868,8 @@ const App={
         const unassigned=slItems.filter(i=>!i.subSwimId||!groups.has(i.subSwimId));
         if(sl.subSwimlanes.length>0&&unassigned.length){const fid=sl.subSwimlanes[0].id;unassigned.forEach(i=>i.subSwimId=fid);(groups.get(fid)||[]).push(...unassigned)}
         for(const it of slItems)if(it.subSwimId&&groups.has(it.subSwimId)&&!unassigned.includes(it))groups.get(it.subSwimId).push(it);
-        for(const[ssId,items]of groups){const ss=sl.subSwimlanes.find(s=>s.id===ssId);const isSubMin=ss&&ss.collapsed==='minimized';if(isSubMin){subMeta.push({ssId,h:20,items:[],minimized:true})}else{const vis=items.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);const contentH=Math.max(50,(mr+1)*rH+10);const ssH=ss&&ss.height>0?Math.max(ss.height,contentH):contentH;subMeta.push({ssId,h:ssH,items,minimized:false})}}
-      }else if(!isCollapsed){const vis=slItems.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId:'',h:Math.max(sl.height||120,(mr+1)*rH+10),items:slItems})}
+        for(const[ssId,items]of groups){const ss=sl.subSwimlanes.find(s=>s.id===ssId);const isSubMin=ss&&ss.collapsed==='minimized';if(isSubMin){subMeta.push({ssId,h:20,items:[],minimized:true})}else{const vis=items.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);const contentH=Math.max(g.subMin,(mr+1)*rH+10);const ssH=ss&&ss[g.hKey]>0?Math.max(ss[g.hKey],contentH):contentH;subMeta.push({ssId,h:ssH,items,minimized:false})}}
+      }else if(!isCollapsed){const vis=slItems.filter(i=>!(p.hideMode&&i.hidden));const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId:'',h:Math.max(sl[g.hKey]||g.slDef,(mr+1)*rH+10),items:slItems})}
       const totalH=isHidden?8:isMinimized?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
       slYMap.set(sl.id,{y:slYAccum,h:totalH});
 
@@ -5857,7 +5891,9 @@ const App={
         let yOff=0;
         for(let smi=0;smi<subMeta.length;smi++){
           const{ssId,h,items,minimized}=subMeta[smi];
-          if(smi>0){if(!subMeta[smi-1].minimized&&!minimized){bodyH+=`<div class="sub-sw-div sub-rh" data-sl-id="${sl.id}" data-ss-id="${subMeta[smi-1].ssId}" style="top:${yOff-3}px"></div>`}else{bodyH+=`<div class="sub-sw-div" style="top:${yOff}px"></div>`}}
+          /* Divider is a resize handle whenever the sub ABOVE it is expanded — it resizes
+             that sub, so the collapse state of the sub below is irrelevant */
+          if(smi>0){if(!subMeta[smi-1].minimized){bodyH+=`<div class="sub-sw-div sub-rh" data-sl-id="${sl.id}" data-ss-id="${subMeta[smi-1].ssId}" style="top:${yOff-3}px"></div>`}else{bodyH+=`<div class="sub-sw-div" style="top:${yOff}px"></div>`}}
           for(const it of items){
             if(p.hideMode&&it.hidden)continue;
             const itY=slYAccum+yOff+6+(it.subRow||0)*rH;
@@ -5888,7 +5924,7 @@ const App={
             const diffWeeks=Math.round(diffDays/7);
             const label=it.id===p.tttMilestoneId?'0':String(diffWeeks);
             const clr=(it.id===p.tttMilestoneId||diffWeeks>=0)?'#2ea043':'#e5534b';
-            overlayH+=`<div class="ttt-label" style="left:${ix+(it.type==='task'?0:8)+2}px;top:${iy+23}px;color:${clr}">${label}</div>`;
+            overlayH+=`<div class="ttt-label" style="left:${ix+(it.type==='task'?0:8)+2}px;top:${iy+g.bar+1}px;color:${clr}">${label}</div>`;
           }
         }
       }
@@ -5907,7 +5943,7 @@ const App={
         const ix=it.type==='task'?this.dXEnd(it.endDate,tl):this.dXMid(it.date,tl);if(ix===null)continue;
         const f=it._float;
         const clr=f===0?'#e5534b':'#888';const fw=f===0?'700':'600';
-        overlayH+=`<div style="position:absolute;left:${ix+(it.type==='task'?2:10)}px;top:${iy+23}px;font-size:8px;font-family:monospace;color:${clr};font-weight:${fw};pointer-events:none;z-index:4;white-space:nowrap">${f}d</div>`;
+        overlayH+=`<div style="position:absolute;left:${ix+(it.type==='task'?2:10)}px;top:${iy+g.bar+1}px;font-size:8px;font-family:monospace;color:${clr};font-weight:${fw};pointer-events:none;z-index:4;white-space:nowrap">${f}d</div>`;
       }
     }
     // Weekend shading
@@ -6126,6 +6162,7 @@ const App={
       const pRow=rowMap.get(it.id)||0;dragItems.forEach(d=>{d.rowOffset=(rowMap.get(d.id)||0)-pRow});
     }else{dragItems.forEach(d=>{d.rowOffset=0})}
     let dr=false,hlEl=null,hlRow=null,ghostEls=[],ghostRow=null,tipEl=null,stripEl=null,prevHdrStart=-1,prevHdrEnd=-1;
+    const _dg=this._rGeom();/* density geometry — captured at drag start, can't change mid-drag */
     // CSS-only expansion: snapshot-based — saves every affected element's original style,
     // then restores exactly on revert. No model mutation, no renderTL during drag.
     const _expandedMap=new Map(); // targetId → {delta, slId, isSub}
@@ -6212,9 +6249,9 @@ const App={
           const primaryD=dragItems.find(d=>d.id===it.id);
           if(primaryD){const isT=it.type==='task',curL=parseFloat(primaryD.el.style.left);
             const nx=curL+(isT?0:8),snapDate=this.xD(nx,tl);
-            const yInBand=yInSw-bandTop,snapRow=Math.max(0,Math.floor((yInBand-6)/38));
+            const yInBand=yInSw-bandTop,snapRow=Math.max(0,Math.floor((yInBand-6)/_dg.rH));
             const maxGR=snapRow+Math.max(0,...dragItems.map(d=>d.rowOffset));
-            const neededH=(maxGR+1)*38+10;
+            const neededH=(maxGR+1)*_dg.rH+10;
             let currentTargetId='';
             if(subs.length>0){for(const b of bands){if(yInSw>=b.yStart&&yInSw<b.yEnd){currentTargetId=b.ssId;break}}}else{currentTargetId=found.dataset.slId}
             // If cursor moved to a different band/swimlane, revert previous expansion first
@@ -6252,8 +6289,8 @@ const App={
               const gX=gIsT?this.dX(dSnap,tl):this.dXMid(dSnap,tl)-8;
               const gEnd=gIsT?this._calcEndDate({startDate:dSnap,duration:dIt.duration,durMode:dIt.durMode}):null;
               const gW=gIsT?Math.max(8,(this.dXEnd(gEnd,tl)||0)-(this.dX(dSnap,tl)||0)):16;
-              const gRow=snapRow+d.rowOffset,gY=bandTop+6+gRow*38;
-              g.style.left=gX+'px';g.style.top=gY+'px';g.style.width=gW+'px';g.style.height=(gIsT?'22':'16')+'px'});
+              const gRow=snapRow+d.rowOffset,gY=bandTop+6+gRow*_dg.rH;
+              g.style.left=gX+'px';g.style.top=gY+'px';g.style.width=gW+'px';g.style.height=(gIsT?_dg.bar:16)+'px'});
           }}
         else if(hlEl){hlEl.remove();hlEl=null;hlRow=null;ghostEls.forEach(g=>g.el.remove());ghostEls=[];ghostRow=null;
           _cssRevertAll();_activeExpandId='';}}
@@ -6303,7 +6340,7 @@ const App={
           dragItems.forEach(dd=>dd.item.swimlaneId=targetSlId);
           const sl=this.gs(targetSlId);
           const yInSw=ev.clientY-targetRect.top;
-          const rH=38;
+          const rH=this._rGeom().rH;
           const subs=sl&&sl.collapsed==='expanded'?sl.subSwimlanes||[]:[];
           if(subs.length>0){
             const dividers=[];
@@ -6400,12 +6437,19 @@ const App={
     const esc=ev2=>{if(ev2.key==='Escape'){ev2.preventDefault();it.startDate=oS;it.endDate=oE;it.duration=oDur;document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('keydown',esc);_cleanFeedback();if(this.undoStack.length)this.undoStack.pop();this.sched();this.refreshPanel()}};
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);document.addEventListener('keydown',esc)},
 
-  bindRH(){document.querySelectorAll('.sl-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();const sl=this.gs(h.dataset.slId);if(!sl)return;const slEl=h.closest('.sw-row'),lblEl=this.$.tl_sl_labels.querySelector(`[data-sl-id="${sl.id}"]`);const sY=e.clientY,sH=slEl.offsetHeight;const hasSubs=sl.subSwimlanes?.length>0&&sl.collapsed==='expanded';const lastSs=hasSubs?sl.subSwimlanes[sl.subSwimlanes.length-1]:null;const startLastH=lastSs?(lastSs.height||50):0;const mv=ev=>{const nh=Math.max(50,sH+ev.clientY-sY);if(hasSubs&&lastSs){lastSs.height=Math.max(50,startLastH+ev.clientY-sY)}else{sl.height=nh}slEl.style.height=nh+'px';if(lblEl)lblEl.style.height=nh+'px';this.sched(true,false)};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}});document.querySelectorAll('.sub-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();e.stopPropagation();const sl=this.gs(h.dataset.slId);if(!sl)return;const ss=sl.subSwimlanes.find(s=>s.id===h.dataset.ssId);if(!ss)return;const sY=e.clientY,startH=ss.height||50;const mv=ev=>{ss.height=Math.max(50,startH+ev.clientY-sY);this.sched(true,false)};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}})},
+  /* Lane/sub resize. Heights are per-density (g.hKey): dragging writes only the
+     active density's field, so Compact resizes never disturb the Normal layout
+     and vice versa. Drags seed from the RENDERED height (label element), not
+     the stored field — in Compact the field is usually unset while the lane
+     renders at content height, and seeding from stored would create a dead
+     zone before the drag visibly takes effect. */
+  bindRH(){const ssRendH=ssId=>{const el=this.$.tl_sl_labels.querySelector(`.sl-sub-lbl[data-ss-id="${ssId}"]`);return el?el.offsetHeight:0};
+    document.querySelectorAll('.sl-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();const g=this._rGeom(),hk=g.hKey,mn=g.subMin;const sl=this.gs(h.dataset.slId);if(!sl)return;const slEl=h.closest('.sw-row'),lblEl=this.$.tl_sl_labels.querySelector(`[data-sl-id="${sl.id}"]`);const sY=e.clientY,sH=slEl.offsetHeight;const hasSubs=sl.subSwimlanes?.length>0&&sl.collapsed==='expanded';const lastSs=hasSubs?[...sl.subSwimlanes].reverse().find(s=>s.collapsed!=='minimized')||null:null;if(hasSubs&&!lastSs)return;/* all subs minimized — heights are fixed at 20px, nothing to resize */const startLastH=lastSs?(ssRendH(lastSs.id)||lastSs[hk]||mn):0;const mv=ev=>{const nh=Math.max(mn,sH+ev.clientY-sY);if(hasSubs&&lastSs){lastSs[hk]=Math.max(mn,startLastH+ev.clientY-sY)}else{sl[hk]=nh}slEl.style.height=nh+'px';if(lblEl)lblEl.style.height=nh+'px';this.sched(true,false)};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}});document.querySelectorAll('.sub-rh').forEach(h=>{h.onmousedown=e=>{e.preventDefault();e.stopPropagation();const g=this._rGeom(),hk=g.hKey,mn=g.subMin;const sl=this.gs(h.dataset.slId);if(!sl)return;const ss=sl.subSwimlanes.find(s=>s.id===h.dataset.ssId);if(!ss)return;const sY=e.clientY,startH=ssRendH(ss.id)||ss[hk]||mn;const mv=ev=>{ss[hk]=Math.max(mn,startH+ev.clientY-sY);this.sched(true,false)};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);this.sched();this.autoSave()};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}})},
 
   async copyScreenshot(viewportOnly=false){try{const typeLabel=viewportOnly?'Viewport':'Full timeline';this.toast('Generating '+typeLabel+'…');const svg=this.buildExportSVG(viewportOnly);const img=new Image();const blob=new Blob([svg],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);let dpr=Math.max(2,window.devicePixelRatio||2);const origDpr=dpr;img.onload=async()=>{if(!img.naturalWidth||!img.naturalHeight){this.toast('Image failed to render','error');URL.revokeObjectURL(url);return}const maxDim=16384;if(img.naturalWidth*dpr>maxDim||img.naturalHeight*dpr>maxDim){dpr=Math.floor(maxDim/Math.max(img.naturalWidth,img.naturalHeight))||1;if(dpr<origDpr)this.toast('Large timeline — reduced export resolution ('+origDpr+'× → '+dpr+'×)','info',3500)}const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*dpr);c.height=Math.round(img.naturalHeight*dpr);const ctx=c.getContext('2d');if(!ctx){this.toast('Canvas too large to render','error');URL.revokeObjectURL(url);return}ctx.scale(dpr,dpr);ctx.drawImage(img,0,0);try{const b=await new Promise(r=>c.toBlob(r,'image/png'));if(!b){this.toast('Render failed','error');URL.revokeObjectURL(url);return}await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);this.toast(typeLabel+' copied to clipboard!')}catch(err){this.toast('Copy failed','error')}URL.revokeObjectURL(url)};img.onerror=()=>{this.toast('Failed','error');URL.revokeObjectURL(url)};img.src=url}catch(err){this.toast('Not supported','error')}},
 
   buildExportSVG(viewportOnly=false){
-    const tl=this.met(),p=this.proj,th=this.getTheme(),rH=38;
+    const tl=this.met(),p=this.proj,th=this.getTheme(),g=this._rGeom(),rH=g.rH;
     const hR=this.buildHdrRows(tl),rowHH=22,totalHdrH=hR.length*rowHH;
     const gfs=p.fontSize||11;
     /* Build swimlane metrics — include ALL items, we handle hidden rendering per-item */
@@ -6418,8 +6462,8 @@ const App={
       if(!isCollapsed&&hasSubs){
         const groups=new Map();for(const ss of sl.subSwimlanes)groups.set(ss.id,[]);
         for(const it of visItems){if(it.subSwimId&&groups.has(it.subSwimId))groups.get(it.subSwimId).push(it);else{const fid=sl.subSwimlanes[0]?.id;if(fid)(groups.get(fid)||[]).push(it)}}
-        for(const[ssId,items]of groups){const ss=sl.subSwimlanes.find(s=>s.id===ssId);const isSubMin=ss&&ss.collapsed==='minimized';if(isSubMin){subMeta.push({ssId,h:20,items:[],minimized:true})}else{const mr=items.reduce((m,i)=>Math.max(m,i.subRow||0),0);const contentH=Math.max(50,(mr+1)*rH+10);const ssH=ss&&ss.height>0?Math.max(ss.height,contentH):contentH;subMeta.push({ssId,h:ssH,items:slItems.filter(i=>i.subSwimId===ssId||(!i.subSwimId&&ssId===sl.subSwimlanes[0]?.id)),minimized:false})}}
-      }else if(!isCollapsed){const mr=visItems.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId:'',h:Math.max(sl.height||120,(mr+1)*rH+10),items:slItems})}
+        for(const[ssId,items]of groups){const ss=sl.subSwimlanes.find(s=>s.id===ssId);const isSubMin=ss&&ss.collapsed==='minimized';if(isSubMin){subMeta.push({ssId,h:20,items:[],minimized:true})}else{const mr=items.reduce((m,i)=>Math.max(m,i.subRow||0),0);const contentH=Math.max(g.subMin,(mr+1)*rH+10);const ssH=ss&&ss[g.hKey]>0?Math.max(ss[g.hKey],contentH):contentH;subMeta.push({ssId,h:ssH,items:slItems.filter(i=>i.subSwimId===ssId||(!i.subSwimId&&ssId===sl.subSwimlanes[0]?.id)),minimized:false})}}
+      }else if(!isCollapsed){const mr=visItems.reduce((m,i)=>Math.max(m,i.subRow||0),0);subMeta.push({ssId:'',h:Math.max(sl[g.hKey]||g.slDef,(mr+1)*rH+10),items:slItems})}
       const h=isHidden?0:isMinimized?28:(subMeta.reduce((s,m)=>s+m.h,0)||80);
       sm.push({sl,items:isCollapsed?[]:slItems,h,subMeta,collapsed:isCollapsed,hidden:isHidden})
     }
@@ -6522,7 +6566,7 @@ const App={
             if(eSDShow&&eSDColorOvr){if(eSD)eRenderColor=eSD.color;else if(eSDCfg.blankColor)eRenderColor=eSDCfg.blankColor}
             const eUseInline=eSD&&eSDShow&&eSDPos==='inline';
         if(it.type==='task'){
-          const ix=this.dX(it.startDate,tl),ix2=this.dXEnd(it.endDate,tl),w=Math.max(8,(ix2||0)-(ix||0)),iy=itemY,barH=22;
+          const ix=this.dX(it.startDate,tl),ix2=this.dXEnd(it.endDate,tl),w=Math.max(8,(ix2||0)-(ix||0)),iy=itemY,barH=g.bar;
           const renderX=lw+ix-vpX;
           if(viewportOnly&&(renderX+w<lw-20||renderX>W+20)){continue}
           /* Task bar */
@@ -6657,7 +6701,7 @@ const App={
           const diffWeeks=Math.round(U.days(refDate,targetDate)/7);
           const label=it.id===p.tttMilestoneId?'0':String(diffWeeks);
           const clr=(it.id===p.tttMilestoneId||diffWeeks>=0)?'#2ea043':'#e5534b';
-          svg+=`<text x="${lw+ix-vpX+(it.type==='task'?2:10)}" y="${iy+32}" fill="${clr}" font-size="9" font-weight="700" font-family="monospace">${label}</text>`
+          svg+=`<text x="${lw+ix-vpX+(it.type==='task'?2:10)}" y="${iy+g.bar+10}" fill="${clr}" font-size="9" font-weight="700" font-family="monospace">${label}</text>`
         }
       }}}
     /* Float labels */
@@ -6673,7 +6717,7 @@ const App={
         const ix=it.type==='task'?this.dXEnd(it.endDate,tl):this.dXMid(it.date,tl);if(ix===null)continue;
         const fl=it._float;
         const clr=fl===0?'#e5534b':'#888';const fw=fl===0?'700':'600';
-        svg+=`<text x="${lw+ix-vpX+(it.type==='task'?2:10)}" y="${iy+32}" fill="${clr}" font-size="8" font-weight="${fw}" font-family="monospace">${fl}d</text>`
+        svg+=`<text x="${lw+ix-vpX+(it.type==='task'?2:10)}" y="${iy+g.bar+10}" fill="${clr}" font-size="8" font-weight="${fw}" font-family="monospace">${fl}d</text>`
       }
     }
     /* Swimlane label backgrounds — draw ALL rects first so no rect masks overflow text */
@@ -7373,7 +7417,11 @@ const App={
 
   autoFitHeights(){
     this.snap();
-    const p=this.proj,rH=38;
+    /* Density-aware: writes the ACTIVE density's height field (height /
+       heightC), so auto-fitting in Compact re-shrink-wraps compact resizes
+       without ever touching the saved Normal-mode layout (and vice versa). */
+    const g=this._rGeom(),hk=g.hKey;
+    const p=this.proj,rH=g.rH;
     let changed=0;
     for(const sl of p.swimlanes){
       if(sl.collapsed!=='expanded')continue;
@@ -7385,14 +7433,14 @@ const App={
           const ssItems=slItems.filter(i=>i.subSwimId===ss.id||(!i.subSwimId&&ss===sl.subSwimlanes[0]));
           const vis=ssItems.filter(i=>!(p.hideMode&&i.hidden));
           const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);
-          const contentH=Math.max(50,(mr+1)*rH+10);
-          if(ss.height!==contentH){ss.height=contentH;changed++}
+          const contentH=Math.max(g.subMin,(mr+1)*rH+10);
+          if(ss[hk]!==contentH){ss[hk]=contentH;changed++}
         }
       }else{
         const vis=slItems.filter(i=>!(p.hideMode&&i.hidden));
         const mr=vis.reduce((m,i)=>Math.max(m,i.subRow||0),0);
-        const contentH=Math.max(50,(mr+1)*rH+10);
-        if(sl.height!==contentH){sl.height=contentH;changed++}
+        const contentH=Math.max(g.subMin,(mr+1)*rH+10);
+        if(sl[hk]!==contentH){sl[hk]=contentH;changed++}
       }
     }
     this.sched();this.autoSave();

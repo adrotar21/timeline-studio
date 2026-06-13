@@ -3,7 +3,7 @@
 **A cross-platform, zero-dependency Gantt chart tool for project managers.**
 Download three files. Open `index.html`. Done.
 
-![Version](https://img.shields.io/badge/version-0.44.7-blue)
+![Version](https://img.shields.io/badge/version-0.48.0-blue)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Files](https://img.shields.io/badge/architecture-3_files-orange)
 
@@ -53,6 +53,7 @@ Milestones and tasks on a zoomable, scrollable timeline. Drag items to change da
 - **Swimlanes** with 3-state collapse (expanded / minimized / hidden) and sub-swimlanes
 - **Drag-and-drop** with ghost snap preview, date delta badge, header highlight, Shift for vertical-only lock, Escape to cancel
 - **Zoom** from 10% to 300%, fit-to-content auto-zoom, configurable timescale (Weeks/Months/Quarters/Years)
+- **Row Density** -- Normal or Compact view (View menu); Compact tightens rows and packs lanes for long execution-tracking timelines, each density remembers its own lane heights
 - **Visual aids** -- today marker, weekend shading, holiday shading, watermark stamp
 - **7 milestone icon shapes**, 20 preset colors, progress bars on tasks
 

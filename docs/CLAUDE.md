@@ -14,7 +14,7 @@ Timeline Studio is a cross-platform, zero-dependency replacement for Office Time
 
 ## Versioning
 - **Scheme:** `0.x.0` = mini-major (feature batches), `0.x.y` = patch/bugfix. Pre-1.0 = beta.
-- **Current:** `v0.47.0` — F61 My Views: saved per-timeline swimlane-collapse configurations. Users save named views (e.g. "Working Timeline", "Executive Summary"), swap between them from View → Swimlanes → My Views ▸, and use "Return to previous view" to toggle back after Expand/Collapse All. Side-cascade flyout keeps the View dropdown compact regardless of view count. 4 new customizable shortcuts. Schema bumped v2→v3. Live at `https://adrotar21.github.io/timeline-studio/`.
+- **Current:** `v0.48.0` — F52 Compact timeline view: "Row Density" selector (Normal/Compact) in the View dropdown under Scale. Compact tightens row pitch 38→26px and bars 22→15px and shrink-wraps every lane to content on entry, while lanes stay fully resizable: each density stores its own lane heights (`height` vs `heightC` via the preset's `hKey`), so resizes in one mode never disturb the other and switching always restores that mode's exact layout. Flows through right-click/drag row math and export SVG (WYSIWYG). Geometry lives in the extensible `DENSITY_PRESETS` table read via `_rGeom()`; bar height flows through the `--bar-h` CSS var. `toggleDensity` customizable shortcut. Live at `https://adrotar21.github.io/timeline-studio/`.
 - **Beta feedback (Feb 2026):** Two PgM beta testers validated the core product. Discoverability is the #1 gap — see BACKLOG.md for F48 (P1) and related items.
 - Version history tracked in `docs/BACKLOG.md` (recent) and `docs/VERSION_HISTORY.md` (archive), plus **git tags** (`git tag v0.23.1`)
 - Git repo at project root; versions marked with git tags instead of folder names
@@ -34,7 +34,7 @@ This is a non-negotiable design constraint. The three-file architecture is what 
 ```
 TimelineProject/
 ├── index.html                      # Complete DOM structure, modals, inline styles
-├── app.js                          # All application logic (~6010 lines)
+├── app.js                          # All application logic (~7,860 lines)
 ├── styles.css                      # Theming via CSS custom properties, layout
 ├── Showcase.tlproj                 # Example project file (JSON)
 ├── README.md                       # Project README (stays at root for GitHub)
@@ -48,7 +48,7 @@ TimelineProject/
 │   ├── autofit-analysis.md         # Auto-fit analysis document
 │   └── timeline-studio-layout-engine-analysis.md  # Layout engine analysis
 ├── screenshots/                    # README screenshots (5 PNGs)
-└── tests/                         # 2,912 tests across 23 files
+└── tests/                         # 4,065 tests across 31 files
     ├── helpers/                    # Shared assert lib, mock engine, builder factories
     ├── core/                       # Scheduling engine, dependency type tests
     ├── features/                   # Per-feature: status, shortcuts, swimlane, fit, data table, CSV, SVG
@@ -331,6 +331,7 @@ Output is color-coded (green pass / red fail) with summary stats. Tests mock eng
 - Format Painter: two-step popover wizard (select properties → Apply Once / Apply to Many) with F4 keyboard shortcut (double-tap for multi mode)
 - Customizable keyboard shortcuts with 3-tier manager (Reserved / Customizable / Mouse Reference) in Settings → Shortcuts (Ctrl+Shift+K). Per-user overrides stored in localStorage.
 - **My Views (v0.47.0):** per-timeline saved swimlane-collapse configurations. Save named views, swap between them from View → Swimlanes → My Views ▸, and use "Return to previous view" to toggle back after any Expand/Collapse All. Side-cascade flyout keeps the dropdown compact.
+- **Row Density (v0.48.0):** Normal/Compact selector in View → Row Density. Compact tightens row pitch 38→26px, bars 22→15px, and shrink-wraps lanes to content on entry. Lanes stay resizable in both modes — each density stores its own lane heights (`height` vs `heightC` via `DENSITY_PRESETS[].hKey`), so layouts never cross-contaminate. Exports are WYSIWYG per density. `toggleDensity` customizable shortcut.
 
 ## Known Issues & Backlog
 See `docs/BACKLOG.md` for the prioritized and sized bug/feature backlog with version history. Completed items are archived in `docs/COMPLETED.md`. Older version history is in `docs/VERSION_HISTORY.md`.
